@@ -1,0 +1,9 @@
+@import "@lunarscribe/components/globals.css";
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+}

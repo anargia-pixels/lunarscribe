@@ -1,0 +1,20 @@
+{
+  "name": "@lunarscribe/utils",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./cn": "./src/cn.ts",
+    "./try-catch": "./src/try-catch.ts",
+    "./fonts.css": "./src/fonts.css"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cn": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

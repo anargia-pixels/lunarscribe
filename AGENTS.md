@@ -1,7 +1,8 @@
 # Lunarscribe
 
 Bun + Turborepo monorepo. Versions live in the root `package.json` catalog; workspaces
-reference them with `catalog:`.
+reference them with `catalog:`. When naming a concept in code, UI copy, docs or
+conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
 
 ## Layout
 

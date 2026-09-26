@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 /** One open document; `markdown` is the source of truth the editor loads from and saves to. */
-export type TextBuffer = {
+type TextBuffer = {
   id: string;
   title: string;
   markdown: string;

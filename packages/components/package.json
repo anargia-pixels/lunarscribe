@@ -27,7 +27,7 @@
     "class-variance-authority": "catalog:",
     "lexical": "catalog:",
     "lucide-react": "catalog:",
-    "shadcn": "^4.21.0",
+    "shadcn": "catalog:",
     "tw-animate-css": "catalog:"
   },
   "peerDependencies": {

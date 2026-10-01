@@ -9,6 +9,8 @@ const toggleVariants = cva(
       variant: {
         default: "bg-transparent",
         outline: "border-input hover:bg-muted border bg-transparent",
+        // No hover fill of its own, for groups that share a FluidHighlight.
+        fluid: "relative bg-transparent hover:bg-transparent",
       },
       size: {
         default:

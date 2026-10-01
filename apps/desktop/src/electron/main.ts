@@ -2,6 +2,8 @@ import { join } from "node:path";
 
 import { app, BrowserWindow, shell } from "electron";
 
+import { registerDocumentsFolder } from "./documents-folder";
+
 /** Opens the editor window and loads the renderer from Vite in dev or disk in production. */
 function createWindow() {
   const window = new BrowserWindow({
@@ -37,6 +39,7 @@ function createWindow() {
 }
 
 void app.whenReady().then(() => {
+  registerDocumentsFolder();
   createWindow();
 
   app.on("activate", () => {

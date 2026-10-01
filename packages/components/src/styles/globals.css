@@ -185,6 +185,14 @@
   --spacing: var(--spacing);
 }
 
+/* Motion for hover highlights and popups: entries settle on a spring-like ease-out,
+   exits run one step quicker so a dismissal reads as final. */
+@theme static {
+  --ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fluid: 120ms;
+  --duration-fluid-exit: 80ms;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

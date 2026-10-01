@@ -7,14 +7,11 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
 import { $setBlocksType } from "@lexical/selection";
 import { mergeRegister } from "@lexical/utils";
+import { FluidHighlight } from "@lunarscribe/components/fluid-motion/fluid-motion";
+import { Hint } from "@lunarscribe/components/hint/hint";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Separator } from "@lunarscribe/components/ui/separator";
 import { Toggle } from "@lunarscribe/components/ui/toggle";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@lunarscribe/components/ui/tooltip";
 import {
   $createParagraphNode,
   $getSelection,
@@ -46,7 +43,7 @@ import {
   Strikethrough,
   Undo2,
 } from "lucide-react";
-import { type ReactElement, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const TEXT_FORMATS: {
   format: TextFormatType;
@@ -120,16 +117,6 @@ function setBlock(editor: LexicalEditor, createBlock: () => ElementNode) {
   });
 }
 
-/** Renders `children` as the tooltip trigger so the control itself receives hover and focus. */
-function Hint({ label, children }: { label: string; children: ReactElement }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger render={children} />
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 function ToolbarSeparator() {
   return (
     <Separator
@@ -185,10 +172,11 @@ export function ToolbarPlugin() {
   );
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-center gap-1 border-b px-3 py-1.5">
+    <div className="relative flex shrink-0 flex-wrap items-center justify-center gap-1 border-b px-3 py-1.5">
+      <FluidHighlight rows="button" className="bg-muted rounded-lg" />
       <Hint label="Undo">
         <Button
-          variant="ghost"
+          variant="fluid"
           size="icon-sm"
           aria-label="Undo"
           disabled={!canUndo}
@@ -199,7 +187,7 @@ export function ToolbarPlugin() {
       </Hint>
       <Hint label="Redo">
         <Button
-          variant="ghost"
+          variant="fluid"
           size="icon-sm"
           aria-label="Redo"
           disabled={!canRedo}
@@ -212,6 +200,7 @@ export function ToolbarPlugin() {
       {TEXT_FORMATS.map(({ format, label, icon: Icon }) => (
         <Hint key={format} label={label}>
           <Toggle
+            variant="fluid"
             size="icon-sm"
             aria-label={label}
             pressed={activeFormats.includes(format)}
@@ -227,7 +216,7 @@ export function ToolbarPlugin() {
       {BLOCKS.map(({ label, icon: Icon, apply }) => (
         <Hint key={label} label={label}>
           <Button
-            variant="ghost"
+            variant="fluid"
             size="icon-sm"
             aria-label={label}
             onClick={() => apply(editor)}

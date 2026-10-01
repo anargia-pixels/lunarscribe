@@ -157,7 +157,8 @@
     "**/out",
     "**/.output",
     "**/.tanstack",
-    "packages/components/src/components/ui/**"
+    "packages/components/src/components/ui/**",
+    "lunarscribe-rewrite/**"
   ],
   "env": {
     "builtin": true

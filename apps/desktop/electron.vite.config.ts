@@ -13,11 +13,15 @@ export default defineConfig({
   preload: {
     build: {
       lib: { entry: resolve(__dirname, "src/electron/preload.ts") },
+      // Sandboxed preloads cannot load ES modules.
+      rollupOptions: { output: { format: "cjs" } },
     },
   },
   renderer: {
     root: resolve(__dirname, "src"),
     build: {
+      // electron-vite skips minification; smaller code means less for V8 to parse and keep.
+      minify: true,
       rollupOptions: { input: resolve(__dirname, "src/index.html") },
     },
     resolve: {

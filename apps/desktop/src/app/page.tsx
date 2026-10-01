@@ -1,3 +1,4 @@
+import { DrawingEditor } from "@lunarscribe/components/editor/drawing-editor";
 import { MarkdownEditor } from "@lunarscribe/components/editor/markdown-editor";
 import { Hint } from "@lunarscribe/components/hint/hint";
 import { Input } from "@lunarscribe/components/ui/input";
@@ -5,6 +6,7 @@ import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
 
 import { ModeToggle } from "@/components/mode-toggle";
+import { useTheme } from "@/components/theme-provider";
 import {
   toBufferTitle,
   useActiveBuffer,
@@ -15,7 +17,8 @@ import {
 export default function Page() {
   const buffer = useActiveBuffer();
   const renameBuffer = useBufferStore((state) => state.renameBuffer);
-  const setMarkdown = useBufferStore((state) => state.setMarkdown);
+  const setContent = useBufferStore((state) => state.setContent);
+  const { theme } = useTheme();
 
   if (!buffer) {
     return null;
@@ -48,11 +51,20 @@ export default function Page() {
           </div>
         </header>
       </TooltipProvider>
-      <MarkdownEditor
-        key={buffer.id}
-        markdown={buffer.markdown}
-        onChange={(markdown) => setMarkdown(buffer.id, markdown)}
-      />
+      {buffer.kind === "drawing" ? (
+        <DrawingEditor
+          key={buffer.id}
+          scene={buffer.content}
+          theme={theme}
+          onChange={(scene) => setContent(buffer.id, scene)}
+        />
+      ) : (
+        <MarkdownEditor
+          key={buffer.id}
+          markdown={buffer.content}
+          onChange={(markdown) => setContent(buffer.id, markdown)}
+        />
+      )}
     </div>
   );
 }

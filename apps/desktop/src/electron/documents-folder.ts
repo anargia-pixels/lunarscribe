@@ -1,18 +1,20 @@
 import { existsSync, mkdirSync, watch } from "node:fs";
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { basename, extname, join } from "node:path";
 
 import { Debouncer } from "@tanstack/pacer/debouncer";
 import { app, BrowserWindow, ipcMain } from "electron";
 
-/** Saves buffers as `<title>.md` in Documents/lunarscribe and tells windows when the folder changes. */
+const EXTENSIONS = new Set([".md", ".draw"]);
+
+/** Saves buffers as `<title><extension>` in Documents/lunarscribe and tells windows when the folder changes. */
 export function registerDocumentsFolder() {
   const folder = join(app.getPath("documents"), "lunarscribe");
   // basename keeps renderer-supplied names inside the folder.
   const pathOf = (name: string) => join(folder, basename(name));
 
   const listFiles = async () =>
-    (await readdir(folder)).filter((name) => name.endsWith(".md"));
+    (await readdir(folder)).filter((name) => EXTENSIONS.has(extname(name)));
 
   mkdirSync(folder, { recursive: true });
 
@@ -26,22 +28,23 @@ export function registerDocumentsFolder() {
       _event,
       previousName: string | null,
       title: string,
-      markdown: string,
+      extension: string,
+      content: string,
     ) => {
       // Slashes would make the written file differ from the name the buffer records.
       const stem = title.trim().replaceAll(/[/\\]/gu, "_") || "untitled";
-      let name = `${stem}.md`;
+      let name = `${stem}${extension}`;
 
-      // Never overwrite another file: take `<stem>_1.md`, `<stem>_2.md`, ... instead.
+      // Never overwrite another file: take `<stem>_1`, `<stem>_2`, ... instead.
       for (
         let suffix = 1;
         name !== previousName && existsSync(pathOf(name));
         suffix += 1
       ) {
-        name = `${stem}_${suffix}.md`;
+        name = `${stem}_${suffix}${extension}`;
       }
 
-      await writeFile(pathOf(name), markdown);
+      await writeFile(pathOf(name), content);
 
       if (previousName && previousName !== name) {
         await rm(pathOf(previousName), { force: true });

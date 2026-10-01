@@ -2,11 +2,18 @@ import { Debouncer } from "@tanstack/pacer/debouncer";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-/** One open document; `markdown` is the source of truth the editor loads from and saves to. */
+/** File extension of each buffer kind. */
+const EXTENSIONS = { markdown: ".md", drawing: ".draw" } as const;
+
+type BufferKind = keyof typeof EXTENSIONS;
+
+/** One open document; `content` is the source of truth its editor loads from and saves to. */
 type TextBuffer = {
   id: string;
   title: string;
-  markdown: string;
+  kind: BufferKind;
+  /** Markdown, or the Excalidraw scene JSON for a drawing; empty for a new drawing. */
+  content: string;
   /** Saved file in the documents folder, or null until the first save. */
   fileName: string | null;
 };
@@ -17,9 +24,9 @@ type BufferStore = {
   /** File shown when the app last closed, reopened on launch; null for an unsaved buffer. */
   lastOpenedFileName: string | null;
   renameBuffer: (id: string, title: string) => void;
-  setMarkdown: (id: string, markdown: string) => void;
+  setContent: (id: string, content: string) => void;
   openFile: (name: string) => Promise<void>;
-  createBuffer: (fileNames: string[]) => void;
+  createBuffer: (kind: BufferKind, fileNames: string[]) => void;
   deleteFile: (name: string) => Promise<void>;
 };
 
@@ -33,6 +40,16 @@ Type markdown shortcuts and they turn into rich text:
 - \`**bold**\`, \`*italic*\` and \`~~strike~~\` for inline marks
 `;
 
+/** A file's kind, from its extension. */
+export function kindOf(fileName: string): BufferKind {
+  return fileName.endsWith(EXTENSIONS.drawing) ? "drawing" : "markdown";
+}
+
+/** A file's name without its extension, which is its buffer title. */
+export function stemOf(fileName: string) {
+  return fileName.slice(0, -EXTENSIONS[kindOf(fileName)].length);
+}
+
 /** Buffer titles are snake_case: lowercase, with whitespace and slashes turned into `_`. */
 export function toBufferTitle(input: string) {
   return input.toLowerCase().replaceAll(/[\s/\\]/gu, "_");
@@ -43,7 +60,7 @@ function patchBuffer(
   id: string,
   patch:
     | Pick<TextBuffer, "title">
-    | Pick<TextBuffer, "markdown">
+    | Pick<TextBuffer, "content">
     | Pick<TextBuffer, "fileName">,
 ) {
   return buffers.map((buffer) =>
@@ -55,7 +72,8 @@ function createWelcomeBuffer(): TextBuffer {
   return {
     id: crypto.randomUUID(),
     title: "welcome",
-    markdown: WELCOME_MARKDOWN,
+    kind: "markdown",
+    content: WELCOME_MARKDOWN,
     fileName: null,
   };
 }
@@ -82,9 +100,9 @@ export const useBufferStore = create<BufferStore>()(
         scheduleSave(id);
       },
 
-      setMarkdown: (id, markdown) => {
+      setContent: (id, content) => {
         set((state) => ({
-          buffers: patchBuffer(state.buffers, id, { markdown }),
+          buffers: patchBuffer(state.buffers, id, { content }),
         }));
         scheduleSave(id);
       },
@@ -98,12 +116,13 @@ export const useBufferStore = create<BufferStore>()(
           return;
         }
 
-        const markdown = await window.lunarscribe.readFile(name);
+        const content = await window.lunarscribe.readFile(name);
 
         const buffer: TextBuffer = {
           id: crypto.randomUUID(),
-          title: name.replace(/\.md$/u, ""),
-          markdown,
+          title: stemOf(name),
+          kind: kindOf(name),
+          content,
           fileName: name,
         };
 
@@ -113,10 +132,13 @@ export const useBufferStore = create<BufferStore>()(
         }));
       },
 
-      createBuffer: (fileNames) => {
+      createBuffer: (kind, fileNames) => {
         // An empty, never-saved buffer is reused instead of stacking up more untitled ones.
         const blank = get().buffers.find(
-          (buffer) => buffer.fileName === null && !buffer.markdown.trim(),
+          (buffer) =>
+            buffer.kind === kind &&
+            buffer.fileName === null &&
+            !buffer.content.trim(),
         );
 
         if (blank) {
@@ -126,7 +148,7 @@ export const useBufferStore = create<BufferStore>()(
         }
 
         const taken = new Set([
-          ...fileNames.map((name) => name.replace(/\.md$/u, "")),
+          ...fileNames.map(stemOf),
           ...get().buffers.map((buffer) => buffer.title),
         ]);
 
@@ -139,7 +161,8 @@ export const useBufferStore = create<BufferStore>()(
         const buffer: TextBuffer = {
           id: crypto.randomUUID(),
           title,
-          markdown: "",
+          kind,
+          content: "",
           fileName: null,
         };
 
@@ -174,7 +197,7 @@ export const useBufferStore = create<BufferStore>()(
         const welcome =
           buffers.find(
             (buffer) =>
-              buffer.fileName === null && buffer.markdown === WELCOME_MARKDOWN,
+              buffer.fileName === null && buffer.content === WELCOME_MARKDOWN,
           ) ?? createWelcomeBuffer();
 
         set({
@@ -212,21 +235,22 @@ if (lastOpenedFileName) {
     .catch(() => useBufferStore.setState({ lastOpenedFileName: null }));
 }
 
-/** Writes the buffer's current title and markdown and records the file name it was saved as. */
+/** Writes the buffer's current title and content and records the file name it was saved as. */
 async function saveBuffer(id: string) {
   const buffer = useBufferStore
     .getState()
     .buffers.find((candidate) => candidate.id === id);
 
   // A new buffer gets a file only once it has content.
-  if (!buffer || (buffer.fileName === null && !buffer.markdown.trim())) {
+  if (!buffer || (buffer.fileName === null && !buffer.content.trim())) {
     return;
   }
 
   const fileName = await window.lunarscribe.saveFile(
     buffer.fileName,
     buffer.title,
-    buffer.markdown,
+    EXTENSIONS[buffer.kind],
+    buffer.content,
   );
 
   useBufferStore.setState((state) => ({

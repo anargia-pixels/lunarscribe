@@ -15,9 +15,14 @@ import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
 import { FilePlus, FileText, PenTool, Settings, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+import {
+  kindOf,
+  stemOf,
+  useActiveBuffer,
+  useBufferStore,
+} from "@/stores/buffer-store";
 
-/** App sidebar listing the markdown files in Documents/lunarscribe; clicking one opens it. */
+/** App sidebar listing the markdown files and drawings in Documents/lunarscribe; clicking one opens it. */
 export function AppSidebar() {
   const [files, setFiles] = useState<string[]>([]);
   const openFile = useBufferStore((state) => state.openFile);
@@ -42,14 +47,18 @@ export function AppSidebar() {
               variant="fluid"
               size="icon-sm"
               aria-label="New note"
-              onClick={() => createBuffer(files)}
+              onClick={() => createBuffer("markdown", files)}
             >
               <FilePlus />
             </Button>
           </Hint>
-          {/* TODO: open the Excalidraw drawing window. */}
-          <Hint label="Drawing" side="bottom">
-            <Button variant="fluid" size="icon-sm" aria-label="Drawing">
+          <Hint label="New drawing" side="bottom">
+            <Button
+              variant="fluid"
+              size="icon-sm"
+              aria-label="New drawing"
+              onClick={() => createBuffer("drawing", files)}
+            >
               <PenTool />
             </Button>
           </Hint>
@@ -70,8 +79,8 @@ export function AppSidebar() {
                   isActive={name === activeFileName}
                   onClick={() => void openFile(name)}
                 >
-                  <FileText />
-                  <span>{name.replace(/\.md$/u, "")}</span>
+                  {kindOf(name) === "drawing" ? <PenTool /> : <FileText />}
+                  <span>{stemOf(name)}</span>
                 </SidebarMenuButton>
                 <SidebarMenuAction
                   render={<Button variant="destructive" size="icon-xs" />}

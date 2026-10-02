@@ -1,3 +1,4 @@
+import { Kbd, KbdGroup } from "@lunarscribe/components/ui/kbd";
 import {
   Tooltip,
   TooltipContent,
@@ -9,16 +10,29 @@ import type { ComponentProps, ReactElement } from "react";
 export function Hint({
   label,
   side,
+  shortcut,
   children,
 }: {
   label: string;
   side?: ComponentProps<typeof TooltipContent>["side"];
+  shortcut?: readonly string[];
   children: ReactElement;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger render={children} />
-      <TooltipContent side={side}>{label}</TooltipContent>
+      <TooltipContent side={side}>
+        <div className="flex items-center gap-2">
+          <span>{label}</span>
+          {shortcut && (
+            <KbdGroup>
+              {shortcut.map((key) => (
+                <Kbd key={key}>{key}</Kbd>
+              ))}
+            </KbdGroup>
+          )}
+        </div>
+      </TooltipContent>
     </Tooltip>
   );
 }

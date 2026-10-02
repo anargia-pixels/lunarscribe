@@ -1,0 +1,10 @@
+::highlight(editor-find) {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+::highlight(editor-find-active) {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  text-decoration: underline;
+}

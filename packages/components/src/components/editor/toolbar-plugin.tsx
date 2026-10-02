@@ -23,6 +23,7 @@ import {
   COMMAND_PRIORITY_LOW,
   type ElementNode,
   FORMAT_TEXT_COMMAND,
+  IS_APPLE,
   type LexicalEditor,
   REDO_COMMAND,
   type TextFormatType,
@@ -53,9 +54,10 @@ const TEXT_FORMATS: {
   format: TextFormatType;
   label: string;
   icon: LucideIcon;
+  shortcut?: string;
 }[] = [
-  { format: "bold", label: "Bold", icon: Bold },
-  { format: "italic", label: "Italic", icon: Italic },
+  { format: "bold", label: "Bold", icon: Bold, shortcut: "B" },
+  { format: "italic", label: "Italic", icon: Italic, shortcut: "I" },
   { format: "strikethrough", label: "Strikethrough", icon: Strikethrough },
   { format: "code", label: "Inline code", icon: Code },
 ];
@@ -148,6 +150,7 @@ function ToolbarSeparator() {
 
 /** Formatting toolbar: history, inline marks and block types. */
 export function ToolbarPlugin() {
+  const modifier = IS_APPLE ? "⌘" : "Ctrl";
   const [editor] = useLexicalComposerContext();
   const [activeFormats, setActiveFormats] = useState<TextFormatType[]>([]);
   const [canUndo, setCanUndo] = useState(false);
@@ -194,7 +197,7 @@ export function ToolbarPlugin() {
   return (
     <div className="relative flex shrink-0 flex-wrap items-center justify-center gap-1 border-b px-3 py-1.5">
       <FluidHighlight rows="button" className="bg-muted rounded-lg" />
-      <Hint label="Undo">
+      <Hint label="Undo" shortcut={[modifier, "Z"]}>
         <Button
           variant="fluid"
           size="icon-sm"
@@ -205,7 +208,10 @@ export function ToolbarPlugin() {
           <Undo2 />
         </Button>
       </Hint>
-      <Hint label="Redo">
+      <Hint
+        label="Redo"
+        shortcut={IS_APPLE ? ["⇧", modifier, "Z"] : [modifier, "Y"]}
+      >
         <Button
           variant="fluid"
           size="icon-sm"
@@ -217,8 +223,12 @@ export function ToolbarPlugin() {
         </Button>
       </Hint>
       <ToolbarSeparator />
-      {TEXT_FORMATS.map(({ format, label, icon: Icon }) => (
-        <Hint key={format} label={label}>
+      {TEXT_FORMATS.map(({ format, label, icon: Icon, shortcut }) => (
+        <Hint
+          key={format}
+          label={label}
+          shortcut={shortcut ? [modifier, shortcut] : undefined}
+        >
           <Toggle
             variant="fluid"
             size="icon-sm"

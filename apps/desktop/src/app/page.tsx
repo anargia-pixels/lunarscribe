@@ -5,7 +5,6 @@ import { Input } from "@lunarscribe/components/ui/input";
 import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
 
-import { DarkModeToggle } from "@/components/darkmode-toggle";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import {
   toBufferTitle,
@@ -29,7 +28,15 @@ export default function Page() {
       {/* Hover waits 800ms; moving to a neighbour within 300ms opens it instantly. */}
       <TooltipProvider delay={800} timeout={300}>
         <header className="relative flex h-12 shrink-0 items-center justify-center border-b px-12">
-          <Hint label="Toggle sidebar" side="bottom">
+          <Hint
+            label="Toggle sidebar"
+            side="bottom"
+            shortcut={[
+              window.lunarscribe.platform === "darwin" ? "⌘" : "Ctrl",
+              "⇧",
+              "B",
+            ]}
+          >
             <SidebarTrigger className="absolute left-3" />
           </Hint>
           <Input
@@ -46,9 +53,6 @@ export default function Page() {
             }}
             className="h-8 max-w-sm text-center"
           />
-          <div className="absolute right-3">
-            <DarkModeToggle />
-          </div>
         </header>
       </TooltipProvider>
       {buffer.kind === "drawing" ? (

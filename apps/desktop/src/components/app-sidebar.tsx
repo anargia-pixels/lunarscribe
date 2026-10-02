@@ -16,6 +16,7 @@ import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
 import { FilePlus, FileText, PenTool, Settings, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { DarkModeToggle } from "@/components/darkmode-toggle";
 import { SettingsDialog } from "@/components/settings-dialog/settings-dialog";
 import {
   kindOf,
@@ -83,6 +84,7 @@ export function AppSidebar() {
                 </DialogTrigger>
               </Hint>
             </SettingsDialog>
+            <DarkModeToggle />
           </div>
         </SidebarHeader>
       </TooltipProvider>

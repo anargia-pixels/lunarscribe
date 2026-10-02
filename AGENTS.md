@@ -29,6 +29,7 @@ conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
 - Change only what the request names. When a UI term is ambiguous (which separator, which
   buttons), ask before editing.
 - Commit on the current branch. Ask before commiting or creating a new branch.
+- This application is being developed for Linux and macos. Windows is not supported yet
 
 ## shadcn
 

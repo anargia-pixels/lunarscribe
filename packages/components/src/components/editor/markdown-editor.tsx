@@ -28,6 +28,7 @@ import type { EditorState } from "lexical";
 
 import { editorTheme } from "./editor-theme";
 import { CodeHighlightPlugin } from "./plugins/code-highlight-plugin";
+import { FindPlugin } from "./plugins/find-plugin";
 import { MARKDOWN_TRANSFORMERS } from "./plugins/markdown-transformers";
 import { TableCellMenuPlugin } from "./plugins/table-cell-menu-plugin";
 import { ToolbarPlugin } from "./toolbar-plugin";
@@ -78,27 +79,30 @@ export function MarkdownEditor({
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <ToolbarPlugin />
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="relative mx-auto flex min-h-full w-full max-w-4xl flex-col px-8 py-10">
-          <TableCellMenuPlugin>
-            <RichTextPlugin
-              contentEditable={
-                <ContentEditable
-                  aria-label="Document"
-                  aria-placeholder="Start writing…"
-                  placeholder={
-                    <div className="font-buffer text-muted-foreground pointer-events-none absolute top-0 left-0 select-none">
-                      Start writing…
-                    </div>
-                  }
-                  className="font-buffer flex-1 outline-none select-text"
-                />
-              }
-              ErrorBoundary={LexicalErrorBoundary}
-            />
-          </TableCellMenuPlugin>
-        </div>
-      </ScrollArea>
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <FindPlugin />
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="relative mx-auto flex min-h-full w-full max-w-4xl flex-col px-8 py-10">
+            <TableCellMenuPlugin>
+              <RichTextPlugin
+                contentEditable={
+                  <ContentEditable
+                    aria-label="Document"
+                    aria-placeholder="Start writing…"
+                    placeholder={
+                      <div className="font-buffer text-muted-foreground pointer-events-none absolute top-0 left-0 select-none">
+                        Start writing…
+                      </div>
+                    }
+                    className="font-buffer flex-1 outline-none select-text"
+                  />
+                }
+                ErrorBoundary={LexicalErrorBoundary}
+              />
+            </TableCellMenuPlugin>
+          </div>
+        </ScrollArea>
+      </div>
       <HistoryPlugin />
       <HorizontalRulePlugin />
       <ListPlugin />

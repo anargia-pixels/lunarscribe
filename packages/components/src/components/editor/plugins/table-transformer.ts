@@ -1,8 +1,6 @@
 import {
   $generateNodesFromMarkdownString,
   type MultilineElementTransformer,
-  TEXT_FORMAT_TRANSFORMERS,
-  TEXT_MATCH_TRANSFORMERS,
 } from "@lexical/markdown";
 import {
   $createTableCellNode,
@@ -24,10 +22,7 @@ import {
   type ElementNode,
 } from "lexical";
 
-const INLINE_TRANSFORMERS = [
-  ...TEXT_FORMAT_TRANSFORMERS,
-  ...TEXT_MATCH_TRANSFORMERS,
-];
+import { INLINE_TRANSFORMERS } from "./inline-transformers";
 
 const TABLE_ROW_REG_EXP = /^ {0,3}\S.*\|/;
 

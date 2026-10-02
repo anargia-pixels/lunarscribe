@@ -1,6 +1,7 @@
 import { Hint } from "@lunarscribe/components/hint/hint";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Moon, Sun } from "lucide-react";
+import { useEffect } from "react";
 
 import { useTheme } from "@/components/theme-provider";
 
@@ -8,10 +9,33 @@ import { useTheme } from "@/components/theme-provider";
 export function DarkModeToggle() {
   const { toggleTheme } = useTheme();
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key === "d" &&
+        (event.ctrlKey || event.metaKey) &&
+        !event.altKey &&
+        !event.repeat &&
+        !event.defaultPrevented
+      ) {
+        event.preventDefault();
+        toggleTheme({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleTheme]);
+
   return (
-    <Hint label="Toggle theme" side="bottom">
+    <Hint
+      label="Toggle theme"
+      side="bottom"
+      shortcut={[window.lunarscribe.platform === "darwin" ? "⌘" : "Ctrl", "D"]}
+    >
       <Button
-        variant="ghost"
+        variant="fluid"
         size="icon-sm"
         aria-label="Toggle theme"
         onClick={(event) => toggleTheme({ x: event.clientX, y: event.clientY })}

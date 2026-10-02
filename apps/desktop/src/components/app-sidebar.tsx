@@ -42,43 +42,48 @@ export function AppSidebar() {
     <Sidebar>
       {/* Hover waits 800ms; moving to a neighbour within 300ms opens it instantly. */}
       <TooltipProvider delay={800} timeout={300}>
-        <SidebarHeader className="relative flex-row justify-center">
-          <FluidHighlight rows="button" className="bg-muted rounded-lg" />
-          <Hint label="New note" side="bottom">
-            <Button
-              variant="fluid"
-              size="icon-sm"
-              aria-label="New note"
-              onClick={() => createBuffer("markdown", files)}
-            >
-              <FilePlus />
-            </Button>
-          </Hint>
-          <Hint label="New drawing" side="bottom">
-            <Button
-              variant="fluid"
-              size="icon-sm"
-              aria-label="New drawing"
-              onClick={() => createBuffer("drawing", files)}
-            >
-              <PenTool />
-            </Button>
-          </Hint>
-          <SettingsDialog>
-            <Hint label="Settings" side="bottom">
-              <DialogTrigger
-                render={
-                  <Button
-                    variant="fluid"
-                    size="icon-sm"
-                    aria-label="Settings"
-                  />
-                }
+        <SidebarHeader>
+          <div className="flex h-8 shrink-0 items-center justify-center px-3">
+            <h1 className="font-logo text-primary text-3xl">Lunarscribe</h1>
+          </div>
+          <div className="relative flex items-center justify-center gap-1 px-3 py-1.5">
+            <FluidHighlight rows="button" className="bg-muted rounded-lg" />
+            <Hint label="New note" side="bottom">
+              <Button
+                variant="fluid"
+                size="icon-sm"
+                aria-label="New note"
+                onClick={() => createBuffer("markdown", files)}
               >
-                <Settings />
-              </DialogTrigger>
+                <FilePlus />
+              </Button>
             </Hint>
-          </SettingsDialog>
+            <Hint label="New drawing" side="bottom">
+              <Button
+                variant="fluid"
+                size="icon-sm"
+                aria-label="New drawing"
+                onClick={() => createBuffer("drawing", files)}
+              >
+                <PenTool />
+              </Button>
+            </Hint>
+            <SettingsDialog>
+              <Hint label="Settings" side="bottom">
+                <DialogTrigger
+                  render={
+                    <Button
+                      variant="fluid"
+                      size="icon-sm"
+                      aria-label="Settings"
+                    />
+                  }
+                >
+                  <Settings />
+                </DialogTrigger>
+              </Hint>
+            </SettingsDialog>
+          </div>
         </SidebarHeader>
       </TooltipProvider>
       <SidebarContent>

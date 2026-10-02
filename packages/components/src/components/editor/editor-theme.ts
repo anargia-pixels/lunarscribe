@@ -5,9 +5,9 @@ export const editorTheme: EditorThemeClasses = {
   paragraph: "mb-3 leading-7",
   quote: "mb-3 border-l-2 border-border pl-4 text-muted-foreground italic",
   heading: {
-    h1: "mb-4 text-3xl font-bold tracking-tight",
-    h2: "mb-3 text-2xl font-semibold tracking-tight",
-    h3: "mb-3 text-xl font-semibold",
+    h1: "mb-4 text-3xl font-bold tracking-tight text-heading-1",
+    h2: "mb-3 text-2xl font-semibold tracking-tight text-heading-2",
+    h3: "mb-3 text-xl font-semibold text-heading-3",
     h4: "mb-2 text-lg font-semibold",
     h5: "mb-2 font-semibold",
     h6: "mb-2 text-sm font-semibold",

@@ -28,7 +28,7 @@ conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
   Roboto Mono, bundled from `packages/utils/src/fonts` so they render offline.
 - Change only what the request names. When a UI term is ambiguous (which separator, which
   buttons), ask before editing.
-- Commit on the current branch. Ask before creating a new branch.
+- Commit on the current branch. Ask before commiting or creating a new branch.
 
 ## shadcn
 

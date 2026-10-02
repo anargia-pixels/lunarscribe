@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 
 import { useAppearanceStore } from "@/stores/appearance-store";
 
-const DEFAULT_FONTS = ["Poppins", "Roboto Mono"] as const;
+const DEFAULT_FONTS = ["Poppins", "Roboto Mono", "Pixelify Sans"] as const;
 
 function FontSelect({
   label,
@@ -89,11 +89,13 @@ export function FontSettings() {
     let active = true;
 
     const loadFonts = async () => {
-      try {
-        if (!window.queryLocalFonts) {
-          throw new Error("Local Font Access is unavailable");
-        }
+      if (!window.queryLocalFonts) {
+        setStatus("error");
 
+        return;
+      }
+
+      try {
         const fonts = await window.queryLocalFonts();
         const families = new Set(fonts.map(({ family }) => family));
 
@@ -101,10 +103,12 @@ export function FontSettings() {
           families.delete(family);
         }
 
-        if (active) {
-          setSystemFonts([...families].sort((a, b) => a.localeCompare(b)));
-          setStatus("ready");
+        if (!active) {
+          return;
         }
+
+        setSystemFonts([...families].sort((a, b) => a.localeCompare(b)));
+        setStatus("ready");
       } catch {
         if (active) {
           setStatus("error");

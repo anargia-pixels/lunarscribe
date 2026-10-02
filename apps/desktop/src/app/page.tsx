@@ -5,7 +5,7 @@ import { Input } from "@lunarscribe/components/ui/input";
 import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
 
-import { ModeToggle } from "@/components/mode-toggle";
+import { DarkModeToggle } from "@/components/darkmode-toggle";
 import { useTheme } from "@/components/theme-provider";
 import {
   toBufferTitle,
@@ -47,7 +47,7 @@ export default function Page() {
             className="h-8 max-w-sm text-center"
           />
           <div className="absolute right-3">
-            <ModeToggle />
+            <DarkModeToggle />
           </div>
         </header>
       </TooltipProvider>

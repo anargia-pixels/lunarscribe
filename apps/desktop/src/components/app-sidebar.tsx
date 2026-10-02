@@ -1,6 +1,7 @@
 import { FluidHighlight } from "@lunarscribe/components/fluid-motion/fluid-motion";
 import { Hint } from "@lunarscribe/components/hint/hint";
 import { Button } from "@lunarscribe/components/ui/button";
+import { DialogTrigger } from "@lunarscribe/components/ui/dialog";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +16,7 @@ import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
 import { FilePlus, FileText, PenTool, Settings, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { SettingsDialog } from "@/components/settings-dialog/settings-dialog";
 import {
   kindOf,
   stemOf,
@@ -62,12 +64,21 @@ export function AppSidebar() {
               <PenTool />
             </Button>
           </Hint>
-          {/* TODO: open the settings window. */}
-          <Hint label="Settings" side="bottom">
-            <Button variant="fluid" size="icon-sm" aria-label="Settings">
-              <Settings />
-            </Button>
-          </Hint>
+          <SettingsDialog>
+            <Hint label="Settings" side="bottom">
+              <DialogTrigger
+                render={
+                  <Button
+                    variant="fluid"
+                    size="icon-sm"
+                    aria-label="Settings"
+                  />
+                }
+              >
+                <Settings />
+              </DialogTrigger>
+            </Hint>
+          </SettingsDialog>
         </SidebarHeader>
       </TooltipProvider>
       <SidebarContent>

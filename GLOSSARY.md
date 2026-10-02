@@ -92,13 +92,25 @@ _Avoid_: divider, border, rule
 The edge line where the sidebar meets the sidebar inset.
 _Avoid_: separator, divider
 
+**Settings window**:
+The dialog that holds Lunarscribe's settings, filling 80% of the app window.
+It pairs the settings sidebar with the settings of the open section.
+Also: settings dialog.
+_Avoid_: preferences, settings modal, options
+
+**Settings sidebar**:
+The panel on the left of the settings window listing its sections. It never
+collapses.
+_Avoid_: settings menu, settings nav, preferences sidebar
+
 **Theme**:
 The color scheme: light (a warm paper palette) or dark (Catppuccin Mocha).
 _Avoid_: mode, skin, color mode
 
-**Theme toggle**:
-The header button that flips between light and dark themes in one click.
-_Avoid_: mode toggle, theme dropdown, theme picker
+**Dark mode toggle**:
+The header button that flips between light and dark themes in one click. It is
+the only way the theme changes in Lunarscribe.
+_Avoid_: mode toggle, theme toggle, dark switch, theme dropdown, theme picker
 
 ### Codebase
 

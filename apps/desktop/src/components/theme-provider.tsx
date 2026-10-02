@@ -12,9 +12,15 @@ const THEMES = ["light", "dark"] as const;
 
 type Theme = (typeof THEMES)[number];
 
+/** Where the theme toggle was pressed; the incoming theme is revealed from this point. */
+type ThemeRevealOrigin = {
+  x: number;
+  y: number;
+};
+
 type ThemeProviderState = {
   theme: Theme;
-  setTheme: (theme: Theme) => void;
+  toggleTheme: (origin: ThemeRevealOrigin) => void;
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState | null>(null);
@@ -52,8 +58,35 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(next);
   };
 
+  const toggleTheme = ({ x, y }: ThemeRevealOrigin) => {
+    const next = theme === "light" ? "dark" : "light";
+
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (!document.startViewTransition || reducedMotion) {
+      setTheme(next);
+
+      return;
+    }
+
+    const root = document.documentElement;
+
+    root.style.setProperty(
+      "--theme-reveal-x",
+      `${(x / window.innerWidth) * 100}%`,
+    );
+    root.style.setProperty(
+      "--theme-reveal-y",
+      `${(y / window.innerHeight) * 100}%`,
+    );
+
+    document.startViewTransition(() => setTheme(next));
+  };
+
   return (
-    <ThemeProviderContext.Provider value={{ theme, setTheme }}>
+    <ThemeProviderContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeProviderContext.Provider>
   );

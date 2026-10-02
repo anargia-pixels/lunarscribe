@@ -31,6 +31,13 @@
   --border: #dbd0ba;
   --input: #dbd0ba;
   --ring: #a67c52;
+  --syntax-comment: #7d6b56;
+  --syntax-keyword: #82559d;
+  --syntax-string: #477044;
+  --syntax-number: #a45d30;
+  --syntax-function: #356d91;
+  --syntax-type: #8c6630;
+  --syntax-operator: #5c4d3f;
   --chart-1: #a67c52;
   --chart-2: #8d6e4c;
   --chart-3: #735a3a;
@@ -98,6 +105,13 @@
   --border: #313244;
   --input: #45475a;
   --ring: #cba6f7;
+  --syntax-comment: #a6adc8;
+  --syntax-keyword: #cba6f7;
+  --syntax-string: #a6e3a1;
+  --syntax-number: #fab387;
+  --syntax-function: #89b4fa;
+  --syntax-type: #f9e2af;
+  --syntax-operator: #89dceb;
   --chart-1: #cba6f7; /* mauve */
   --chart-2: #89b4fa; /* blue */
   --chart-3: #a6e3a1; /* green */
@@ -152,6 +166,13 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-syntax-comment: var(--syntax-comment);
+  --color-syntax-keyword: var(--syntax-keyword);
+  --color-syntax-string: var(--syntax-string);
+  --color-syntax-number: var(--syntax-number);
+  --color-syntax-function: var(--syntax-function);
+  --color-syntax-type: var(--syntax-type);
+  --color-syntax-operator: var(--syntax-operator);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -194,6 +215,60 @@
   --ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
   --duration-fluid: 120ms;
   --duration-fluid-exit: 80ms;
+}
+
+/* Lexical supplies checkbox roles and keyboard handling; these glyphs follow
+   its left-edge hit area without placing a second control inside the list item. */
+@utility editor-checklist {
+  &:is(ul) {
+    margin-inline: 0.5rem 0;
+  }
+}
+
+@utility editor-checklist-item {
+  position: relative;
+  padding-inline-start: 1.5rem;
+  list-style: none;
+
+  &[role="checkbox"] {
+    outline: none;
+  }
+
+  &[role="checkbox"]::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0.3em;
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+
+  &[role="checkbox"]:focus-visible::before {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+@utility editor-checklist-checked {
+  &[role="checkbox"]::before {
+    background-color: var(--primary);
+  }
+
+  &[role="checkbox"]::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0.35rem;
+    top: calc(0.3em + 0.15rem);
+    width: 0.3rem;
+    height: 0.55rem;
+    border: solid var(--primary-foreground);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
 }
 
 @layer base {

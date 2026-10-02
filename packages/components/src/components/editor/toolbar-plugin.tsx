@@ -1,11 +1,13 @@
 import { $createCodeNode } from "@lexical/code";
 import {
+  INSERT_CHECK_LIST_COMMAND,
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
 } from "@lexical/list";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
 import { $setBlocksType } from "@lexical/selection";
+import { INSERT_TABLE_COMMAND } from "@lexical/table";
 import { mergeRegister } from "@lexical/utils";
 import { FluidHighlight } from "@lunarscribe/components/fluid-motion/fluid-motion";
 import { Hint } from "@lunarscribe/components/hint/hint";
@@ -34,6 +36,7 @@ import {
   Heading3,
   Italic,
   List,
+  ListChecks,
   ListOrdered,
   type LucideIcon,
   Pilcrow,
@@ -41,6 +44,7 @@ import {
   Redo2,
   SquareCode,
   Strikethrough,
+  Table,
   Undo2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -103,6 +107,22 @@ const BLOCKS: {
     icon: ListOrdered,
     apply: (editor) =>
       editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined),
+  },
+  {
+    label: "Checkbox list",
+    icon: ListChecks,
+    apply: (editor) =>
+      editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined),
+  },
+  {
+    label: "Insert table",
+    icon: Table,
+    apply: (editor) =>
+      editor.dispatchCommand(INSERT_TABLE_COMMAND, {
+        rows: "3",
+        columns: "3",
+        includeHeaders: { rows: true, columns: false },
+      }),
   },
 ];
 

@@ -9,6 +9,7 @@ import {
 import { RotateCcw } from "lucide-react";
 import type { CSSProperties } from "react";
 
+import { FontSettings } from "@/components/settings-dialog/font-settings";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import {
   COLOR_THEMES,
@@ -102,7 +103,7 @@ function ColorThemeSwatches({ palette }: { palette: ColorPalette }) {
   });
 }
 
-/** Appearances pane: a color theme per theme, and a reset back to the colors in globals.css. */
+/** Appearances pane: color themes and separate UI, buffer, and code fonts. */
 export function AppearancePane() {
   const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
   const darkColorTheme = useAppearanceStore((state) => state.darkColorTheme);
@@ -149,6 +150,7 @@ export function AppearancePane() {
         <RotateCcw />
         Reset to defaults
       </Button>
+      <FontSettings />
     </div>
   );
 }

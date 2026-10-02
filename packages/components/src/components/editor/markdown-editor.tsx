@@ -87,11 +87,11 @@ export function MarkdownEditor({
                   aria-label="Document"
                   aria-placeholder="Start writing…"
                   placeholder={
-                    <div className="text-muted-foreground pointer-events-none absolute top-0 left-0 select-none">
+                    <div className="font-buffer text-muted-foreground pointer-events-none absolute top-0 left-0 select-none">
                       Start writing…
                     </div>
                   }
-                  className="flex-1 outline-none select-text"
+                  className="font-buffer flex-1 outline-none select-text"
                 />
               }
               ErrorBoundary={LexicalErrorBoundary}

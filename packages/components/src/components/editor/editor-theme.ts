@@ -24,7 +24,7 @@ export const editorTheme: EditorThemeClasses = {
   link: "text-primary underline underline-offset-4",
   hr: "my-4 border-0 border-t border-border",
   hrSelected: "outline outline-ring",
-  code: "mb-3 block overflow-x-auto rounded-md bg-muted p-3 font-mono text-sm",
+  code: "mb-3 block overflow-x-auto rounded-md bg-muted p-3 font-code text-sm",
   codeHighlight: {
     atrule: "text-syntax-keyword",
     attr: "text-syntax-function",
@@ -70,6 +70,6 @@ export const editorTheme: EditorThemeClasses = {
     italic: "italic",
     strikethrough: "line-through",
     underline: "underline",
-    code: "rounded bg-muted px-1 py-0.5 font-mono text-sm",
+    code: "rounded bg-muted px-1 py-0.5 font-code text-sm",
   },
 };

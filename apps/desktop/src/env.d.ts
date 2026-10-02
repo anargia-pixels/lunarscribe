@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 interface Window {
+  /** Chromium's Local Font Access API; only the family names are needed. */
+  queryLocalFonts?: () => Promise<{ family: string }[]>;
   /** Base URLs Excalidraw loads its fonts from; set to the bundled copy so drawings work offline. */
   EXCALIDRAW_ASSET_PATH?: string | string[];
   lunarscribe: {

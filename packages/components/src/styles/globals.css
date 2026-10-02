@@ -51,9 +51,9 @@
   --sidebar-accent-foreground: #4a3f35;
   --sidebar-border: #dbd0ba;
   --sidebar-ring: #a67c52;
-  --font-sans: Poppins, ui-sans-serif, sans-serif, system-ui;
-  --font-serif: Poppins, ui-sans-serif, sans-serif, system-ui;
-  --font-mono: Roboto Mono, ui-monospace, monospace;
+  --font-ui: Poppins, ui-sans-serif, sans-serif, system-ui;
+  --font-buffer: Poppins, ui-sans-serif, sans-serif, system-ui;
+  --font-code: "Roboto Mono", ui-monospace, monospace;
   --radius: 0.25rem;
   --shadow-x: 2px;
   --shadow-y: 3px;
@@ -187,9 +187,14 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: var(--font-sans);
-  --font-serif: var(--font-serif);
-  --font-mono: var(--font-mono);
+  --font-sans: initial;
+  --font-serif: initial;
+  --font-mono: initial;
+  --font-ui: var(--font-ui);
+  --font-buffer: var(--font-buffer);
+  --font-code: var(--font-code);
+  --default-font-family: var(--font-ui);
+  --default-mono-font-family: var(--font-code);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -306,7 +311,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans tracking-normal antialiased;
+    @apply bg-background text-foreground font-ui tracking-normal antialiased;
   }
 }
 

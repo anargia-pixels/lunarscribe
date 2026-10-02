@@ -38,6 +38,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
   const darkColorTheme = useAppearanceStore((state) => state.darkColorTheme);
   const setTheme = useAppearanceStore((state) => state.setTheme);
+  const uiFont = useAppearanceStore((state) => state.uiFont);
+  const bufferFont = useAppearanceStore((state) => state.bufferFont);
+  const codeFont = useAppearanceStore((state) => state.codeFont);
 
   const colorTheme = findColorTheme(
     theme === "dark" ? darkColorTheme : lightColorTheme,
@@ -50,6 +53,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.classList.add(theme);
     applyColorTheme(root, colorTheme?.[theme]);
   }, [theme, colorTheme]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    // Escape family names so spaces, quotes, and punctuation stay part of the name.
+    const uiFamily = `"${CSS.escape(uiFont)}", Poppins, ui-sans-serif, sans-serif, system-ui`;
+    const bufferFamily = `"${CSS.escape(bufferFont)}", Poppins, ui-sans-serif, sans-serif, system-ui`;
+    const codeFamily = `"${CSS.escape(codeFont)}", "Roboto Mono", ui-monospace, monospace`;
+
+    root.style.setProperty("--font-ui", uiFamily);
+    root.style.setProperty("--font-buffer", bufferFamily);
+    root.style.setProperty("--font-code", codeFamily);
+  }, [uiFont, bufferFont, codeFont]);
 
   const toggleTheme = ({ x, y }: ThemeRevealOrigin) => {
     const next = theme === "light" ? "dark" : "light";

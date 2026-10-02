@@ -6,6 +6,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
@@ -25,13 +26,15 @@ import {
   useBufferStore,
 } from "@/stores/buffer-store";
 
-/** App sidebar listing the markdown files and drawings in Documents/lunarscribe; clicking one opens it. */
+/** Sidebar groups for saved buffers and tracked external files. */
 export function AppSidebar() {
   const [files, setFiles] = useState<string[]>([]);
   const openFile = useBufferStore((state) => state.openFile);
   const createBuffer = useBufferStore((state) => state.createBuffer);
   const deleteFile = useBufferStore((state) => state.deleteFile);
-  const activeFileName = useActiveBuffer()?.fileName;
+  const activeBuffer = useActiveBuffer();
+  const externalFiles = useBufferStore((state) => state.externalFiles);
+  const openExternalFiles = useBufferStore((state) => state.openExternalFiles);
 
   useEffect(() => {
     void window.lunarscribe.listFiles().then(setFiles);
@@ -90,11 +93,12 @@ export function AppSidebar() {
       </TooltipProvider>
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupLabel>~/Documents/lunarscribe</SidebarGroupLabel>
           <SidebarMenu>
             {files.map((name) => (
               <SidebarMenuItem key={name} className="overflow-clip">
                 <SidebarMenuButton
-                  isActive={name === activeFileName}
+                  isActive={name === activeBuffer?.fileName}
                   onClick={() => void openFile(name)}
                 >
                   {kindOf(name) === "drawing" ? <PenTool /> : <FileText />}
@@ -108,6 +112,23 @@ export function AppSidebar() {
                 >
                   <Trash2 />
                 </SidebarMenuAction>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>External files</SidebarGroupLabel>
+          <SidebarMenu>
+            {externalFiles.map((file) => (
+              <SidebarMenuItem key={file.path} className="overflow-clip">
+                <SidebarMenuButton
+                  isActive={file.path === activeBuffer?.externalPath}
+                  title={file.path}
+                  onClick={() => void openExternalFiles([file.path])}
+                >
+                  <FileText />
+                  <span>{stemOf(file.name)}</span>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>

@@ -1,11 +1,11 @@
 import { existsSync, mkdirSync, watch } from "node:fs";
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { basename, extname, join } from "node:path";
+import { basename, join } from "node:path";
 
 import { Debouncer } from "@tanstack/pacer/debouncer";
 import { app, BrowserWindow, ipcMain } from "electron";
 
-const EXTENSIONS = new Set([".md", ".draw"]);
+import { getFileExtension } from "../lib/editor-files";
 
 /** Saves buffers as `<title><extension>` in Documents/lunarscribe and tells windows when the folder changes. */
 export function registerDocumentsFolder() {
@@ -14,7 +14,7 @@ export function registerDocumentsFolder() {
   const pathOf = (name: string) => join(folder, basename(name));
 
   const listFiles = async () =>
-    (await readdir(folder)).filter((name) => EXTENSIONS.has(extname(name)));
+    (await readdir(folder)).filter((name) => getFileExtension(name) !== null);
 
   mkdirSync(folder, { recursive: true });
 

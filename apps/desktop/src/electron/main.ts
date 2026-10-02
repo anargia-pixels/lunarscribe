@@ -3,6 +3,53 @@ import { join } from "node:path";
 import { app, BrowserWindow, shell } from "electron";
 
 import { registerDocumentsFolder } from "./documents-folder";
+import { queueExternalFiles, registerExternalFiles } from "./external-files";
+
+const hasInstanceLock = app.requestSingleInstanceLock();
+
+if (!hasInstanceLock) {
+  app.quit();
+}
+
+// macOS can deliver these requests before app.whenReady resolves.
+app.on("open-file", (event, path) => {
+  event.preventDefault();
+  queueExternalFiles([path], process.cwd());
+  showEditor();
+});
+
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  queueExternalFiles([url], process.cwd());
+  showEditor();
+});
+
+app.on("second-instance", (_event, arguments_, workingDirectory) => {
+  queueExternalFiles(arguments_.slice(1), workingDirectory);
+  showEditor();
+});
+
+/** Reuses the editor window for file associations and deep links. */
+function showEditor() {
+  if (!app.isReady()) {
+    return;
+  }
+
+  const window = BrowserWindow.getAllWindows()[0];
+
+  if (!window) {
+    createWindow();
+
+    return;
+  }
+
+  if (window.isMinimized()) {
+    window.restore();
+  }
+
+  window.show();
+  window.focus();
+}
 
 // Memory trims. A text editor needs no GPU, so compositing runs in software.
 app.disableHardwareAcceleration();
@@ -51,7 +98,18 @@ function createWindow() {
 }
 
 void app.whenReady().then(() => {
+  if (!hasInstanceLock) {
+    return;
+  }
+
   registerDocumentsFolder();
+  registerExternalFiles();
+  queueExternalFiles(process.argv.slice(app.isPackaged ? 1 : 2), process.cwd());
+
+  if (app.isPackaged) {
+    app.setAsDefaultProtocolClient("lunarscribe");
+  }
+
   createWindow();
 
   app.on("activate", () => {

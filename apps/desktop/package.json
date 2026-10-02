@@ -1,13 +1,16 @@
 {
   "name": "desktop",
   "version": "0.1.0",
+  "description": "Lunarscribe Markdown writing app",
   "private": true,
   "type": "module",
   "main": "./out/main/main.js",
   "scripts": {
-    "dev": "electron-vite dev --watch",
+    "dev": "bun run setup:electron && electron-vite dev --watch",
+    "setup:electron": "install-electron",
     "build": "electron-vite build",
-    "preview": "electron-vite preview",
+    "package": "bun run build && electron-builder --publish never",
+    "preview": "bun run setup:electron && electron-vite preview",
     "check-types": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {
@@ -25,10 +28,69 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^5.1.0",
     "electron": "^44.4.0",
+    "electron-builder": "catalog:",
     "electron-vite": "^5.0.0",
     "react-grab": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "^7.3.0"
+  },
+  "build": {
+    "appId": "com.lunarscribe.app",
+    "productName": "Lunarscribe",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "npmRebuild": false,
+    "fileAssociations": [
+      {
+        "ext": [
+          "md",
+          "markdown"
+        ],
+        "name": "Markdown",
+        "role": "Editor",
+        "mimeType": "text/markdown"
+      },
+      {
+        "ext": [
+          "txt"
+        ],
+        "name": "Plain text",
+        "role": "Editor",
+        "mimeType": "text/plain"
+      }
+    ],
+    "protocols": [
+      {
+        "name": "Lunarscribe",
+        "schemes": [
+          "lunarscribe"
+        ]
+      }
+    ],
+    "linux": {
+      "target": [
+        "deb",
+        "AppImage"
+      ],
+      "category": "Office",
+      "mimeTypes": [
+        "text/markdown",
+        "text/x-markdown",
+        "text/plain"
+      ],
+      "maintainer": "Lunarscribe contributors"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    }
   }
 }

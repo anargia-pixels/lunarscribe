@@ -1,10 +1,13 @@
 import { DrawingEditor } from "@lunarscribe/components/editor/drawing-editor";
 import { MarkdownEditor } from "@lunarscribe/components/editor/markdown-editor";
 import { Hint } from "@lunarscribe/components/hint/hint";
+import { Alert, AlertDescription } from "@lunarscribe/components/ui/alert";
 import { Input } from "@lunarscribe/components/ui/input";
 import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
+import { useEffect } from "react";
 
+import { EditorFileDropZone } from "@/components/editor-file-drop-zone";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import {
   toBufferTitle,
@@ -18,6 +21,28 @@ export default function Page() {
   const renameBuffer = useBufferStore((state) => state.renameBuffer);
   const setContent = useBufferStore((state) => state.setContent);
   const theme = useAppearanceStore((state) => state.theme);
+  const fileError = useBufferStore((state) => state.fileError);
+
+  useEffect(() => {
+    const preventFileNavigation = (event: DragEvent) => {
+      if (event.dataTransfer?.types.includes("Files")) {
+        event.preventDefault();
+      }
+    };
+
+    const unsubscribe = window.lunarscribe.onExternalFilesOpened((paths) => {
+      void useBufferStore.getState().openExternalFiles(paths);
+    });
+
+    window.addEventListener("dragover", preventFileNavigation);
+    window.addEventListener("drop", preventFileNavigation);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("dragover", preventFileNavigation);
+      window.removeEventListener("drop", preventFileNavigation);
+    };
+  }, []);
 
   if (!buffer) {
     return null;
@@ -42,6 +67,8 @@ export default function Page() {
           <Input
             aria-label="Buffer title"
             value={buffer.title}
+            readOnly={buffer.externalPath !== null}
+            title={buffer.externalPath ?? undefined}
             onChange={(event) => {
               const input = event.target;
               const caret = input.selectionStart;
@@ -55,6 +82,13 @@ export default function Page() {
           />
         </header>
       </TooltipProvider>
+      {fileError && (
+        <Alert variant="destructive">
+          <AlertDescription className="whitespace-pre-wrap">
+            {fileError}
+          </AlertDescription>
+        </Alert>
+      )}
       {buffer.kind === "drawing" ? (
         <DrawingEditor
           key={buffer.id}
@@ -63,11 +97,13 @@ export default function Page() {
           onChange={(scene) => setContent(buffer.id, scene)}
         />
       ) : (
-        <MarkdownEditor
-          key={buffer.id}
-          markdown={buffer.content}
-          onChange={(markdown) => setContent(buffer.id, markdown)}
-        />
+        <EditorFileDropZone>
+          <MarkdownEditor
+            key={buffer.id}
+            markdown={buffer.content}
+            onChange={(markdown) => setContent(buffer.id, markdown)}
+          />
+        </EditorFileDropZone>
       )}
     </div>
   );

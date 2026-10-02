@@ -2,6 +2,9 @@ import { Debouncer } from "@tanstack/pacer/debouncer";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { getFileExtension } from "@/lib/editor-files";
+import type { ExternalFile } from "@/lib/editor-files";
+
 /** File extension of each buffer kind. */
 const EXTENSIONS = { markdown: ".md", drawing: ".draw" } as const;
 
@@ -18,6 +21,8 @@ type TextBuffer = {
   content: string;
   /** Saved file in the documents folder, or null until the first save. */
   fileName: string | null;
+  /** Original text file outside the documents folder; edits save back here. */
+  externalPath: string | null;
 };
 
 type BufferStore = {
@@ -25,9 +30,13 @@ type BufferStore = {
   activeId: string;
   /** File shown when the app last closed, reopened on launch; null for an unsaved buffer. */
   lastOpenedFileName: string | null;
+  externalFiles: ExternalFile[];
+  lastOpenedExternalPath: string | null;
+  fileError: string | null;
   renameBuffer: (id: string, title: string) => void;
   setContent: (id: string, content: string) => void;
   openFile: (name: string) => Promise<void>;
+  openExternalFiles: (paths: string[]) => Promise<void>;
   createBuffer: (kind: BufferKind, fileNames: string[]) => void;
   deleteFile: (name: string) => Promise<void>;
 };
@@ -47,12 +56,14 @@ Type markdown shortcuts and they turn into rich text:
 
 /** A file's kind, from its extension. */
 export function kindOf(fileName: string): BufferKind {
-  return fileName.endsWith(EXTENSIONS.drawing) ? "drawing" : "markdown";
+  return getFileExtension(fileName) === EXTENSIONS.drawing
+    ? "drawing"
+    : "markdown";
 }
 
 /** A file's name without its extension, which is its buffer title. */
 export function stemOf(fileName: string) {
-  return fileName.slice(0, -EXTENSIONS[kindOf(fileName)].length);
+  return fileName.slice(0, fileName.lastIndexOf("."));
 }
 
 /** Buffer titles are snake_case: lowercase, with whitespace and slashes turned into `_`. */
@@ -82,6 +93,7 @@ function createWelcomeBuffer(): TextBuffer {
     kind: "markdown",
     content: WELCOME_MARKDOWN,
     fileName: null,
+    externalPath: null,
   };
 }
 
@@ -89,9 +101,11 @@ function createWelcomeBuffer(): TextBuffer {
 
 const initialBuffer = createWelcomeBuffer();
 
+let pendingFileOpen = Promise.resolve();
+
 /**
  * Open buffers and the active selection; each edit is saved to disk 2s after typing stops.
- * Only `lastOpenedFileName` is persisted, since buffers themselves live on disk.
+ * Persists the external file list and last selection; buffer contents are read from disk.
  */
 export const useBufferStore = create<BufferStore>()(
   persist(
@@ -99,6 +113,9 @@ export const useBufferStore = create<BufferStore>()(
       buffers: [initialBuffer],
       activeId: initialBuffer.id,
       lastOpenedFileName: null,
+      externalFiles: [],
+      lastOpenedExternalPath: null,
+      fileError: null,
 
       renameBuffer: (id, rawTitle) => {
         const title = toBufferTitle(rawTitle);
@@ -133,6 +150,7 @@ export const useBufferStore = create<BufferStore>()(
           kind: kindOf(name),
           content,
           fileName: name,
+          externalPath: null,
         };
 
         set((state) => ({
@@ -141,12 +159,38 @@ export const useBufferStore = create<BufferStore>()(
         }));
       },
 
+      openExternalFiles: (paths) => {
+        const openFiles = async () => {
+          await bufferRestored;
+
+          const failed: string[] = [];
+
+          for (const path of paths) {
+            try {
+              await openExternalFile(path);
+            } catch (error) {
+              failed.push(
+                `${path}: ${error instanceof Error ? error.message : "Unable to open text file."}`,
+              );
+            }
+          }
+
+          set({ fileError: failed.length ? failed.join("\n") : null });
+        };
+
+        // Keep the selection in request order even when file reads take different amounts of time.
+        pendingFileOpen = pendingFileOpen.then(openFiles, openFiles);
+
+        return pendingFileOpen;
+      },
+
       createBuffer: (kind, fileNames) => {
         // An empty, never-saved buffer is reused instead of stacking up more untitled ones.
         const blank = get().buffers.find(
           (buffer) =>
             buffer.kind === kind &&
             buffer.fileName === null &&
+            buffer.externalPath === null &&
             !buffer.content.trim(),
         );
 
@@ -173,6 +217,7 @@ export const useBufferStore = create<BufferStore>()(
           kind,
           content: "",
           fileName: null,
+          externalPath: null,
         };
 
         set((state) => ({
@@ -206,7 +251,9 @@ export const useBufferStore = create<BufferStore>()(
         const welcome =
           buffers.find(
             (buffer) =>
-              buffer.fileName === null && buffer.content === WELCOME_MARKDOWN,
+              buffer.fileName === null &&
+              buffer.externalPath === null &&
+              buffer.content === WELCOME_MARKDOWN,
           ) ?? createWelcomeBuffer();
 
         set({
@@ -217,34 +264,126 @@ export const useBufferStore = create<BufferStore>()(
     }),
     {
       name: "lunarscribe-buffers",
-      partialize: (state) => ({ lastOpenedFileName: state.lastOpenedFileName }),
+      partialize: (state) => ({
+        lastOpenedFileName: state.lastOpenedFileName,
+        externalFiles: state.externalFiles,
+        lastOpenedExternalPath: state.lastOpenedExternalPath,
+      }),
     },
   ),
 );
 
-// Persisted file name
+/** Opens one external buffer, retaining its source path and reusing an already-open buffer. */
+async function openExternalFile(path: string) {
+  const { buffers, externalFiles } = useBufferStore.getState();
+
+  const openBuffer = buffers.find((buffer) => buffer.externalPath === path);
+
+  if (openBuffer) {
+    useBufferStore.setState({ activeId: openBuffer.id, fileError: null });
+
+    return;
+  }
+
+  const trackedFile = externalFiles.find((file) => file.path === path);
+
+  const file = await window.lunarscribe.readExternalFile(
+    trackedFile?.sourcePath ?? path,
+  );
+
+  useBufferStore.setState((state) => {
+    // Canonical paths reuse a buffer opened through a different symlink.
+    const existingBuffer = state.buffers.find(
+      (buffer) => buffer.externalPath === file.path,
+    );
+
+    if (existingBuffer) {
+      return { activeId: existingBuffer.id, fileError: null };
+    }
+
+    const buffer: TextBuffer = {
+      id: crypto.randomUUID(),
+      title: stemOf(file.name),
+      kind: "markdown",
+      content: file.markdown,
+      fileName: null,
+      externalPath: file.path,
+    };
+
+    const externalFile: ExternalFile = {
+      path: file.path,
+      name: file.name,
+      sourcePath: file.sourcePath,
+    };
+
+    const hasTrackedFile = state.externalFiles.some(
+      (external) => external.path === file.path,
+    );
+
+    return {
+      buffers: [...state.buffers, buffer],
+      externalFiles: hasTrackedFile
+        ? state.externalFiles.map((tracked) =>
+            tracked.path === file.path ? externalFile : tracked,
+          )
+        : [...state.externalFiles, externalFile],
+      activeId: buffer.id,
+      fileError: null,
+    };
+  });
+}
+
+// Persisted selection
 
 // Tracks the shown buffer's file, so opening, saving under a new name and deleting all
 // keep the persisted name current.
 useBufferStore.subscribe((state) => {
-  const fileName =
-    state.buffers.find((buffer) => buffer.id === state.activeId)?.fileName ??
-    null;
+  const buffer = state.buffers.find(
+    (candidate) => candidate.id === state.activeId,
+  );
 
-  if (fileName !== state.lastOpenedFileName) {
-    useBufferStore.setState({ lastOpenedFileName: fileName });
+  const fileName = buffer?.fileName ?? null;
+  const externalPath = buffer?.externalPath ?? null;
+
+  if (
+    fileName !== state.lastOpenedFileName ||
+    externalPath !== state.lastOpenedExternalPath
+  ) {
+    useBufferStore.setState({
+      lastOpenedFileName: fileName,
+      lastOpenedExternalPath: externalPath,
+    });
   }
 });
 
 // Reopen the last file; if it is gone, the welcome buffer stays and the name is cleared.
-const { lastOpenedFileName } = useBufferStore.getState();
+async function restoreLastBuffer() {
+  const { lastOpenedFileName, lastOpenedExternalPath } =
+    useBufferStore.getState();
 
-if (lastOpenedFileName) {
-  useBufferStore
-    .getState()
-    .openFile(lastOpenedFileName)
-    .catch(() => useBufferStore.setState({ lastOpenedFileName: null }));
+  if (lastOpenedExternalPath) {
+    await openExternalFile(lastOpenedExternalPath).catch((error) => {
+      useBufferStore.setState({
+        fileError:
+          error instanceof Error
+            ? error.message
+            : "Unable to reopen text file.",
+      });
+    });
+
+    return;
+  }
+
+  if (lastOpenedFileName) {
+    await useBufferStore
+      .getState()
+      .openFile(lastOpenedFileName)
+      .catch(() => useBufferStore.setState({ lastOpenedFileName: null }));
+  }
 }
+
+/** File-open requests wait for restoration so their selection wins on cold launch. */
+const bufferRestored = restoreLastBuffer();
 
 // Saving to disk
 
@@ -254,15 +393,28 @@ async function saveBuffer(id: string) {
     .getState()
     .buffers.find((candidate) => candidate.id === id);
 
-  // A new buffer gets a file only once it has content.
-  if (!buffer || (buffer.fileName === null && !buffer.content.trim())) {
+  if (!buffer) {
+    return;
+  }
+
+  if (buffer.externalPath) {
+    await window.lunarscribe.saveExternalFile(
+      buffer.externalPath,
+      buffer.content,
+    );
+
+    return;
+  }
+
+  // A new buffer gets a file only once it has content; external files may be emptied.
+  if (buffer.fileName === null && !buffer.content.trim()) {
     return;
   }
 
   const fileName = await window.lunarscribe.saveFile(
     buffer.fileName,
     buffer.title,
-    EXTENSIONS[buffer.kind],
+    getFileExtension(buffer.fileName ?? "") ?? EXTENSIONS[buffer.kind],
     buffer.content,
   );
 
@@ -277,7 +429,19 @@ const saveDebouncers = new Map<string, Debouncer<() => undefined>>();
 function scheduleSave(id: string) {
   const debouncer =
     saveDebouncers.get(id) ??
-    new Debouncer(() => void saveBuffer(id), { wait: 2000 });
+    new Debouncer(
+      () => {
+        void saveBuffer(id).catch((error) => {
+          useBufferStore.setState({
+            fileError:
+              error instanceof Error
+                ? error.message
+                : "Unable to save the buffer.",
+          });
+        });
+      },
+      { wait: 2000 },
+    );
 
   saveDebouncers.set(id, debouncer);
   debouncer.maybeExecute();

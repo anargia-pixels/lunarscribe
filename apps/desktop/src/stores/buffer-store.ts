@@ -35,6 +35,7 @@ type BufferStore = {
   fileError: string | null;
   renameBuffer: (id: string, title: string) => void;
   setContent: (id: string, content: string) => void;
+  saveActiveBuffer: () => Promise<string>;
   openFile: (name: string) => Promise<void>;
   openExternalFiles: (paths: string[]) => Promise<void>;
   createBuffer: (kind: BufferKind, fileNames: string[]) => void;
@@ -133,6 +134,21 @@ export const useBufferStore = create<BufferStore>()(
         scheduleSave(id);
       },
 
+      saveActiveBuffer: async () => {
+        const id = get().activeId;
+        saveDebouncers.get(id)?.cancel();
+
+        const fileName = await saveBuffer(id, true);
+
+        if (fileName === null) {
+          throw new Error("The buffer is no longer open.");
+        }
+
+        set({ fileError: null });
+
+        return fileName;
+      },
+
       openFile: async (name) => {
         const open = get().buffers.find((buffer) => buffer.fileName === name);
 
@@ -227,38 +243,53 @@ export const useBufferStore = create<BufferStore>()(
       },
 
       deleteFile: async (name) => {
-        await window.lunarscribe.deleteFile(name);
-
         const open = get().buffers.find((buffer) => buffer.fileName === name);
 
         if (!open) {
-          return;
-        }
-
-        // Drop the buffer so a pending save doesn't recreate the file.
-        saveDebouncers.get(open.id)?.cancel();
-        saveDebouncers.delete(open.id);
-
-        const buffers = get().buffers.filter((buffer) => buffer.id !== open.id);
-
-        if (get().activeId !== open.id) {
-          set({ buffers });
+          await window.lunarscribe.deleteFile(name);
 
           return;
         }
 
-        // Deleting the shown file falls back to the welcome text, reusing an untouched copy.
-        const welcome =
-          buffers.find(
-            (buffer) =>
-              buffer.fileName === null &&
-              buffer.externalPath === null &&
-              buffer.content === WELCOME_MARKDOWN,
-          ) ?? createWelcomeBuffer();
+        await queueBufferWrite(open.id, async () => {
+          // An earlier queued save may have renamed the file.
+          const fileName =
+            get().buffers.find((buffer) => buffer.id === open.id)?.fileName ??
+            name;
 
-        set({
-          buffers: buffers.includes(welcome) ? buffers : [...buffers, welcome],
-          activeId: welcome.id,
+          await window.lunarscribe.deleteFile(fileName);
+
+          // Drop the buffer so later queued saves cannot recreate the file.
+          saveDebouncers.get(open.id)?.cancel();
+          saveDebouncers.delete(open.id);
+
+          const buffers = get().buffers.filter(
+            (buffer) => buffer.id !== open.id,
+          );
+
+          if (get().activeId !== open.id) {
+            set({ buffers });
+
+            return null;
+          }
+
+          // Deleting the shown file falls back to the welcome text, reusing an untouched copy.
+          const welcome =
+            buffers.find(
+              (buffer) =>
+                buffer.fileName === null &&
+                buffer.externalPath === null &&
+                buffer.content === WELCOME_MARKDOWN,
+            ) ?? createWelcomeBuffer();
+
+          set({
+            buffers: buffers.includes(welcome)
+              ? buffers
+              : [...buffers, welcome],
+            activeId: welcome.id,
+          });
+
+          return null;
         });
       },
     }),
@@ -387,14 +418,43 @@ const bufferRestored = restoreLastBuffer();
 
 // Saving to disk
 
-/** Writes the buffer's current title and content and records the file name it was saved as. */
-async function saveBuffer(id: string) {
+const pendingBufferWrites = new Map<string, Promise<string | null>>();
+
+/** Orders saves and deletion for each buffer; a failed write does not block retries. */
+async function queueBufferWrite(
+  id: string,
+  write: () => Promise<string | null>,
+): Promise<string | null> {
+  const previousWrite = pendingBufferWrites.get(id);
+
+  const pendingWrite = previousWrite
+    ? previousWrite.then(write, write)
+    : write();
+
+  pendingBufferWrites.set(id, pendingWrite);
+
+  try {
+    return await pendingWrite;
+  } finally {
+    if (pendingBufferWrites.get(id) === pendingWrite) {
+      pendingBufferWrites.delete(id);
+    }
+  }
+}
+
+/** Queues a save so an earlier autosave cannot overwrite it or create a second file. */
+function saveBuffer(id: string, force = false): Promise<string | null> {
+  return queueBufferWrite(id, () => writeBuffer(id, force));
+}
+
+/** Writes the latest buffer and records its file name; a manual save also creates an empty file. */
+async function writeBuffer(id: string, force: boolean): Promise<string | null> {
   const buffer = useBufferStore
     .getState()
     .buffers.find((candidate) => candidate.id === id);
 
   if (!buffer) {
-    return;
+    return null;
   }
 
   if (buffer.externalPath) {
@@ -403,12 +463,17 @@ async function saveBuffer(id: string) {
       buffer.content,
     );
 
-    return;
+    return (
+      useBufferStore
+        .getState()
+        .externalFiles.find((file) => file.path === buffer.externalPath)
+        ?.name ?? buffer.title
+    );
   }
 
-  // A new buffer gets a file only once it has content; external files may be emptied.
-  if (buffer.fileName === null && !buffer.content.trim()) {
-    return;
+  // Autosave waits for a new buffer to have content; manual saves may create empty files.
+  if (!force && buffer.fileName === null && !buffer.content.trim()) {
+    return null;
   }
 
   const fileName = await window.lunarscribe.saveFile(
@@ -421,6 +486,8 @@ async function saveBuffer(id: string) {
   useBufferStore.setState((state) => ({
     buffers: patchBuffer(state.buffers, id, { fileName }),
   }));
+
+  return fileName;
 }
 
 const saveDebouncers = new Map<string, Debouncer<() => undefined>>();

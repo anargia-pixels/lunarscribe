@@ -1,0 +1,114 @@
+@import "@excalidraw/excalidraw/index.css";
+
+/* Excalidraw's controls use their own variables in both themes. Map them to
+   the app tokens here so the shared component follows the active color theme. */
+:root .excalidraw,
+:root .excalidraw.theme--dark {
+  --ui-font: var(--font-ui);
+
+  --color-primary: var(--primary);
+  --color-primary-darker: color-mix(
+    in srgb,
+    var(--primary),
+    var(--foreground) 10%
+  );
+  --color-primary-darkest: color-mix(
+    in srgb,
+    var(--primary),
+    var(--foreground) 20%
+  );
+  --color-primary-light: var(--accent);
+  --color-primary-light-darker: var(--secondary);
+  --color-primary-hover: var(--color-primary-darker);
+  --color-brand-hover: var(--color-primary-darker);
+  --color-brand-active: var(--color-primary-darkest);
+  --color-selection: var(--primary);
+  --color-icon-white: var(--primary-foreground);
+
+  --color-surface-high: var(--muted);
+  --color-surface-mid: var(--muted);
+  --color-surface-low: var(--background);
+  --color-surface-lowest: var(--background);
+  --color-on-surface: var(--foreground);
+  --color-surface-primary-container: var(--accent);
+  --color-on-primary-container: var(--accent-foreground);
+  --color-border-outline: var(--ring);
+  --color-border-outline-variant: var(--border);
+  --color-disabled: var(--muted-foreground);
+
+  --default-bg-color: var(--background);
+  --default-border-color: var(--border);
+  --island-bg-color: var(--card);
+  --dialog-border-color: var(--border);
+  --popup-bg-color: var(--popover);
+  --popup-secondary-bg-color: var(--muted);
+  --popup-text-color: var(--popover-foreground);
+  --popup-text-inverted-color: var(--primary-foreground);
+  --overlay-bg-color: color-mix(in srgb, var(--background) 88%, transparent);
+  --sidebar-bg-color: var(--sidebar);
+  --sidebar-border-color: var(--sidebar-border);
+
+  --input-bg-color: var(--background);
+  --input-border-color: var(--input);
+  --input-hover-bg-color: var(--muted);
+  --input-label-color: var(--foreground);
+  --focus-highlight-color: var(--ring);
+  --keybinding-color: var(--muted-foreground);
+  --link-color: var(--primary);
+  --select-highlight-color: var(--primary);
+  --button-gray-1: var(--muted);
+  --button-gray-2: var(--muted);
+  --button-gray-3: var(--border);
+  --button-destructive-color: var(--destructive);
+  --button-destructive-bg-color: color-mix(
+    in srgb,
+    var(--destructive) 15%,
+    var(--background)
+  );
+  --color-slider-track: var(--muted);
+  --color-slider-thumb: var(--primary);
+  --scrollbar-thumb: var(--muted-foreground);
+  --scrollbar-thumb-hover: var(--foreground);
+  --RadioGroup-choice-color-on: var(--primary-foreground);
+  --ExcTextField--border: var(--input);
+  --ExcTextField--readonly--background: var(--muted);
+  --ExcTextField--readonly--color: var(--muted-foreground);
+  --ExcTextField--placeholder: var(--muted-foreground);
+
+  --shadow-island: var(--shadow-md);
+  --modal-shadow: var(--shadow-xl);
+  --sidebar-shadow: var(--shadow-lg);
+  --library-dropdown-shadow: var(--shadow-lg);
+}
+
+/* Excalidraw uses its lowest surface color as the label on primary buttons. */
+:root .excalidraw .ExcButton--color-primary.ExcButton--variant-filled {
+  --text-color: var(--primary-foreground);
+}
+
+/* These controls hardcode Assistant instead of inheriting Excalidraw's UI font. */
+:root .excalidraw .ExcTextField__label,
+:root .excalidraw .ExcTextField__input input,
+:root .excalidraw .RadioGroup__choice,
+:root .excalidraw .ImageExportModal h3,
+:root .excalidraw .ImageExportModal__settings__setting__label,
+:root .excalidraw .OverwriteConfirm__Description,
+:root .excalidraw__embeddable-container .excalidraw__embeddable-hint {
+  font-family: var(--font-ui);
+}
+
+/* Tooltips are portalled outside the drawing editor. */
+:root .excalidraw-tooltip {
+  --ui-font: var(--font-ui);
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+}
+
+:root .excalidraw button.ExportDialog-imageExportButton,
+:root .excalidraw .CollabButton-collaborators,
+:root .excalidraw .ttd-dialog-input,
+:root .excalidraw .ttd-dialog-panel textarea,
+:root .excalidraw .ttd-dialog-output-error p,
+:root .ErrorSplash.excalidraw .ErrorSplash-details textarea {
+  font-family: var(--font-code);
+}

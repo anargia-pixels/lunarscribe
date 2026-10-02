@@ -7,9 +7,3 @@
     @apply h-full;
   }
 }
-
-/* Excalidraw defines its own interface font, including portalled tooltips. */
-:root .excalidraw,
-:root .excalidraw-tooltip {
-  --ui-font: var(--font-ui);
-}

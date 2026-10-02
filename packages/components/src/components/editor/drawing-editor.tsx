@@ -1,4 +1,4 @@
-import "@excalidraw/excalidraw/index.css";
+import "./drawing-editor.css";
 import {
   Excalidraw,
   hashElementsVersion,

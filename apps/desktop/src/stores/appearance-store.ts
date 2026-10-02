@@ -1,14 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-const THEMES = ["light", "dark"] as const;
-
-type Theme = (typeof THEMES)[number];
+export type Theme = "light" | "dark";
 
 // Types
 
 type AppearanceStore = {
-  theme: Theme; // light or dark
+  theme: Theme;
   lightColorTheme: string | null; // null = the colors in globals.css
   darkColorTheme: string | null; // null = the colors in globals.css
   uiFont: string;

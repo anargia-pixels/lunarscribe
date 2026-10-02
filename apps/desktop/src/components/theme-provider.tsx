@@ -1,4 +1,10 @@
-import { createContext, type ReactNode, useContext, useEffect } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useLayoutEffect,
+} from "react";
+import { flushSync } from "react-dom";
 
 import { useAppearanceStore } from "@/stores/appearance-store";
 import {
@@ -19,7 +25,7 @@ type ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState | null>(null);
 
-/** Writes the color theme's tokens onto <html>; tokens it omits fall back to globals.css. */
+/** Writes a complete palette onto <html>; clearing it restores globals.css. */
 function applyColorTheme(root: HTMLElement, palette?: ColorPalette) {
   for (const token of COLOR_TOKENS) {
     const value = palette?.[token];
@@ -46,7 +52,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     theme === "dark" ? darkColorTheme : lightColorTheme,
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
 
     root.classList.remove("light", "dark");
@@ -54,7 +60,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyColorTheme(root, colorTheme?.[theme]);
   }, [theme, colorTheme]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
     // Escape family names so spaces, quotes, and punctuation stay part of the name.
     const uiFamily = `"${CSS.escape(uiFont)}", Poppins, ui-sans-serif, sans-serif, system-ui`;
@@ -90,7 +96,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       `${(y / window.innerHeight) * 100}%`,
     );
 
-    document.startViewTransition(() => setTheme(next));
+    document.startViewTransition(() => {
+      // The transition captures the new palette after React updates <html>.
+      flushSync(() => setTheme(next));
+    });
   };
 
   return (

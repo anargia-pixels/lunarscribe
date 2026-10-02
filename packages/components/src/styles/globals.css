@@ -109,6 +109,19 @@
   --shadow-opacity-strong: 0.8;
 }
 
+/* Font utilities must read runtime variables, including when used with variants. */
+@theme static {
+  --font-sans: initial;
+  --font-serif: initial;
+  --font-mono: initial;
+  --font-ui: Poppins, ui-sans-serif, sans-serif, system-ui;
+  --font-buffer: Poppins, ui-sans-serif, sans-serif, system-ui;
+  --font-code: "Roboto Mono", ui-monospace, monospace;
+  --font-logo: "Pixelify Sans", ui-sans-serif, sans-serif, system-ui;
+  --default-font-family: var(--font-ui);
+  --default-mono-font-family: var(--font-code);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -153,16 +166,6 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: initial;
-  --font-serif: initial;
-  --font-mono: initial;
-  --font-ui: Poppins, ui-sans-serif, sans-serif, system-ui;
-  --font-buffer: Poppins, ui-sans-serif, sans-serif, system-ui;
-  --font-code: "Roboto Mono", ui-monospace, monospace;
-  --font-logo: "Pixelify Sans", ui-sans-serif, sans-serif, system-ui;
-  --default-font-family: var(--font-ui);
-  --default-mono-font-family: var(--font-code);
-
   --radius: 0.25rem;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -190,25 +193,6 @@
 
   --tracking-normal: 0em;
   --spacing: 0.25rem;
-}
-
-/* Resolve font tokens at render time so saved selections override inline defaults. */
-@layer utilities {
-  .font-ui {
-    font-family: var(--font-ui);
-  }
-
-  .font-buffer {
-    font-family: var(--font-buffer);
-  }
-
-  .font-code {
-    font-family: var(--font-code);
-  }
-
-  .font-logo {
-    font-family: var(--font-logo);
-  }
 }
 
 /* Motion for hover highlights and popups: entries settle on a spring-like ease-out,
@@ -308,8 +292,7 @@
   }
 
   body {
-    @apply bg-background text-foreground tracking-normal antialiased;
-    font-family: var(--font-ui);
+    @apply bg-background text-foreground font-ui tracking-normal antialiased;
   }
 }
 

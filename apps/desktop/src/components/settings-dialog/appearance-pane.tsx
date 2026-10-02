@@ -10,7 +10,7 @@ import { RotateCcw } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { FontSettings } from "@/components/settings-dialog/font-settings";
-import { useAppearanceStore } from "@/stores/appearance-store";
+import { type Theme, useAppearanceStore } from "@/stores/appearance-store";
 import {
   COLOR_THEMES,
   findColorTheme,
@@ -40,8 +40,6 @@ const SWATCH_TOKENS = [
   "primary",
   "popover",
 ] as const;
-
-type Theme = keyof typeof LABELS;
 
 type SwatchStyle = CSSProperties & { "--swatch": string };
 

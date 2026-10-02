@@ -6,7 +6,7 @@ import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
 
 import { DarkModeToggle } from "@/components/darkmode-toggle";
-import { useTheme } from "@/components/theme-provider";
+import { useAppearanceStore } from "@/stores/appearance-store";
 import {
   toBufferTitle,
   useActiveBuffer,
@@ -18,7 +18,7 @@ export default function Page() {
   const buffer = useActiveBuffer();
   const renameBuffer = useBufferStore((state) => state.renameBuffer);
   const setContent = useBufferStore((state) => state.setContent);
-  const { theme } = useTheme();
+  const theme = useAppearanceStore((state) => state.theme);
 
   if (!buffer) {
     return null;

@@ -8,7 +8,7 @@ conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
 
 - `apps/desktop`: Electron + React via electron-vite. Next.js-style `src/`:
   `app/layout.tsx` and `app/page.tsx` are the shell, `electron/` holds main and preload,
-  `stores/` holds zustand stores.
+  `stores/` holds zustand stores, `themes/` holds the color theme catalog.
 - `apps/web`: TanStack Start, kept as generator boilerplate until asked otherwise.
 - `packages/components`: shared UI. `src/components/ui/` is shadcn (Base UI),
   `src/components/<feature>/` holds shared non-shadcn components (the Lexical markdown

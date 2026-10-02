@@ -5,6 +5,8 @@ import { persist } from "zustand/middleware";
 /** File extension of each buffer kind. */
 const EXTENSIONS = { markdown: ".md", drawing: ".draw" } as const;
 
+// Types
+
 type BufferKind = keyof typeof EXTENSIONS;
 
 /** One open document; `content` is the source of truth its editor loads from and saves to. */
@@ -30,6 +32,7 @@ type BufferStore = {
   deleteFile: (name: string) => Promise<void>;
 };
 
+/** Markdown shown by the welcome buffer on first launch. */
 const WELCOME_MARKDOWN = `# Welcome to Lunarscribe
 
 Type markdown shortcuts and they turn into rich text:
@@ -39,6 +42,8 @@ Type markdown shortcuts and they turn into rich text:
 - \`> \` for quotes
 - \`**bold**\`, \`*italic*\` and \`~~strike~~\` for inline marks
 `;
+
+// File names and titles
 
 /** A file's kind, from its extension. */
 export function kindOf(fileName: string): BufferKind {
@@ -55,6 +60,7 @@ export function toBufferTitle(input: string) {
   return input.toLowerCase().replaceAll(/[\s/\\]/gu, "_");
 }
 
+/** Returns a copy of `buffers` with the buffer that has `id` patched. */
 function patchBuffer(
   buffers: TextBuffer[],
   id: string,
@@ -68,6 +74,7 @@ function patchBuffer(
   );
 }
 
+/** A welcome buffer that no file holds, reused when the shown file is deleted. */
 function createWelcomeBuffer(): TextBuffer {
   return {
     id: crypto.randomUUID(),
@@ -77,6 +84,8 @@ function createWelcomeBuffer(): TextBuffer {
     fileName: null,
   };
 }
+
+// Store
 
 const initialBuffer = createWelcomeBuffer();
 
@@ -213,6 +222,8 @@ export const useBufferStore = create<BufferStore>()(
   ),
 );
 
+// Persisted file name
+
 // Tracks the shown buffer's file, so opening, saving under a new name and deleting all
 // keep the persisted name current.
 useBufferStore.subscribe((state) => {
@@ -234,6 +245,8 @@ if (lastOpenedFileName) {
     .openFile(lastOpenedFileName)
     .catch(() => useBufferStore.setState({ lastOpenedFileName: null }));
 }
+
+// Saving to disk
 
 /** Writes the buffer's current title and content and records the file name it was saved as. */
 async function saveBuffer(id: string) {
@@ -276,6 +289,8 @@ window.addEventListener("beforeunload", () => {
     debouncer.flush();
   }
 });
+
+// Hooks
 
 /** Returns the buffer currently shown in the editor. */
 export function useActiveBuffer() {

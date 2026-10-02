@@ -6,6 +6,7 @@ import {
 import { SidebarProvider } from "@lunarscribe/components/ui/sidebar";
 import type { ReactNode } from "react";
 
+import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
 import { SettingsSidebar } from "@/components/settings-dialog/settings-sidebar";
 
 /** Settings window filling 80% of the Lunarscribe window: the settings sidebar beside the open section. */
@@ -20,7 +21,9 @@ export function SettingsDialog({ children }: { children: ReactNode }) {
         <DialogTitle className="sr-only">Settings</DialogTitle>
         <SidebarProvider className="h-full min-h-0">
           <SettingsSidebar />
-          <div className="bg-background min-w-0 flex-1" />
+          <div className="bg-background min-w-0 flex-1">
+            <AppearancePane />
+          </div>
         </SidebarProvider>
       </DialogContent>
     </Dialog>

@@ -1,0 +1,154 @@
+import { Button } from "@lunarscribe/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@lunarscribe/components/ui/select";
+import { RotateCcw } from "lucide-react";
+import type { CSSProperties } from "react";
+
+import { useAppearanceStore } from "@/stores/appearance-store";
+import {
+  COLOR_THEMES,
+  findColorTheme,
+  type ColorPalette,
+} from "@/themes/color-themes";
+
+/** Stands for the colors written in globals.css rather than a color theme. */
+const DEFAULT_COLOR_THEME = "default";
+
+const LABELS = {
+  light: "Light theme",
+  dark: "Dark theme",
+} as const;
+
+const COLOR_THEME_ITEMS = {
+  [DEFAULT_COLOR_THEME]: "Default",
+  ...Object.fromEntries(
+    COLOR_THEMES.map((colorTheme) => [colorTheme.id, colorTheme.label]),
+  ),
+};
+
+/** The five colors a color theme shows beside its name. */
+const SWATCH_TOKENS = [
+  "background",
+  "foreground",
+  "accent",
+  "primary",
+  "popover",
+] as const;
+
+type Theme = keyof typeof LABELS;
+
+type SwatchStyle = CSSProperties & { "--swatch": string };
+
+/** Picks the color theme for one theme; every color theme in the dropdown with its five colors. */
+function ColorThemeSelect({
+  theme,
+  colorTheme,
+  onColorThemeChange,
+}: {
+  theme: Theme;
+  colorTheme: string | null;
+  onColorThemeChange: (colorTheme: string | null) => void;
+}) {
+  const selected = findColorTheme(colorTheme);
+  const value = selected === undefined ? DEFAULT_COLOR_THEME : selected.id;
+
+  return (
+    <div className="flex items-center justify-between gap-6">
+      <span className="text-sm">{LABELS[theme]}</span>
+      <Select
+        items={COLOR_THEME_ITEMS}
+        value={value}
+        onValueChange={(next) =>
+          onColorThemeChange(next === DEFAULT_COLOR_THEME ? null : next)
+        }
+      >
+        <SelectTrigger
+          className="w-64 justify-between"
+          aria-label={LABELS[theme]}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent alignItemWithTrigger={false}>
+          <SelectItem value={DEFAULT_COLOR_THEME}>Default</SelectItem>
+          {COLOR_THEMES.map((colorTheme) => (
+            <SelectItem key={colorTheme.id} value={colorTheme.id}>
+              <ColorThemeSwatches palette={colorTheme[theme]} />
+              <span>{colorTheme.label}</span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+/** The five colors of a color theme, each painted through a custom property so the value stays dynamic. */
+function ColorThemeSwatches({ palette }: { palette: ColorPalette }) {
+  return SWATCH_TOKENS.map((token) => {
+    const style: SwatchStyle = { "--swatch": palette[token] };
+
+    return (
+      <span
+        key={token}
+        className="ring-foreground/15 size-3.5 shrink-0 rounded-xs bg-(--swatch) ring-1"
+        style={style}
+      />
+    );
+  });
+}
+
+/** Appearances pane: a color theme per theme, and a reset back to the colors in globals.css. */
+export function AppearancePane() {
+  const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
+  const darkColorTheme = useAppearanceStore((state) => state.darkColorTheme);
+
+  const setLightColorTheme = useAppearanceStore(
+    (state) => state.setLightColorTheme,
+  );
+
+  const setDarkColorTheme = useAppearanceStore(
+    (state) => state.setDarkColorTheme,
+  );
+
+  const resetColorThemes = useAppearanceStore(
+    (state) => state.resetColorThemes,
+  );
+
+  return (
+    <div className="flex h-full flex-col gap-6 overflow-auto p-6">
+      <header className="flex flex-col gap-1">
+        <h2 className="text-base font-medium">Appearances</h2>
+        <p className="text-muted-foreground text-sm">
+          A color theme restyles every color in the app. Each theme picks its
+          own.
+        </p>
+      </header>
+      <div className="flex max-w-lg flex-col gap-4">
+        <ColorThemeSelect
+          theme="light"
+          colorTheme={lightColorTheme}
+          onColorThemeChange={setLightColorTheme}
+        />
+        <ColorThemeSelect
+          theme="dark"
+          colorTheme={darkColorTheme}
+          onColorThemeChange={setDarkColorTheme}
+        />
+      </div>
+      <Button
+        variant="outline"
+        className="self-start"
+        disabled={lightColorTheme === null && darkColorTheme === null}
+        onClick={resetColorThemes}
+      >
+        <RotateCcw />
+        Reset to defaults
+      </Button>
+    </div>
+  );
+}

@@ -96,6 +96,11 @@ export function FluidHighlight({
         "data-instant",
         !indicator.hasAttribute("data-active"),
       );
+      // So a destructive row fills destructive, as it does with its own hover.
+      indicator.setAttribute(
+        "data-variant",
+        row.getAttribute("data-variant") ?? "default",
+      );
       indicator.style.translate = `${left}px ${top}px`;
       indicator.style.width = `${width}px`;
       indicator.style.height = `${height}px`;
@@ -173,7 +178,7 @@ export function FluidHighlight({
       aria-hidden="true"
       data-slot="fluid-highlight"
       className={cn(
-        "ease-fluid pointer-events-none absolute top-0 left-0 rounded-md opacity-0 transition-all duration-(--duration-fluid) data-active:opacity-100 data-instant:transition-opacity motion-reduce:transition-opacity",
+        "ease-fluid data-[variant=destructive]:bg-destructive/10 dark:data-[variant=destructive]:bg-destructive/20 pointer-events-none absolute top-0 left-0 rounded-md opacity-0 transition-all duration-(--duration-fluid) data-active:opacity-100 data-instant:transition-opacity motion-reduce:transition-opacity",
         className,
       )}
     />

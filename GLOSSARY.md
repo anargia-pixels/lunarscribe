@@ -107,9 +107,17 @@ _Avoid_: settings menu, settings nav, preferences sidebar
 The color scheme: light (a warm paper palette) or dark (Catppuccin Mocha).
 _Avoid_: mode, skin, color mode
 
+**Color theme**:
+A named set of colors applied on top of a theme, so the same theme can look
+like Modern Minimal or Catppuccin. The settings window picks one per theme
+under Appearances; "Reset to defaults" clears both, leaving the colors in
+`globals.css`. The colors tweakcn ships are the catalog.
+_Avoid_: mode, dark mode, skin, color mode, theme preset, palette
+
 **Dark mode toggle**:
 The header button that flips between light and dark themes in one click. It is
-the only way the theme changes in Lunarscribe.
+the only way the theme changes in Lunarscribe. It never changes the color
+theme.
 _Avoid_: mode toggle, theme toggle, dark switch, theme dropdown, theme picker
 
 ### Codebase

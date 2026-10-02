@@ -1,62 +1,55 @@
+import { createContext, type ReactNode, useContext, useEffect } from "react";
+
+import { useAppearanceStore } from "@/stores/appearance-store";
 import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+  COLOR_TOKENS,
+  findColorTheme,
+  type ColorPalette,
+} from "@/themes/color-themes";
 
-const STORAGE_KEY = "lunarscribe-theme";
-
-const THEMES = ["light", "dark"] as const;
-
-type Theme = (typeof THEMES)[number];
-
-/** Where the theme toggle was pressed; the incoming theme is revealed from this point. */
+/** Where the dark mode toggle was pressed; the incoming theme is revealed from this point. */
 type ThemeRevealOrigin = {
   x: number;
   y: number;
 };
 
 type ThemeProviderState = {
-  theme: Theme;
   toggleTheme: (origin: ThemeRevealOrigin) => void;
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState | null>(null);
 
-/** Reads the saved theme, falling back to the OS preference. */
-function readInitialTheme(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const saved = THEMES.find((theme) => theme === stored);
+/** Writes the color theme's tokens onto <html>; tokens it omits fall back to globals.css. */
+function applyColorTheme(root: HTMLElement, palette?: ColorPalette) {
+  for (const token of COLOR_TOKENS) {
+    const value = palette?.[token];
 
-  if (saved) {
-    return saved;
+    if (value === undefined) {
+      root.style.removeProperty(`--${token}`);
+    } else {
+      root.style.setProperty(`--${token}`, value);
+    }
   }
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
 }
 
-/**
- * Applies the theme as a `light`/`dark` class on <html> and remembers it in
- * localStorage. Based on the shadcn Vite dark-mode guide.
- */
+/** Puts the theme and its color theme on <html>, and flips the theme on demand. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState(readInitialTheme);
+  const theme = useAppearanceStore((state) => state.theme);
+  const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
+  const darkColorTheme = useAppearanceStore((state) => state.darkColorTheme);
+  const setTheme = useAppearanceStore((state) => state.setTheme);
+
+  const colorTheme = findColorTheme(
+    theme === "dark" ? darkColorTheme : lightColorTheme,
+  );
 
   useEffect(() => {
     const root = document.documentElement;
 
     root.classList.remove("light", "dark");
     root.classList.add(theme);
-  }, [theme]);
-
-  const setTheme = (next: Theme) => {
-    localStorage.setItem(STORAGE_KEY, next);
-    setThemeState(next);
-  };
+    applyColorTheme(root, colorTheme?.[theme]);
+  }, [theme, colorTheme]);
 
   const toggleTheme = ({ x, y }: ThemeRevealOrigin) => {
     const next = theme === "light" ? "dark" : "light";
@@ -86,7 +79,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ThemeProviderContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeProviderContext.Provider value={{ toggleTheme }}>
       {children}
     </ThemeProviderContext.Provider>
   );

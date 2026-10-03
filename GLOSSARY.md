@@ -26,50 +26,46 @@ Use these exact names in code, UI copy, docs, and conversation. The
 _Strictly avoid_ lists prohibit aliases for the corresponding concept.
 Keep Electron API identifiers in their exact form when referring to an API.
 
-**Application data base folder**:
+**App data folder**:
 The shared per-user folder returned by `app.getPath("appData")`.
 On Linux, it is `$XDG_CONFIG_HOME` when set, or `~/.config/` otherwise.
 On macOS, it is `~/Library/Application Support/`. Here, `~` means the
 current user's home directory. By default, Electron appends the app's
-name to this base to create the app data folder.
-_Strictly avoid_: app data folder, binary folder, app path, install folder
-(as names for this base folder)
+name to this base to create the user data folder.
+_Strictly avoid_: user data folder, application folder, application data base folder,
+binary folder, app path, install folder (as names for this base folder)
 
-**App data folder**:
+**User data folder**:
 The folder for Lunarscribe's settings, persistent app state, sync state,
 and saved user credentials. Credentials include OAuth access and refresh
 tokens. Store credentials as JSON with owner-only file permissions. Code must
-get this folder with `app.getPath("userData")`. Build paths to files and subfolders from
-this returned path. Do not hardcode the folder or construct it from a
-home directory, environment variable, or application name. Its default path is
-`<application data base folder>/<app-name>/`, where `<app-name>` is
+get this folder with `app.getPath("userData")`. Build paths to files and
+subfolders from this returned path. Do not hardcode the folder or construct it
+from a home directory, environment variable, or application name. Its default path is
+`<app data folder>/<app-name>/`, where `<app-name>` is
 Electron's application name. App updates preserve this folder. Saved
 markdown and drawings use `lunarscribe/` inside the system Documents folder.
-_Strictly avoid_: application data base folder, `appData`, binary folder,
-app path, install folder, Documents folder, app folder
-(as names for Lunarscribe's app data folder). Hardcoded paths and manual
-construction of the app data folder path are prohibited.
+_Strictly avoid_: app data folder, application folder, application data base folder, `appData`,
+binary folder, app path, install folder, Documents folder, app folder
+(as names for Lunarscribe's user data folder). Hardcoded paths and manual
+construction of the user data folder path are prohibited.
 
-**Binary folder**:
+**Application folder**:
 The folder for the installed Lunarscribe executable and all libraries,
-resources, and supporting files required to run it. Its location is the
-app path defined below. The installer replaces this folder during an app
-update. Settings and saved credentials belong in the app data folder.
-_Strictly avoid_: app data folder, application data base folder,
-application data folder, `appData`, `userData`, Documents folder, app folder
-(as names for the installed binary folder)
-
-**App path**:
-The filesystem path to the installed binary folder. The installer stores
-this value in `APP_PATH`. The default is `~/.local/lunarscribe.app/` on
+resources, and supporting files required to run it. The installer stores
+its filesystem path in `APPLICATION_FOLDER`. The default is `~/.local/lunarscribe.app/` on
 Linux and `~/Applications/Lunarscribe.app/` on macOS. On Linux,
-`LUNARSCRIBE_INSTALL_DIR` sets the app path. On macOS, it sets the parent
+`LUNARSCRIBE_INSTALL_DIR` sets the application folder. On macOS, it sets the parent
 folder, and the installer appends `Lunarscribe.app`. The Linux executable
-is at `<app path>/lunarscribe`. Electron's `app.getAppPath()` returns the
+is at `<application folder>/lunarscribe`. The installer replaces the application
+folder during an app update. Settings and saved credentials belong in the user
+data folder. Electron's `app.getAppPath()` returns the
 loaded application code location and is a separate API.
-_Strictly avoid_: app data path, user data path, application data base folder,
-executable path, `app.getPath("appData")`, `app.getPath("userData")`,
-`app.getAppPath()` (as names for the installer's app path)
+_Strictly avoid_: app folder, binary folder, app path, install folder, app data folder,
+user data folder, application data base folder, application data folder,
+app data path, user data path, executable path, `appData`, `userData`,
+Documents folder, `app.getPath("appData")`, `app.getPath("userData")`,
+`app.getAppPath()` (as names for the installed application folder)
 
 ### Writing
 

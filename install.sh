@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the release for this operating system and architecture.
+# Install the release into the application folder for this operating system and architecture.
 set -euo pipefail
 
 REPO="anargia-pixels/lunarscribe"
@@ -7,7 +7,7 @@ VERSION="${LUNARSCRIBE_VERSION:-latest}"
 TMP_DIR=""
 MOUNT_PATH=""
 STAGE_DIR=""
-APP_PATH=""
+APPLICATION_FOLDER=""
 INSTALL_COMPLETE="false"
 
 fail() {
@@ -21,10 +21,10 @@ cleanup() {
   fi
   if [[ -n "$STAGE_DIR" ]]; then
     if [[ -d "$STAGE_DIR/previous.app" && "$INSTALL_COMPLETE" != "true" ]]; then
-      if [[ -e "$APP_PATH" || -L "$APP_PATH" ]]; then
-        mv "$APP_PATH" "$STAGE_DIR/failed.app"
+      if [[ -e "$APPLICATION_FOLDER" || -L "$APPLICATION_FOLDER" ]]; then
+        mv "$APPLICATION_FOLDER" "$STAGE_DIR/failed.app"
       fi
-      mv "$STAGE_DIR/previous.app" "$APP_PATH"
+      mv "$STAGE_DIR/previous.app" "$APPLICATION_FOLDER"
     fi
     rm -rf "$STAGE_DIR"
   fi
@@ -109,7 +109,7 @@ if [[ "$(uname -s)" == "Linux" ]]; then
     fail "The install destination is not a directory."
   INSTALL_PARENT=$(dirname "$INSTALL_DIR")
   mkdir -p "$INSTALL_PARENT" "$DESKTOP_DIR"
-  APP_PATH="$(cd "$INSTALL_PARENT" && pwd -P)/$(basename "$INSTALL_DIR")"
+  APPLICATION_FOLDER="$(cd "$INSTALL_PARENT" && pwd -P)/$(basename "$INSTALL_DIR")"
   STAGE_DIR=$(mktemp -d "$INSTALL_PARENT/.lunarscribe.XXXXXX")
   unzip -q "$TMP_DIR/$ASSET" -d "$STAGE_DIR/new.app"
   [[ -f "$STAGE_DIR/new.app/lunarscribe" && -f "$STAGE_DIR/new.app/resources/app.asar" ]] ||
@@ -117,7 +117,7 @@ if [[ "$(uname -s)" == "Linux" ]]; then
   chmod +x "$STAGE_DIR/new.app/lunarscribe"
 
   # Escape the quoted Exec argument, then the desktop entry's string value.
-  EXEC_PATH="$APP_PATH/lunarscribe"
+  EXEC_PATH="$APPLICATION_FOLDER/lunarscribe"
   EXEC_PATH="${EXEC_PATH//\\/\\\\}"
   EXEC_PATH="${EXEC_PATH//\"/\\\"}"
   EXEC_PATH="${EXEC_PATH//\$/\\\$}"
@@ -137,16 +137,16 @@ Categories=Office;TextEditor;
 MimeType=text/markdown;text/x-markdown;text/plain;x-scheme-handler/lunarscribe;
 EOF
   chmod 644 "$STAGE_DIR/lunarscribe.desktop"
-  if [[ -e "$APP_PATH" || -L "$APP_PATH" ]]; then
-    mv "$APP_PATH" "$STAGE_DIR/previous.app"
+  if [[ -e "$APPLICATION_FOLDER" || -L "$APPLICATION_FOLDER" ]]; then
+    mv "$APPLICATION_FOLDER" "$STAGE_DIR/previous.app"
   fi
-  mv "$STAGE_DIR/new.app" "$APP_PATH"
+  mv "$STAGE_DIR/new.app" "$APPLICATION_FOLDER"
   mv -f "$STAGE_DIR/lunarscribe.desktop" "$DESKTOP_DIR/lunarscribe.desktop"
   INSTALL_COMPLETE="true"
   if command -v update-desktop-database >/dev/null; then
     update-desktop-database "$DESKTOP_DIR" || true
   fi
-  echo "Installed Lunarscribe $VERSION at $APP_PATH"
+  echo "Installed Lunarscribe $VERSION at $APPLICATION_FOLDER"
   echo "Installed desktop entry at $DESKTOP_DIR/lunarscribe.desktop"
   echo "Select Lunarscribe in your application menu to start the app."
 else
@@ -159,12 +159,12 @@ else
   ditto "$MOUNT_PATH/Lunarscribe.app" "$STAGE_DIR/new.app"
   hdiutil detach "$MOUNT_PATH" -quiet
   MOUNT_PATH=""
-  APP_PATH="$INSTALL_DIR/Lunarscribe.app"
-  if [[ -e "$APP_PATH" ]]; then
-    mv "$APP_PATH" "$STAGE_DIR/previous.app"
+  APPLICATION_FOLDER="$INSTALL_DIR/Lunarscribe.app"
+  if [[ -e "$APPLICATION_FOLDER" ]]; then
+    mv "$APPLICATION_FOLDER" "$STAGE_DIR/previous.app"
   fi
-  mv "$STAGE_DIR/new.app" "$APP_PATH"
+  mv "$STAGE_DIR/new.app" "$APPLICATION_FOLDER"
   INSTALL_COMPLETE="true"
-  echo "Installed Lunarscribe $VERSION at $APP_PATH"
+  echo "Installed Lunarscribe $VERSION at $APPLICATION_FOLDER"
   echo "Open Lunarscribe.app to start the app."
 fi

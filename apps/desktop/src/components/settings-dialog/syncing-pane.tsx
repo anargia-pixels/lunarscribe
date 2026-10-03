@@ -156,7 +156,7 @@ export function SyncingPane() {
         <p className="text-muted-foreground text-sm text-pretty">
           {selected === "github"
             ? "Requires git and gh installed, with gh auth login completed. Connect finds lunarscribe-bak-files or creates it as a private repository."
-            : `Sign in to ${SYNC_PROVIDERS[selected]} in your browser. Lunarscribe finds or creates the lunarscribe-bak-files folder. Credentials are saved in the app data folder.`}
+            : `Sign in to ${SYNC_PROVIDERS[selected]} in your browser. Lunarscribe finds or creates the lunarscribe-bak-files folder. Credentials are saved in the user data folder.`}
         </p>
         {selected !== "github" && !isConfigured && !status.provider && (
           <div className="flex flex-col gap-2">

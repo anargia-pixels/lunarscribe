@@ -23,7 +23,7 @@ checks for that account's `lunarscribe-bak-files` repository. If the repository 
 exist, Lunarscribe creates it as private. An existing public repository must be made
 private before connecting. Lunarscribe checks privacy again before pushing.
 
-The app uses a disposable checkout in its app data folder. GitHub CLI supplies HTTPS
+The app uses a disposable checkout in its user data folder. GitHub CLI supplies HTTPS
 authentication. Lunarscribe does not change global Git settings. It uses the remote
 default branch, or `master` for a new empty repository. It does not merge, rebase, or
 force push. A concurrent remote commit rejects the push and shows a toast.
@@ -117,7 +117,7 @@ Failed sync does not roll back a successful local save. A provider can accept so
 writes before another write fails; the next sync compares those files again.
 
 OAuth tokens stay in the Electron main process and are stored as readable JSON in
-`sync/sync-settings.json` inside the app data folder from `app.getPath("userData")`. The
+`sync/sync-settings.json` inside the user data folder from `app.getPath("userData")`. The
 file has owner-only read and write permissions (`0600`). No system keyring is required.
 Previously encrypted credentials require browser sign-in again; the saved destination and
 comparison history are preserved when reconnecting the same account. Disconnect removes

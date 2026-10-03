@@ -72,12 +72,14 @@ Bash, curl, and jq. Linux also requires `unzip` and `sha256sum`.
   macOS can require approval in System Settings → Privacy & Security before the first
   start.
 
-Repeat the command to update the app. On Linux, the installer replaces the app folder. If
-you set `XDG_DATA_HOME`, the desktop entry uses that directory's `applications/` folder.
+Repeat the command to update the app. On Linux, the installer replaces the application
+folder. If you set `XDG_DATA_HOME`, the desktop entry uses that directory's
+`applications/` folder.
 
 To change the install location, export `LUNARSCRIBE_INSTALL_DIR` before the command. On
-Linux, this path is the app folder. On macOS, this path is the folder that contains the
-app. To install a specific version, export `LUNARSCRIBE_VERSION`, such as `v0.0.13`.
+Linux, this path is the application folder. On macOS, this path is the parent of the
+application folder. To install a specific version, export `LUNARSCRIBE_VERSION`, such as
+`v0.0.13`.
 
 You can also download the Linux ZIP or macOS DMG from
 [GitHub Releases](https://github.com/anargia-pixels/lunarscribe/releases).

@@ -1,7 +1,7 @@
 export const SYNC_PROVIDERS = {
   github: "GitHub",
-  "google-drive": "Google Drive",
-  dropbox: "Dropbox",
+  "google-drive": "Google Drive - WIP",
+  dropbox: "Dropbox - WIP",
 } as const;
 
 export type SyncProvider = keyof typeof SYNC_PROVIDERS;

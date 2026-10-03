@@ -145,16 +145,18 @@ export function SyncingPane() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent alignItemWithTrigger={false}>
-              <SelectItem value="github">GitHub</SelectItem>
-              <SelectItem value="google-drive">Google Drive</SelectItem>
-              <SelectItem value="dropbox">Dropbox</SelectItem>
+              <SelectItem value="github">{SYNC_PROVIDERS.github}</SelectItem>
+              <SelectItem value="google-drive">
+                {SYNC_PROVIDERS["google-drive"]}
+              </SelectItem>
+              <SelectItem value="dropbox">{SYNC_PROVIDERS.dropbox}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <p className="text-muted-foreground text-sm text-pretty">
           {selected === "github"
             ? "Requires git and gh installed, with gh auth login completed. Connect finds lunarscribe-bak-files or creates it as a private repository."
-            : `Sign in to ${SYNC_PROVIDERS[selected]} in your browser. Lunarscribe finds or creates the lunarscribe-bak-files folder. Access tokens stay encrypted on this device.`}
+            : `Sign in to ${SYNC_PROVIDERS[selected]} in your browser. Lunarscribe finds or creates the lunarscribe-bak-files folder. Credentials are saved in the app data folder.`}
         </p>
         {selected !== "github" && !isConfigured && !status.provider && (
           <div className="flex flex-col gap-2">

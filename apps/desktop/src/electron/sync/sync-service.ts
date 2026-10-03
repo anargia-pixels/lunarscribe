@@ -17,13 +17,7 @@ import type { OAuthProvider } from "./oauth";
 import { planSync } from "./plan";
 import type { FileSyncProvider } from "./provider";
 import { SyncSignInRequired } from "./provider";
-import {
-  decryptTokens,
-  createEmptySettings,
-  encryptTokens,
-  requireTokenEncryption,
-  createSyncSettings,
-} from "./settings";
+import { createEmptySettings, createSyncSettings } from "./settings";
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -51,6 +45,15 @@ export function registerSync(
     .load()
     .then((saved) => {
       settings = saved;
+      needsSignIn =
+        saved.provider !== null &&
+        saved.provider !== "github" &&
+        saved.tokens === null;
+
+      if (needsSignIn) {
+        error =
+          "Sign-in is required. Open Settings → Syncing and select Sign in again.";
+      }
     })
     .catch((cause) => {
       error = errorMessage(cause, "Unable to load sync settings.");
@@ -77,7 +80,7 @@ export function registerSync(
     }
 
     if (settings.provider === selected && settings.tokens) {
-      return decryptTokens(settings.tokens).clientId;
+      return settings.tokens.clientId;
     }
 
     return selected === "google-drive" ? GOOGLE_CLIENT_ID : DROPBOX_CLIENT_ID;
@@ -85,10 +88,10 @@ export function registerSync(
 
   async function getAccessToken(provider: OAuthProvider) {
     if (!settings.tokens || settings.provider !== provider) {
-      throw new Error("Reconnect your sync account.");
+      throw new SyncSignInRequired("Reconnect your sync account.");
     }
 
-    let tokens = decryptTokens(settings.tokens);
+    let tokens = settings.tokens;
 
     if (tokens.expiresAt <= Date.now() + 60_000) {
       if (!tokens.refreshToken) {
@@ -99,7 +102,7 @@ export function registerSync(
       }
 
       tokens = await refreshTokens(provider, tokens);
-      settings.tokens = encryptTokens(tokens);
+      settings.tokens = tokens;
       await persistence.save(settings);
     }
 
@@ -229,7 +232,6 @@ export function registerSync(
         if (selected === "github") {
           next.account = await connectGithub(directory);
         } else {
-          requireTokenEncryption();
           authorization = new AbortController();
 
           try {
@@ -239,7 +241,7 @@ export function registerSync(
               authorization.signal,
             );
 
-            next.tokens = encryptTokens(tokens);
+            next.tokens = tokens;
 
             if (selected === "google-drive") {
               const api = createGoogleDriveApi(async () => tokens.accessToken);

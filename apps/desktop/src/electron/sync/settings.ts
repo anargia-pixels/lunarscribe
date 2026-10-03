@@ -1,7 +1,6 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-
-import { safeStorage } from "electron";
 
 import type { SyncBaseline, SyncProvider } from "../../lib/sync";
 import {
@@ -11,13 +10,14 @@ import {
   jsonStrings,
   parseJson,
 } from "./json";
+import type { JsonValue } from "./json";
 import type { OAuthTokens } from "./oauth";
 
 export type SyncSettings = {
   provider: SyncProvider | null;
   account: string | null;
   folderId: string | null;
-  tokens: string | null;
+  tokens: OAuthTokens | null;
   baseline: SyncBaseline;
   lastSyncedAt: string | null;
 };
@@ -33,31 +33,11 @@ export function createEmptySettings(): SyncSettings {
   };
 }
 
-/** Refuse Linux's plaintext fallback instead of silently storing refresh tokens insecurely. */
-export function requireTokenEncryption() {
-  if (
-    !safeStorage.isEncryptionAvailable() ||
-    (process.platform === "linux" &&
-      safeStorage.getSelectedStorageBackend() === "basic_text")
-  ) {
-    throw new Error(
-      "Secure credential storage is unavailable. Enable your system keyring, then reconnect.",
-    );
+function parseStoredTokens(storedTokens: JsonValue): OAuthTokens | null {
+  // Legacy encrypted strings require browser sign-in again, without a keyring dependency.
+  if (storedTokens === null || storedTokens === String(storedTokens)) {
+    return null;
   }
-}
-
-export function encryptTokens(tokens: OAuthTokens) {
-  requireTokenEncryption();
-
-  return safeStorage.encryptString(JSON.stringify(tokens)).toString("base64");
-}
-
-export function decryptTokens(encrypted: string): OAuthTokens {
-  requireTokenEncryption();
-
-  const storedTokens = parseJson(
-    safeStorage.decryptString(Buffer.from(encrypted, "base64")),
-  );
 
   const tokens = {
     accessToken: jsonString(storedTokens, "accessToken"),
@@ -121,15 +101,23 @@ export function createSyncSettings(directory: string) {
         baseline: jsonStrings(baseline),
         account: jsonString(storedSettings, "account", true) || null,
         folderId: jsonString(storedSettings, "folderId", true) || null,
-        tokens: jsonString(storedSettings, "tokens", true) || null,
+        tokens: parseStoredTokens(jsonField(storedSettings, "tokens") ?? null),
         lastSyncedAt: jsonString(storedSettings, "lastSyncedAt", true) || null,
       };
     },
     async save(settings: SyncSettings) {
-      await mkdir(directory, { recursive: true });
-      const temporary = `${path}.tmp`;
-      await writeFile(temporary, JSON.stringify(settings), { mode: 0o600 });
-      await rename(temporary, path);
+      await mkdir(directory, { recursive: true, mode: 0o700 });
+      const temporary = `${path}.${randomUUID()}.tmp`;
+
+      try {
+        await writeFile(temporary, JSON.stringify(settings, null, 2), {
+          mode: 0o600,
+          flag: "wx",
+        });
+        await rename(temporary, path);
+      } finally {
+        await rm(temporary, { force: true });
+      }
     },
   };
 }

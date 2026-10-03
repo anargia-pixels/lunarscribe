@@ -49,12 +49,8 @@ case "$(uname -s)" in
     done
     ;;
   Darwin)
-    case "$(uname -m)" in
-      x86_64) ARCH="x64" ;;
-      arm64) ARCH="arm64" ;;
-      *) fail "Unsupported macOS architecture: $(uname -m)" ;;
-    esac
-    ASSET="lunarscribe-macos-${ARCH}.dmg"
+    [[ "$(uname -m)" == "arm64" ]] || fail "The macOS release requires Apple Silicon (arm64)."
+    ASSET="lunarscribe-macos-arm64.dmg"
     INSTALL_DIR="${LUNARSCRIBE_INSTALL_DIR:-$HOME/Applications}"
     for command in hdiutil ditto shasum; do
       command -v "$command" >/dev/null || fail "Required command not found: $command"

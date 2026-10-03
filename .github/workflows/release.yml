@@ -30,9 +30,6 @@ jobs:
           - runner: ubuntu-24.04
             script: package:linux
             asset: lunarscribe-linux-x64.zip
-          - runner: macos-15-intel
-            script: package:macos:x64
-            asset: lunarscribe-macos-x64.dmg
           - runner: macos-15
             script: package:macos:arm64
             asset: lunarscribe-macos-arm64.dmg

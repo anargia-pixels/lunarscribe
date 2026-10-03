@@ -93,7 +93,12 @@
     "mac": {
       "artifactName": "lunarscribe-macos-${arch}.${ext}",
       "target": [
-        "dmg"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
       ],
       "category": "public.app-category.productivity",
       "identity": "-",

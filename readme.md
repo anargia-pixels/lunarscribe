@@ -1,8 +1,8 @@
 # Lunarscribe
 
-Lunarscribe is a desktop markdown writing app for Linux and macOS. The markdown editor
-shows formatted text as you type. The app has a formatting toolbar, local file storage,
-Excalidraw drawings, and PDF and DOCX export.
+Lunarscribe is a desktop markdown writing app for Linux and Apple Silicon Macs. The
+markdown editor shows formatted text as you type. The app has a formatting toolbar, local
+file storage, Excalidraw drawings, and PDF and DOCX export.
 
 ## Features
 
@@ -55,7 +55,6 @@ checks the SHA-256 checksum before installation. It does not require Bun or Node
 | Operating system | Architecture        | Release format | Default install location         |
 | ---------------- | ------------------- | -------------- | -------------------------------- |
 | Linux            | x86_64              | ZIP            | `~/.local/lunarscribe.app/`      |
-| macOS            | Intel x86_64        | DMG            | `~/Applications/Lunarscribe.app` |
 | macOS            | Apple Silicon arm64 | DMG            | `~/Applications/Lunarscribe.app` |
 
 The installer requires Bash, curl, and jq. Linux also requires `sha256sum` and `unzip`.
@@ -97,8 +96,8 @@ includes `install.sh` and `sha256sums.txt`.
 
 ## Run from source
 
-Use Linux or macOS with Bun 1.3.14. The root `package.json` specifies this Bun version.
-The app does not support Windows yet.
+Use Linux x86_64 or an Apple Silicon Mac with Bun 1.3.14. The root `package.json`
+specifies this Bun version. The app does not support Windows yet.
 
 ```sh
 git clone https://github.com/anargia-pixels/lunarscribe.git
@@ -230,15 +229,14 @@ To build release packages, run the command for the target operating system:
 
 ```sh
 bun run package:linux
-bun run package:macos:x64
 bun run package:macos:arm64
 ```
 
-Run the macOS commands on the corresponding Mac architecture. Packages are in
-`apps/desktop/dist/`. A version tag, such as `v0.0.13`, starts the GitHub Actions release
-workflow. The workflow builds all three packages and publishes them with their checksums.
-To build an existing release again, run the Release workflow manually and enter its tag.
-The workflow replaces that release's packages. A push to `main` does not start a release.
+Run the macOS command on an Apple Silicon Mac. Packages are in `apps/desktop/dist/`. A
+version tag, such as `v0.0.13`, starts the GitHub Actions release workflow. The workflow
+builds both packages and publishes them with their checksums. To build an existing release
+again, run the Release workflow manually and enter its tag. The workflow replaces that
+release's packages. A push to `main` does not start a release.
 
 The root `package.json` catalog specifies dependency versions. Workspaces use `catalog:`
 references. Refer to [AGENTS.md](AGENTS.md) for repository conventions. Refer to

@@ -203,6 +203,40 @@
   --duration-fluid-exit: 80ms;
 }
 
+@utility editor-scrollbar {
+  --editor-scrollbar-thumb: color-mix(
+    in oklab,
+    var(--muted-foreground) 35%,
+    transparent
+  );
+
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--editor-scrollbar-thumb);
+    border: 1px solid transparent;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--muted-foreground) 60%,
+      transparent
+    );
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--editor-scrollbar-thumb) transparent;
+  }
+}
+
 /* Lexical supplies checkbox roles and keyboard handling; these glyphs follow
    its left-edge hit area without placing a second control inside the list item. */
 @utility editor-checklist {

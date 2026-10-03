@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <TooltipProvider>
           <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <AppSidebar />
-            <SidebarInset>{children}</SidebarInset>
+            <SidebarInset className="min-w-0">{children}</SidebarInset>
           </SidebarProvider>
         </TooltipProvider>
       </Toaster>

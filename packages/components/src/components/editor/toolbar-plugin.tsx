@@ -195,66 +195,68 @@ export function ToolbarPlugin() {
   );
 
   return (
-    <div className="relative flex shrink-0 flex-wrap items-center justify-center gap-1 border-b px-3 py-1.5">
-      <FluidHighlight rows="button" className="bg-muted rounded-lg" />
-      <Hint label="Undo" shortcut={[modifier, "Z"]}>
-        <Button
-          variant="fluid"
-          size="icon-sm"
-          aria-label="Undo"
-          disabled={!canUndo}
-          onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-        >
-          <Undo2 />
-        </Button>
-      </Hint>
-      <Hint
-        label="Redo"
-        shortcut={IS_APPLE ? ["⇧", modifier, "Z"] : [modifier, "Y"]}
-      >
-        <Button
-          variant="fluid"
-          size="icon-sm"
-          aria-label="Redo"
-          disabled={!canRedo}
-          onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-        >
-          <Redo2 />
-        </Button>
-      </Hint>
-      <ToolbarSeparator />
-      {TEXT_FORMATS.map(({ format, label, icon: Icon, shortcut }) => (
-        <Hint
-          key={format}
-          label={label}
-          shortcut={shortcut ? [modifier, shortcut] : undefined}
-        >
-          <Toggle
-            variant="fluid"
-            size="icon-sm"
-            aria-label={label}
-            pressed={activeFormats.includes(format)}
-            onPressedChange={() =>
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
-            }
-          >
-            <Icon />
-          </Toggle>
-        </Hint>
-      ))}
-      <ToolbarSeparator />
-      {BLOCKS.map(({ label, icon: Icon, apply }) => (
-        <Hint key={label} label={label}>
+    <div className="editor-scrollbar min-w-0 shrink-0 overflow-x-auto border-b">
+      <div className="relative flex w-max min-w-full items-center justify-center gap-1 px-3 py-1.5">
+        <FluidHighlight rows="button" className="bg-muted rounded-lg" />
+        <Hint label="Undo" shortcut={[modifier, "Z"]}>
           <Button
             variant="fluid"
             size="icon-sm"
-            aria-label={label}
-            onClick={() => apply(editor)}
+            aria-label="Undo"
+            disabled={!canUndo}
+            onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
           >
-            <Icon />
+            <Undo2 />
           </Button>
         </Hint>
-      ))}
+        <Hint
+          label="Redo"
+          shortcut={IS_APPLE ? ["⇧", modifier, "Z"] : [modifier, "Y"]}
+        >
+          <Button
+            variant="fluid"
+            size="icon-sm"
+            aria-label="Redo"
+            disabled={!canRedo}
+            onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
+          >
+            <Redo2 />
+          </Button>
+        </Hint>
+        <ToolbarSeparator />
+        {TEXT_FORMATS.map(({ format, label, icon: Icon, shortcut }) => (
+          <Hint
+            key={format}
+            label={label}
+            shortcut={shortcut ? [modifier, shortcut] : undefined}
+          >
+            <Toggle
+              variant="fluid"
+              size="icon-sm"
+              aria-label={label}
+              pressed={activeFormats.includes(format)}
+              onPressedChange={() =>
+                editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
+              }
+            >
+              <Icon />
+            </Toggle>
+          </Hint>
+        ))}
+        <ToolbarSeparator />
+        {BLOCKS.map(({ label, icon: Icon, apply }) => (
+          <Hint key={label} label={label}>
+            <Button
+              variant="fluid"
+              size="icon-sm"
+              aria-label={label}
+              onClick={() => apply(editor)}
+            >
+              <Icon />
+            </Button>
+          </Hint>
+        ))}
+      </div>
     </div>
   );
 }

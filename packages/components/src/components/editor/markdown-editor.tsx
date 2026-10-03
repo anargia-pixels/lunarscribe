@@ -79,7 +79,7 @@ export function MarkdownEditor({
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <ToolbarPlugin />
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <FindPlugin />
         <ScrollArea className="min-h-0 flex-1">
           <div className="relative mx-auto flex min-h-full w-full max-w-4xl flex-col px-8 py-10">
@@ -94,7 +94,7 @@ export function MarkdownEditor({
                         Start writing…
                       </div>
                     }
-                    className="font-buffer flex-1 outline-none select-text"
+                    className="font-buffer w-full min-w-0 flex-1 outline-none select-text"
                   />
                 }
                 ErrorBoundary={LexicalErrorBoundary}

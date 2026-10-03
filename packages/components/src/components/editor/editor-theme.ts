@@ -64,7 +64,7 @@ export const editorTheme: EditorThemeClasses = {
   tableCellHeader: "bg-popover font-semibold",
   tableCellSelected: "bg-accent",
   tableSelection: "selection:bg-transparent",
-  tableScrollableWrapper: "overflow-x-auto",
+  tableScrollableWrapper: "editor-scrollbar w-full overflow-x-auto",
   text: {
     bold: "font-bold",
     italic: "italic",

@@ -54,7 +54,7 @@ export default function Page() {
     <div className="flex h-svh flex-col">
       {/* Hover waits 800ms; moving to a neighbour within 300ms opens it instantly. */}
       <TooltipProvider delay={800} timeout={300}>
-        <header className="relative flex h-12 shrink-0 items-center justify-center border-b px-12">
+        <header className="relative flex h-10 shrink-0 items-center justify-center border-b px-12 text-xs">
           <Hint
             label="Toggle sidebar"
             side="bottom"

@@ -41,9 +41,12 @@ done
 case "$(uname -s)" in
   Linux)
     [[ "$(uname -m)" == "x86_64" ]] || fail "The Linux release requires x86_64."
-    ASSET="lunarscribe-linux-x86_64.AppImage"
-    INSTALL_DIR="${LUNARSCRIBE_INSTALL_DIR:-$HOME/.local/bin}"
-    command -v sha256sum >/dev/null || fail "Install sha256sum before running this installer."
+    ASSET="lunarscribe-linux-x64.zip"
+    INSTALL_DIR="${LUNARSCRIBE_INSTALL_DIR:-$HOME/.local/lunarscribe.app}"
+    DESKTOP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    for command in sha256sum unzip; do
+      command -v "$command" >/dev/null || fail "Install $command before running this installer."
+    done
     ;;
   Darwin)
     case "$(uname -m)" in
@@ -97,27 +100,62 @@ EXPECTED=$(awk -v asset="$ASSET" '$2 == asset { print $1 }' "$TMP_DIR/sha256sums
 [[ "$EXPECTED" =~ ^[0-9a-f]{64}$ ]] || fail "The release checksum is missing or invalid."
 
 if [[ "$(uname -s)" == "Linux" ]]; then
-  [[ ! -d "$INSTALL_DIR/lunarscribe" ]] || fail "The install destination is a directory."
   ACTUAL=$(sha256sum "$TMP_DIR/$ASSET")
 else
   ACTUAL=$(shasum -a 256 "$TMP_DIR/$ASSET")
 fi
 [[ "${ACTUAL%% *}" == "$EXPECTED" ]] || fail "The download checksum does not match."
 
-mkdir -p "$INSTALL_DIR"
-STAGE_DIR=$(mktemp -d "$INSTALL_DIR/.lunarscribe.XXXXXX")
-
 if [[ "$(uname -s)" == "Linux" ]]; then
-  cp "$TMP_DIR/$ASSET" "$STAGE_DIR/lunarscribe"
-  chmod +x "$STAGE_DIR/lunarscribe"
-  mv -f "$STAGE_DIR/lunarscribe" "$INSTALL_DIR/lunarscribe"
-  echo "Installed Lunarscribe $VERSION at $INSTALL_DIR/lunarscribe"
-  case ":$PATH:" in
-    *":$INSTALL_DIR:"*) ;;
-    *) echo "Add $INSTALL_DIR to PATH to run lunarscribe."
-      ;;
-  esac
+  INSTALL_DIR="${INSTALL_DIR%/}"
+  [[ -n "$INSTALL_DIR" && "$INSTALL_DIR" != *$'\n'* && "$INSTALL_DIR" != *$'\r'* ]] ||
+    fail "Use an install path without line breaks."
+  [[ ! -e "$INSTALL_DIR" || -d "$INSTALL_DIR" ]] ||
+    fail "The install destination is not a directory."
+  INSTALL_PARENT=$(dirname "$INSTALL_DIR")
+  mkdir -p "$INSTALL_PARENT" "$DESKTOP_DIR"
+  APP_PATH="$(cd "$INSTALL_PARENT" && pwd -P)/$(basename "$INSTALL_DIR")"
+  STAGE_DIR=$(mktemp -d "$INSTALL_PARENT/.lunarscribe.XXXXXX")
+  unzip -q "$TMP_DIR/$ASSET" -d "$STAGE_DIR/new.app"
+  [[ -f "$STAGE_DIR/new.app/lunarscribe" && -f "$STAGE_DIR/new.app/resources/app.asar" ]] ||
+    fail "The ZIP does not contain the Lunarscribe app."
+  chmod +x "$STAGE_DIR/new.app/lunarscribe"
+
+  # Escape the quoted Exec argument, then the desktop entry's string value.
+  EXEC_PATH="$APP_PATH/lunarscribe"
+  EXEC_PATH="${EXEC_PATH//\\/\\\\}"
+  EXEC_PATH="${EXEC_PATH//\"/\\\"}"
+  EXEC_PATH="${EXEC_PATH//\$/\\\$}"
+  EXEC_PATH="${EXEC_PATH//\`/\\\`}"
+  EXEC_PATH="${EXEC_PATH//%/%%}"
+  EXEC_PATH="${EXEC_PATH//\\/\\\\}"
+  cat > "$STAGE_DIR/lunarscribe.desktop" <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Lunarscribe
+Comment=Write markdown and create drawings
+Exec="$EXEC_PATH" %U
+Icon=accessories-text-editor
+Terminal=false
+Categories=Office;TextEditor;
+MimeType=text/markdown;text/x-markdown;text/plain;x-scheme-handler/lunarscribe;
+EOF
+  chmod 644 "$STAGE_DIR/lunarscribe.desktop"
+  if [[ -e "$APP_PATH" || -L "$APP_PATH" ]]; then
+    mv "$APP_PATH" "$STAGE_DIR/previous.app"
+  fi
+  mv "$STAGE_DIR/new.app" "$APP_PATH"
+  mv -f "$STAGE_DIR/lunarscribe.desktop" "$DESKTOP_DIR/lunarscribe.desktop"
+  if command -v update-desktop-database >/dev/null; then
+    update-desktop-database "$DESKTOP_DIR" || true
+  fi
+  echo "Installed Lunarscribe $VERSION at $APP_PATH"
+  echo "Installed desktop entry at $DESKTOP_DIR/lunarscribe.desktop"
+  echo "Select Lunarscribe in your application menu to start the app."
 else
+  mkdir -p "$INSTALL_DIR"
+  STAGE_DIR=$(mktemp -d "$INSTALL_DIR/.lunarscribe.XXXXXX")
   mkdir "$TMP_DIR/mount"
   MOUNT_PATH="$TMP_DIR/mount"
   hdiutil attach "$TMP_DIR/$ASSET" -nobrowse -readonly -mountpoint "$MOUNT_PATH" -quiet

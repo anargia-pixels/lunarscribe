@@ -78,9 +78,9 @@
     ],
     "linux": {
       "artifactName": "lunarscribe-linux-${arch}.${ext}",
+      "executableName": "lunarscribe",
       "target": [
-        "deb",
-        "AppImage"
+        "zip"
       ],
       "category": "Office",
       "mimeTypes": [

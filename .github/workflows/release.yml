@@ -16,7 +16,7 @@ jobs:
         include:
           - runner: ubuntu-24.04
             script: package:linux
-            asset: lunarscribe-linux-x86_64.AppImage
+            asset: lunarscribe-linux-x64.zip
           - runner: macos-15-intel
             script: package:macos:x64
             asset: lunarscribe-macos-x64.dmg

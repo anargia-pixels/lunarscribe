@@ -54,12 +54,17 @@ checks the SHA-256 checksum before installation. It does not require Bun or Node
 
 | Operating system | Architecture        | Release format | Default install location         |
 | ---------------- | ------------------- | -------------- | -------------------------------- |
-| Linux            | x86_64              | AppImage       | `~/.local/bin/lunarscribe`       |
+| Linux            | x86_64              | ZIP            | `~/.local/lunarscribe.app/`      |
 | macOS            | Intel x86_64        | DMG            | `~/Applications/Lunarscribe.app` |
 | macOS            | Apple Silicon arm64 | DMG            | `~/Applications/Lunarscribe.app` |
 
-The installer requires Bash, curl, and jq. Linux also requires `sha256sum` and FUSE
-support to run the AppImage. macOS provides the other required commands.
+The installer requires Bash, curl, and jq. Linux also requires `sha256sum` and `unzip`.
+macOS provides the other required commands.
+
+On Linux, the ZIP includes the executable and its required files and folders. The
+installer extracts them to `~/.local/lunarscribe.app/`. It installs the desktop entry at
+`~/.local/share/applications/lunarscribe.desktop`. If you set `XDG_DATA_HOME`, the desktop
+entry uses that directory's `applications/` folder.
 
 This repository is private. Use a GitHub token with read access to the repository and its
 releases. With an authenticated GitHub CLI, run these commands:
@@ -73,19 +78,20 @@ curl -fsSL \
 ```
 
 You can also set `GH_TOKEN` to an existing token before the curl command. Repeat the
-installer command to update the app.
+installer command to update the app. On Linux, the installer replaces the app folder.
 
-On Linux, add `~/.local/bin` to `PATH` if necessary. Run `lunarscribe` to start the app.
-On macOS, open `~/Applications/Lunarscribe.app`.
+On Linux, select Lunarscribe in your application menu. You can also run
+`~/.local/lunarscribe.app/lunarscribe`. On macOS, open `~/Applications/Lunarscribe.app`.
 
 The macOS releases use ad-hoc signatures. They do not have Apple notarization. macOS can
 require approval in System Settings → Privacy & Security before the first start.
 
-Set `LUNARSCRIBE_INSTALL_DIR` to change the install location. Set `LUNARSCRIBE_VERSION` to
-a release tag, such as `v0.0.13`, to install that version. Export these variables before
-the installer command.
+Set `LUNARSCRIBE_INSTALL_DIR` to change the install location. On Linux, this path is the
+app folder. On macOS, this path is the folder that contains `Lunarscribe.app`. Set
+`LUNARSCRIBE_VERSION` to a release tag, such as `v0.0.13`, to install that version. Export
+these variables before the installer command.
 
-You can also download the AppImage or DMG from
+You can also download the ZIP or DMG from
 [GitHub Releases](https://github.com/anargia-pixels/lunarscribe/releases). The release
 includes `install.sh` and `sha256sums.txt`.
 

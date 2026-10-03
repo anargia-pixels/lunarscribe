@@ -62,7 +62,7 @@
     "dev:web": "turbo -F web dev",
     "dev:desktop": "turbo -F desktop dev",
     "build": "turbo build",
-    "package:linux": "bun run --cwd apps/desktop package --linux AppImage --x64",
+    "package:linux": "bun run --cwd apps/desktop package --linux zip --x64",
     "package:macos:x64": "bun run --cwd apps/desktop package --mac dmg --x64",
     "package:macos:arm64": "bun run --cwd apps/desktop package --mac dmg --arm64",
     "check-types": "turbo check-types",

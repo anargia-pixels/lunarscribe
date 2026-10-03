@@ -32,6 +32,7 @@ import {
 import {
   Bold,
   Code,
+  GitFork,
   Heading1,
   Heading2,
   Heading3,
@@ -56,6 +57,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { INSERT_MATH_COMMAND } from "./plugins/math-plugin";
+import { INSERT_MERMAID_COMMAND } from "./plugins/mermaid-plugin";
 
 const TEXT_FORMATS: {
   format: TextFormatType;
@@ -286,6 +288,18 @@ export function ToolbarPlugin() {
             </Button>
           </Hint>
         ))}
+        <Hint label="Insert Mermaid block">
+          <Button
+            variant="fluid"
+            size="icon-sm"
+            aria-label="Insert Mermaid block"
+            onClick={() =>
+              editor.dispatchCommand(INSERT_MERMAID_COMMAND, undefined)
+            }
+          >
+            <GitFork />
+          </Button>
+        </Hint>
       </div>
     </div>
   );

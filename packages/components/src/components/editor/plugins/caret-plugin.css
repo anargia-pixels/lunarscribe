@@ -1,0 +1,12 @@
+[data-editor-caret-active] {
+  caret-color: transparent;
+}
+
+[data-editor-caret-active] [data-lexical-cursor]::before {
+  display: none;
+}
+
+/* Embedded source controls own their selections independently of Lexical. */
+[data-markdown-editor] :is(input, textarea) {
+  caret-color: auto;
+}

@@ -19,15 +19,19 @@ function PreviewReadyPlugin({
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    // Allow syntax highlighting and React math decorators to finish mounting.
-    let frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => {
-        const root = editor.getRootElement();
+    // Allow decorators to mount, then wait for asynchronous Mermaid previews.
+    const ready = () => {
+      const root = editor.getRootElement();
 
-        if (root) {
-          onReady(root);
-        }
-      });
+      if (root?.querySelector("[data-mermaid-pending]")) {
+        frame = requestAnimationFrame(ready);
+      } else if (root) {
+        onReady(root);
+      }
+    };
+
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(ready);
     });
 
     return () => cancelAnimationFrame(frame);

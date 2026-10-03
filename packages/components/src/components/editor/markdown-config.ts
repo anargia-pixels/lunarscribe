@@ -10,6 +10,7 @@ import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { editorTheme } from "./editor-theme";
 import { MARKDOWN_TRANSFORMERS } from "./plugins/markdown-transformers";
 import { MathNode } from "./plugins/math-node";
+import { MermaidNode } from "./plugins/mermaid-node";
 
 /** The editor and export preview use the same markdown rendering. */
 export function createMarkdownConfig(markdown: string): InitialConfigType {
@@ -30,6 +31,7 @@ export function createMarkdownConfig(markdown: string): InitialConfigType {
       TableCellNode,
       HorizontalRuleNode,
       MathNode,
+      MermaidNode,
     ],
     editorState: () =>
       $convertFromMarkdownString(markdown, MARKDOWN_TRANSFORMERS),

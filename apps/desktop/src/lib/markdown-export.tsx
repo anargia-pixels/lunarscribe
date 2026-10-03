@@ -100,8 +100,11 @@ export async function withMarkdownSnapshot<Result>(
       ? document.querySelector<HTMLElement>("[data-markdown-editor]")
       : null;
 
-  // Preserve formatting not represented by markdown, while excluding math source controls.
-  if (activeRoot && !activeRoot.querySelector("[data-math-source]")) {
+  // Exclude block editing controls and wait for asynchronous diagram rendering.
+  if (
+    activeRoot &&
+    !activeRoot.querySelector("[data-math-source], [data-mermaid-render]")
+  ) {
     return exportSnapshot(activeRoot, title);
   }
 

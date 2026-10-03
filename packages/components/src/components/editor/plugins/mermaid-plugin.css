@@ -1,0 +1,50 @@
+.editor-mermaid {
+  margin-block: 1rem;
+  color: var(--foreground);
+}
+
+.editor-mermaid [data-mermaid-preview] {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  white-space: normal;
+  transition: none;
+}
+
+.editor-mermaid [data-mermaid-preview]:active {
+  transform: none;
+}
+
+[data-mermaid-source] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+[data-mermaid-source] [data-slot="textarea"] {
+  font-family: var(--font-code);
+}
+
+[data-mermaid-render] {
+  width: 100%;
+  overflow-x: auto;
+  padding-block: 0.75rem;
+}
+
+.editor-mermaid [data-mermaid-render] > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+
+[data-mermaid-error] {
+  color: var(--destructive);
+  white-space: pre-wrap;
+  text-align: start;
+  font-family: var(--font-code);
+}

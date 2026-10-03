@@ -2,6 +2,7 @@ import { join } from "node:path";
 
 import { app, BrowserWindow, shell } from "electron";
 
+import appIcon from "../../../../assets/icons/512x512.png?asset";
 import { registerDocumentsFolder } from "./documents-folder";
 import { registerDocxExport } from "./docx-export";
 import { queueExternalFiles, registerExternalFiles } from "./external-files";
@@ -70,6 +71,7 @@ function createWindow() {
     minWidth: 640,
     minHeight: 420,
     show: false,
+    icon: appIcon,
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, "../preload/preload.cjs"),
@@ -99,6 +101,10 @@ function createWindow() {
 void app.whenReady().then(() => {
   if (!hasInstanceLock) {
     return;
+  }
+
+  if (!app.isPackaged) {
+    app.dock?.setIcon(appIcon);
   }
 
   registerDocumentsFolder();

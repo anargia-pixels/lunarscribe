@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "Lunarscribe Markdown writing app",
   "private": true,
   "type": "module",
@@ -42,6 +42,7 @@
     "appId": "com.lunarscribe.app",
     "productName": "Lunarscribe",
     "directories": {
+      "buildResources": "../../assets/icons",
       "output": "dist"
     },
     "files": [
@@ -49,6 +50,12 @@
       "package.json"
     ],
     "npmRebuild": false,
+    "extraResources": [
+      {
+        "from": "../../assets/icons/256x256.png",
+        "to": "icons/256x256.png"
+      }
+    ],
     "fileAssociations": [
       {
         "ext": [
@@ -56,6 +63,7 @@
           "markdown"
         ],
         "name": "Markdown",
+        "icon": "icon.icns",
         "role": "Editor",
         "mimeType": "text/markdown"
       },
@@ -64,6 +72,7 @@
           "txt"
         ],
         "name": "Plain text",
+        "icon": "icon.icns",
         "role": "Editor",
         "mimeType": "text/plain"
       }
@@ -77,6 +86,7 @@
       }
     ],
     "linux": {
+      "icon": "256x256.png",
       "artifactName": "lunarscribe-linux-${arch}.${ext}",
       "executableName": "lunarscribe",
       "target": [
@@ -91,6 +101,7 @@
       "maintainer": "Lunarscribe contributors"
     },
     "mac": {
+      "icon": "icon.icns",
       "artifactName": "lunarscribe-macos-${arch}.${ext}",
       "target": [
         {

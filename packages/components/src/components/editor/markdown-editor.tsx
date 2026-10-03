@@ -15,6 +15,7 @@ import { ScrollArea } from "@lunarscribe/components/ui/scroll-area";
 import type { EditorState } from "lexical";
 
 import { createMarkdownConfig } from "./markdown-config";
+import { CheckListReorderPlugin } from "./plugins/check-list-reorder-plugin";
 import { CodeHighlightPlugin } from "./plugins/code-highlight-plugin";
 import { FindPlugin } from "./plugins/find-plugin";
 import { MARKDOWN_TRANSFORMERS } from "./plugins/markdown-transformers";
@@ -72,6 +73,7 @@ export function MarkdownEditor({
       <HorizontalRulePlugin />
       <ListPlugin />
       <CheckListPlugin disableTakeFocusOnClick />
+      <CheckListReorderPlugin />
       <TablePlugin
         hasCellMerge={false}
         hasCellBackgroundColor={false}

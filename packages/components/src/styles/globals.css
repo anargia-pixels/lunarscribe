@@ -273,6 +273,14 @@
 }
 
 @utility editor-checklist-checked {
+  &[role="checkbox"] {
+    text-decoration-line: line-through;
+  }
+
+  &[role="checkbox"] > :not(ul, ol) {
+    opacity: 0.8;
+  }
+
   &[role="checkbox"]::before {
     background-color: var(--primary);
   }

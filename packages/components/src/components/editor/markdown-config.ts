@@ -34,7 +34,12 @@ export function createMarkdownConfig(markdown: string): InitialConfigType {
       MermaidNode,
     ],
     editorState: () =>
-      $convertFromMarkdownString(markdown, MARKDOWN_TRANSFORMERS),
+      $convertFromMarkdownString(
+        markdown,
+        MARKDOWN_TRANSFORMERS,
+        undefined,
+        true,
+      ),
     onError: (error) => {
       throw error;
     },

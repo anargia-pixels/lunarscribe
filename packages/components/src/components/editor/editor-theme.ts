@@ -5,7 +5,7 @@ export const editorTheme: EditorThemeClasses = {
   // Lexical hides the native caret beside block decorators and uses this cursor.
   blockCursor:
     "pointer-events-none relative block h-0 before:absolute before:top-0 before:left-0 before:h-7 before:w-px before:animate-caret-blink before:bg-foreground",
-  paragraph: "mb-3 leading-7",
+  paragraph: "leading-7",
   quote: "mb-3 border-l-2 border-border pl-4 text-muted-foreground italic",
   heading: {
     h1: "mb-4 text-3xl font-bold tracking-tight text-heading-1",

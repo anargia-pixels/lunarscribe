@@ -40,7 +40,9 @@ export function MarkdownEditor({
 
   const handleChange = (editorState: EditorState) =>
     editorState.read(() =>
-      onChange($convertToMarkdownString(MARKDOWN_TRANSFORMERS)),
+      onChange(
+        $convertToMarkdownString(MARKDOWN_TRANSFORMERS, undefined, true),
+      ),
     );
 
   return (

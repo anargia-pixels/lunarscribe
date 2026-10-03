@@ -11,6 +11,7 @@ import {
 } from "@/lib/editor-files";
 import type { ExternalFile, FileTarget } from "@/lib/editor-files";
 import { createOperationQueue } from "@/lib/operation-queue";
+import type { SyncedFileChange } from "@/lib/sync";
 import { createBufferFileWrites } from "@/stores/file-writes";
 
 export { stemOf } from "@/lib/editor-files";
@@ -26,6 +27,8 @@ export type TextBuffer = {
   kind: BufferKind;
   /** Markdown, or the Excalidraw scene JSON for a drawing; empty for a new drawing. */
   content: string;
+  savedContent: string | null;
+  syncRevision: number;
   /** Saved file in the documents folder, or null until the first save. */
   fileName: string | null;
   /** Original text file outside the documents folder; edits save back here. */
@@ -42,6 +45,7 @@ export type BufferStore = {
   /** Failed external opens, retained until dismissed or another batch is opened. */
   fileError: string | null;
   clearFileError: () => void;
+  applySyncedFiles: (changes: SyncedFileChange[]) => string[];
   renameBuffer: (id: string, title: string) => void;
   setContent: (id: string, content: string) => void;
   saveActiveBuffer: () => Promise<string>;
@@ -104,6 +108,8 @@ function createWelcomeBuffer(): TextBuffer {
     title: "welcome",
     kind: "markdown",
     content: WELCOME_MARKDOWN,
+    savedContent: null,
+    syncRevision: 0,
     fileName: null,
     externalPath: null,
   };
@@ -228,6 +234,50 @@ export const useBufferStore = create<BufferStore>()(
       lastOpenedExternalPath: null,
       fileError: null,
       clearFileError: () => set({ fileError: null }),
+      applySyncedFiles: (changes) => {
+        const conflicts: string[] = [];
+
+        for (const change of changes) {
+          const buffer = get().buffers.find(
+            (candidate) => candidate.fileName === change.name,
+          );
+
+          if (!buffer) {
+            continue;
+          }
+
+          if (
+            buffer.content !== change.before ||
+            buffer.title !== stemOf(change.name)
+          ) {
+            conflicts.push(change.name);
+
+            continue;
+          }
+
+          bufferFileWrites.discardSaveTimer(buffer.id);
+
+          if (change.after === null) {
+            closeFileBuffer(buffer);
+          } else {
+            const content = change.after;
+            set((state) => ({
+              buffers: state.buffers.map((candidate) =>
+                candidate.id === buffer.id
+                  ? {
+                      ...candidate,
+                      content,
+                      savedContent: content,
+                      syncRevision: candidate.syncRevision + 1,
+                    }
+                  : candidate,
+              ),
+            }));
+          }
+        }
+
+        return conflicts;
+      },
 
       renameBuffer: (id, rawTitle) => {
         const title = toBufferTitle(rawTitle);
@@ -313,6 +363,8 @@ export const useBufferStore = create<BufferStore>()(
           title,
           kind,
           content: "",
+          savedContent: null,
+          syncRevision: 0,
           fileName: null,
           externalPath: null,
         };
@@ -359,6 +411,7 @@ export const useBufferStore = create<BufferStore>()(
                 title,
                 getFileExtension(target.name) ??
                   BUFFER_EXTENSIONS[kindOf(target.name)],
+                content,
                 content,
               );
 
@@ -422,6 +475,8 @@ async function openSavedFile(name: string) {
     title: stemOf(name),
     kind: kindOf(name),
     content,
+    savedContent: content,
+    syncRevision: 0,
     fileName: name,
     externalPath: null,
   };
@@ -495,6 +550,8 @@ async function openExternalFile(path: string) {
       title: stemOf(file.name),
       kind: "markdown",
       content: file.markdown,
+      savedContent: file.markdown,
+      syncRevision: 0,
       fileName: null,
       externalPath: file.path,
     };

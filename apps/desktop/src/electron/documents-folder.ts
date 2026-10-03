@@ -11,6 +11,7 @@ import {
 } from "../lib/editor-files";
 import { createOperationQueue } from "../lib/operation-queue";
 import { registerFileSearch } from "./file-search";
+import { registerSync } from "./sync/sync-service";
 
 /** Saves buffers as `<title><extension>` in Documents/lunarscribe and tells windows when the folder changes. */
 export function registerDocumentsFolder() {
@@ -24,6 +25,7 @@ export function registerDocumentsFolder() {
 
   mkdirSync(folder, { recursive: true });
   registerFileSearch(folder);
+  registerSync(folder, queueFileOperation);
 
   ipcMain.handle("files:list", listFiles);
   ipcMain.handle("files:path", (_event, name: string) => pathOf(name));
@@ -38,8 +40,27 @@ export function registerDocumentsFolder() {
       title: string,
       extension: string,
       content: string,
+      expectedContent: string | null,
     ) => {
       return queueFileOperation(folder, async () => {
+        if (previousName && expectedContent !== null) {
+          let current: string;
+
+          try {
+            current = await readFile(pathOf(previousName), "utf8");
+          } catch {
+            throw new Error(
+              "The saved file was removed or cannot be read. Your buffer is safe; copy your writing before reopening the saved file.",
+            );
+          }
+
+          if (current !== expectedContent) {
+            throw new Error(
+              "The saved file changed since this buffer was loaded. Your edits were preserved. Copy your writing before reopening the saved file to resolve the conflict.",
+            );
+          }
+        }
+
         // Slashes would make the written file differ from the name the buffer records.
         const stem =
           title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_") ||

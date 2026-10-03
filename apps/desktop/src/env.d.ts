@@ -7,6 +7,26 @@ interface Window {
   EXCALIDRAW_ASSET_PATH?: string | string[];
   lunarscribe: {
     platform: string;
+    getSyncStatus: () => Promise<import("./lib/sync").SyncStatus>;
+    connectSync: (
+      provider: import("./lib/sync").SyncProvider,
+      clientId: string,
+    ) => Promise<import("./lib/sync").SyncStatus>;
+    disconnectSync: () => Promise<import("./lib/sync").SyncStatus>;
+    syncFiles: (
+      name: string | null,
+    ) => Promise<import("./lib/sync").SyncResult>;
+    cancelSyncSignIn: () => void;
+    protectSyncFiles: (names: string[]) => void;
+    onSyncStatus: (
+      listener: (status: import("./lib/sync").SyncStatus) => void,
+    ) => () => void;
+    onSyncResult: (
+      listener: (result: import("./lib/sync").SyncResult) => void,
+    ) => () => void;
+    onSyncedFiles: (
+      listener: (changes: import("./lib/sync").SyncedFileChange[]) => void,
+    ) => () => void;
     getPathForFile: (file: File) => string;
     readExternalFile: (
       path: string,
@@ -37,6 +57,7 @@ interface Window {
       title: string,
       extension: import("./lib/editor-files").FileExtension,
       content: string,
+      expectedContent: string | null,
     ) => Promise<string>;
     deleteFile: (name: string) => Promise<void>;
     onFilesChanged: (listener: (files: string[]) => void) => () => void;

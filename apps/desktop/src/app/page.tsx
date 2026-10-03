@@ -135,7 +135,7 @@ export default function Page() {
       )}
       {buffer.kind === "drawing" ? (
         <LazyDrawingEditor
-          key={buffer.id}
+          key={`${buffer.id}:${buffer.syncRevision}`}
           scene={buffer.content}
           theme={theme}
           onChange={(scene) => setContent(buffer.id, scene)}
@@ -143,7 +143,7 @@ export default function Page() {
       ) : (
         <EditorFileDropZone>
           <MarkdownEditor
-            key={buffer.id}
+            key={`${buffer.id}:${buffer.syncRevision}`}
             markdown={buffer.content}
             onChange={(markdown) => setContent(buffer.id, markdown)}
           />

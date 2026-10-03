@@ -26,6 +26,12 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
 - **Local storage:** Lunarscribe automatically saves changes two seconds after the last
   edit. The save shortcut saves the active buffer immediately. When the app starts, it
   opens the last selected saved file.
+- **Syncing:** Settings → General → Syncing connects GitHub, Google Drive, or Dropbox.
+  Saved markdown and drawings sync every five minutes while the app is open. The save
+  shortcut also pushes the active saved file. Conflicts and sync failures show toasts.
+  Google Drive and Dropbox use browser sign-in without bundled OAuth secrets. Drive
+  requires browser sign-in again when its access token expires. Refer to
+  [Syncing saved writing](docs/features/001-syncing.md) for setup and conflict behavior.
 - **External files:** The editor opens `.md`, `.markdown`, and `.txt` files. You can drag
   files into the markdown editor or give their paths to the desktop app. Packaged apps
   support file associations and `lunarscribe://open?path=...` links. Lunarscribe saves

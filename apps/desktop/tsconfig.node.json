@@ -7,7 +7,9 @@
   "include": [
     "electron.vite.config.ts",
     "src/electron/**/*.ts",
+    "src/electron/sync/public-creds.json",
     "src/lib/editor-files.ts",
-    "src/lib/operation-queue.ts"
+    "src/lib/operation-queue.ts",
+    "src/lib/sync.ts"
   ]
 }

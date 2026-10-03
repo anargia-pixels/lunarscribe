@@ -6,10 +6,55 @@ import type {
   FileSearchMatch,
   OpenedExternalFile,
 } from "../lib/editor-files";
+import type {
+  SyncProvider,
+  SyncStatus,
+  SyncResult,
+  SyncedFileChange,
+} from "../lib/sync";
 
 /** Exposes file operations and lifecycle events without Node access in the renderer. */
 contextBridge.exposeInMainWorld("lunarscribe", {
   platform: process.platform,
+  getSyncStatus: (): Promise<SyncStatus> => ipcRenderer.invoke("sync:status"),
+  connectSync: (
+    provider: SyncProvider,
+    clientId: string,
+  ): Promise<SyncStatus> =>
+    ipcRenderer.invoke("sync:connect", provider, clientId),
+  disconnectSync: (): Promise<SyncStatus> =>
+    ipcRenderer.invoke("sync:disconnect"),
+  syncFiles: (name: string | null): Promise<SyncResult> =>
+    ipcRenderer.invoke("sync:run", name),
+  cancelSyncSignIn: () => ipcRenderer.send("sync:cancel"),
+  protectSyncFiles: (names: string[]) =>
+    ipcRenderer.send("sync:protected", names),
+  onSyncStatus: (listener: (status: SyncStatus) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, status: SyncStatus) =>
+      listener(status);
+
+    ipcRenderer.on("sync:status", handler);
+
+    return () => ipcRenderer.off("sync:status", handler);
+  },
+  onSyncResult: (listener: (result: SyncResult) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, result: SyncResult) =>
+      listener(result);
+
+    ipcRenderer.on("sync:result", handler);
+
+    return () => ipcRenderer.off("sync:result", handler);
+  },
+  onSyncedFiles: (listener: (changes: SyncedFileChange[]) => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      changes: SyncedFileChange[],
+    ) => listener(changes);
+
+    ipcRenderer.on("sync:files", handler);
+
+    return () => ipcRenderer.off("sync:files", handler);
+  },
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   readExternalFile: (path: string): Promise<OpenedExternalFile> =>
     ipcRenderer.invoke("external-files:read", path),
@@ -51,8 +96,16 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     title: string,
     extension: FileExtension,
     content: string,
+    expectedContent: string | null,
   ): Promise<string> =>
-    ipcRenderer.invoke("files:save", previousName, title, extension, content),
+    ipcRenderer.invoke(
+      "files:save",
+      previousName,
+      title,
+      extension,
+      content,
+      expectedContent,
+    ),
   deleteFile: (name: string) => ipcRenderer.invoke("files:delete", name),
   onFilesChanged: (listener: (files: string[]) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, files: string[]) =>

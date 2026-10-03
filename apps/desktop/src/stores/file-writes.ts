@@ -76,6 +76,7 @@ export function createBufferFileWrites(store: StoreApi<BufferStore>) {
       buffer.title,
       getFileExtension(buffer.fileName ?? "") ?? BUFFER_EXTENSIONS[buffer.kind],
       buffer.content,
+      buffer.savedContent,
     );
 
     store.setState((state) => ({
@@ -88,7 +89,7 @@ export function createBufferFileWrites(store: StoreApi<BufferStore>) {
         const title =
           candidate.title === buffer.title ? stemOf(fileName) : candidate.title;
 
-        return { ...candidate, fileName, title };
+        return { ...candidate, fileName, title, savedContent: buffer.content };
       }),
     }));
 

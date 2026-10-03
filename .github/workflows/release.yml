@@ -4,6 +4,19 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build or update
+        required: true
+        type: string
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -33,7 +46,7 @@ jobs:
       - name: Check the release version
         run: |
           version=$(jq -r .version apps/desktop/package.json)
-          test "$GITHUB_REF_NAME" = "v$version"
+          test "$RELEASE_TAG" = "v$version"
       - run: bun install --frozen-lockfile
       - run: bun run format:check
       - run: bun run lint
@@ -65,5 +78,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release/* install.sh \
-            --verify-tag --title "Lunarscribe $GITHUB_REF_NAME" --generate-notes
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release/* install.sh --clobber
+          else
+            gh release create "$RELEASE_TAG" release/* install.sh \
+              --verify-tag --title "Lunarscribe $RELEASE_TAG" --generate-notes
+          fi
+          old_asset=$(gh release view "$RELEASE_TAG" --json assets \
+            --jq '.assets[] | select(.name == "lunarscribe-linux-x86_64.AppImage") | .name')
+          if [ -n "$old_asset" ]; then
+            gh release delete-asset "$RELEASE_TAG" "$old_asset" --yes
+          fi

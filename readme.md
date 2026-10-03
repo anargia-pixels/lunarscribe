@@ -237,6 +237,8 @@ bun run package:macos:arm64
 Run the macOS commands on the corresponding Mac architecture. Packages are in
 `apps/desktop/dist/`. A version tag, such as `v0.0.13`, starts the GitHub Actions release
 workflow. The workflow builds all three packages and publishes them with their checksums.
+To build an existing release again, run the Release workflow manually and enter its tag.
+The workflow replaces that release's packages. A push to `main` does not start a release.
 
 The root `package.json` catalog specifies dependency versions. Workspaces use `catalog:`
 references. Refer to [AGENTS.md](AGENTS.md) for repository conventions. Refer to

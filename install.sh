@@ -3,7 +3,6 @@
 set -euo pipefail
 
 REPO="anargia-pixels/lunarscribe"
-TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
 VERSION="${LUNARSCRIBE_VERSION:-latest}"
 TMP_DIR=""
 MOUNT_PATH=""
@@ -61,9 +60,6 @@ case "$(uname -s)" in
 esac
 
 HEADERS=(-H "X-GitHub-Api-Version: 2022-11-28")
-if [[ -n "$TOKEN" ]]; then
-  HEADERS+=(-H "Authorization: Bearer $TOKEN")
-fi
 
 if [[ "$VERSION" == "latest" ]]; then
   RELEASE_URL="https://api.github.com/repos/$REPO/releases/latest"
@@ -76,17 +72,16 @@ TMP_DIR=$(mktemp -d)
 echo "Fetching release metadata..."
 curl -fsSL --retry 3 "${HEADERS[@]}" -H "Accept: application/vnd.github+json" \
   "$RELEASE_URL" -o "$TMP_DIR/release.json" ||
-  fail "Cannot access the release. For a private repository, set GH_TOKEN to a token with repository read access."
+  fail "Cannot access the release. Check your connection and try again."
 
 VERSION=$(jq -er '.tag_name' "$TMP_DIR/release.json")
 
 download_asset() {
   local name="$1"
   local url
-  url=$(jq -er --arg name "$name" '.assets[] | select(.name == $name) | .url' \
+  url=$(jq -er --arg name "$name" '.assets[] | select(.name == $name) | .browser_download_url' \
     "$TMP_DIR/release.json") || fail "Release $VERSION does not contain $name."
-  curl -fsSL --retry 3 "${HEADERS[@]}" -H "Accept: application/octet-stream" \
-    "$url" -o "$TMP_DIR/$name"
+  curl -fsSL --retry 3 "$url" -o "$TMP_DIR/$name"
 }
 
 echo "Downloading Lunarscribe $VERSION ($ASSET)..."

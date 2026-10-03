@@ -19,6 +19,10 @@ interface Window {
     ) => Promise<import("./lib/editor-files").ExternalFile>;
     onExternalFilesOpened: (listener: (paths: string[]) => void) => () => void;
     listFiles: () => Promise<string[]>;
+    searchFiles: (
+      query: string,
+      isContentSearch: boolean,
+    ) => Promise<import("./lib/editor-files").FileSearchMatch[]>;
     getFilePath: (name: string) => Promise<string>;
     readFile: (name: string) => Promise<string>;
     /**

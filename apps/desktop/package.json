@@ -14,6 +14,7 @@
     "check-types": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {
+    "@ff-labs/fff-node": "catalog:",
     "@lunarscribe/components": "workspace:*",
     "@tanstack/pacer": "catalog:",
     "lucide-react": "catalog:",
@@ -91,6 +92,11 @@
         "dmg"
       ],
       "category": "public.app-category.productivity"
-    }
+    },
+    "asarUnpack": [
+      "node_modules/@ff-labs/**",
+      "node_modules/ffi-rs/**",
+      "node_modules/@yuuang/**"
+    ]
   }
 }

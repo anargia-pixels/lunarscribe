@@ -10,6 +10,7 @@ import {
   INVALID_FILE_TITLE_CHARACTERS,
 } from "../lib/editor-files";
 import { createOperationQueue } from "../lib/operation-queue";
+import { registerFileSearch } from "./file-search";
 
 /** Saves buffers as `<title><extension>` in Documents/lunarscribe and tells windows when the folder changes. */
 export function registerDocumentsFolder() {
@@ -22,6 +23,7 @@ export function registerDocumentsFolder() {
     (await readdir(folder)).filter((name) => getFileExtension(name) !== null);
 
   mkdirSync(folder, { recursive: true });
+  registerFileSearch(folder);
 
   ipcMain.handle("files:list", listFiles);
   ipcMain.handle("files:path", (_event, name: string) => pathOf(name));

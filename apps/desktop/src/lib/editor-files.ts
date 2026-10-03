@@ -3,6 +3,18 @@ const TEXT_EXTENSIONS = [".md", ".markdown", ".txt"] as const;
 
 export type FileExtension = (typeof TEXT_EXTENSIONS)[number] | ".draw";
 
+/** Half-open JavaScript string offsets for highlighting a search match. */
+export type SearchMatchRange = [start: number, end: number];
+
+/** A saved file returned by file-name or content search. */
+export type FileSearchMatch = {
+  name: string;
+  lineNumber?: number;
+  lineContent?: string;
+  /** JavaScript string offsets, converted from fff's UTF-8 byte offsets. */
+  lineMatchRanges?: SearchMatchRange[];
+};
+
 /** A supported text or drawing extension, preserving its kind when a buffer is saved. */
 export function getFileExtension(name: string): FileExtension | null {
   const extension = name.slice(name.lastIndexOf(".")).toLowerCase();

@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type {
   ExternalFile,
   FileExtension,
+  FileSearchMatch,
   OpenedExternalFile,
 } from "../lib/editor-files";
 
@@ -33,6 +34,11 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     };
   },
   listFiles: () => ipcRenderer.invoke("files:list"),
+  searchFiles: (
+    query: string,
+    isContentSearch: boolean,
+  ): Promise<FileSearchMatch[]> =>
+    ipcRenderer.invoke("files:search", query, isContentSearch),
   getFilePath: (name: string): Promise<string> =>
     ipcRenderer.invoke("files:path", name),
   readFile: (name: string) => ipcRenderer.invoke("files:read", name),

@@ -124,6 +124,8 @@ if [[ "$(uname -s)" == "Linux" ]]; then
   EXEC_PATH="${EXEC_PATH//\`/\\\`}"
   EXEC_PATH="${EXEC_PATH//%/%%}"
   EXEC_PATH="${EXEC_PATH//\\/\\\\}"
+  ICON_PATH="$APPLICATION_FOLDER/resources/icons/256x256.png"
+  ICON_PATH="${ICON_PATH//\\/\\\\}"
   cat > "$STAGE_DIR/lunarscribe.desktop" <<EOF
 [Desktop Entry]
 Version=1.0
@@ -131,7 +133,7 @@ Type=Application
 Name=Lunarscribe
 Comment=Write markdown and create drawings
 Exec="$EXEC_PATH" %U
-Icon=accessories-text-editor
+Icon=$ICON_PATH
 Terminal=false
 Categories=Office;TextEditor;
 MimeType=text/markdown;text/x-markdown;text/plain;x-scheme-handler/lunarscribe;

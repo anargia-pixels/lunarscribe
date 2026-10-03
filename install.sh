@@ -8,6 +8,7 @@ TMP_DIR=""
 MOUNT_PATH=""
 STAGE_DIR=""
 APP_PATH=""
+INSTALL_COMPLETE="false"
 
 fail() {
   echo "error: $*" >&2
@@ -19,7 +20,10 @@ cleanup() {
     hdiutil detach "$MOUNT_PATH" -quiet || true
   fi
   if [[ -n "$STAGE_DIR" ]]; then
-    if [[ -d "$STAGE_DIR/previous.app" && ! -e "$APP_PATH" ]]; then
+    if [[ -d "$STAGE_DIR/previous.app" && "$INSTALL_COMPLETE" != "true" ]]; then
+      if [[ -e "$APP_PATH" || -L "$APP_PATH" ]]; then
+        mv "$APP_PATH" "$STAGE_DIR/failed.app"
+      fi
       mv "$STAGE_DIR/previous.app" "$APP_PATH"
     fi
     rm -rf "$STAGE_DIR"
@@ -138,6 +142,7 @@ EOF
   fi
   mv "$STAGE_DIR/new.app" "$APP_PATH"
   mv -f "$STAGE_DIR/lunarscribe.desktop" "$DESKTOP_DIR/lunarscribe.desktop"
+  INSTALL_COMPLETE="true"
   if command -v update-desktop-database >/dev/null; then
     update-desktop-database "$DESKTOP_DIR" || true
   fi
@@ -159,6 +164,7 @@ else
     mv "$APP_PATH" "$STAGE_DIR/previous.app"
   fi
   mv "$STAGE_DIR/new.app" "$APP_PATH"
+  INSTALL_COMPLETE="true"
   echo "Installed Lunarscribe $VERSION at $APP_PATH"
   echo "Open Lunarscribe.app to start the app."
 fi

@@ -20,6 +20,7 @@
       "dependencies": {
         "@ff-labs/fff-node": "catalog:",
         "@lunarscribe/components": "workspace:*",
+        "@lunarscribe/utils": "workspace:*",
         "@tanstack/pacer": "catalog:",
         "docx": "catalog:",
         "lucide-react": "catalog:",

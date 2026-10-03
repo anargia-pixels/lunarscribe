@@ -42,6 +42,10 @@ contextBridge.exposeInMainWorld("lunarscribe", {
   getFilePath: (name: string): Promise<string> =>
     ipcRenderer.invoke("files:path", name),
   readFile: (name: string) => ipcRenderer.invoke("files:read", name),
+  exportPdf: (title: string, html: string): Promise<string | null> =>
+    ipcRenderer.invoke("files:export-pdf", title, html),
+  exportDocx: (title: string, bytes: Uint8Array): Promise<string | null> =>
+    ipcRenderer.invoke("files:export-docx", title, bytes),
   saveFile: (
     previousName: string | null,
     title: string,

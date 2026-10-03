@@ -3,7 +3,9 @@ import { join } from "node:path";
 import { app, BrowserWindow, shell } from "electron";
 
 import { registerDocumentsFolder } from "./documents-folder";
+import { registerDocxExport } from "./docx-export";
 import { queueExternalFiles, registerExternalFiles } from "./external-files";
+import { registerPdfExport } from "./pdf-export";
 
 const hasInstanceLock = app.requestSingleInstanceLock();
 
@@ -104,6 +106,8 @@ void app.whenReady().then(() => {
 
   registerDocumentsFolder();
   registerExternalFiles();
+  registerPdfExport();
+  registerDocxExport();
   queueExternalFiles(process.argv.slice(app.isPackaged ? 1 : 2), process.cwd());
 
   if (app.isPackaged) {

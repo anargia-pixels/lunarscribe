@@ -17,6 +17,7 @@
     "@ff-labs/fff-node": "catalog:",
     "@lunarscribe/components": "workspace:*",
     "@tanstack/pacer": "catalog:",
+    "docx": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

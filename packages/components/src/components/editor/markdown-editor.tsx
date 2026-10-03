@@ -1,19 +1,9 @@
-import { CodeHighlightNode, CodeNode } from "@lexical/code";
-import { AutoLinkNode, LinkNode } from "@lexical/link";
-import { ListItemNode, ListNode } from "@lexical/list";
-import {
-  $convertFromMarkdownString,
-  $convertToMarkdownString,
-} from "@lexical/markdown";
+import { $convertToMarkdownString } from "@lexical/markdown";
 import { CheckListPlugin } from "@lexical/react/LexicalCheckListPlugin";
-import {
-  type InitialConfigType,
-  LexicalComposer,
-} from "@lexical/react/LexicalComposer";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
@@ -21,36 +11,16 @@ import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPl
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
-import { HeadingNode, QuoteNode } from "@lexical/rich-text";
-import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { ScrollArea } from "@lunarscribe/components/ui/scroll-area";
 import type { EditorState } from "lexical";
 
-import { editorTheme } from "./editor-theme";
+import { createMarkdownConfig } from "./markdown-config";
 import { CodeHighlightPlugin } from "./plugins/code-highlight-plugin";
 import { FindPlugin } from "./plugins/find-plugin";
 import { MARKDOWN_TRANSFORMERS } from "./plugins/markdown-transformers";
-import { MathNode } from "./plugins/math-node";
 import { MathPlugin } from "./plugins/math-plugin";
 import { TableCellMenuPlugin } from "./plugins/table-cell-menu-plugin";
 import { ToolbarPlugin } from "./toolbar-plugin";
-
-/** Every node type the markdown transformers can produce. */
-const MARKDOWN_NODES = [
-  HeadingNode,
-  QuoteNode,
-  ListNode,
-  ListItemNode,
-  CodeNode,
-  CodeHighlightNode,
-  LinkNode,
-  AutoLinkNode,
-  TableNode,
-  TableRowNode,
-  TableCellNode,
-  HorizontalRuleNode,
-  MathNode,
-];
 
 /**
  * WYSIWYG markdown editor. Loads `markdown` once on mount (remount via `key` to
@@ -63,16 +33,7 @@ export function MarkdownEditor({
   markdown: string;
   onChange: (markdown: string) => void;
 }) {
-  const initialConfig: InitialConfigType = {
-    namespace: "lunarscribe",
-    theme: editorTheme,
-    nodes: MARKDOWN_NODES,
-    editorState: () =>
-      $convertFromMarkdownString(markdown, MARKDOWN_TRANSFORMERS),
-    onError: (error) => {
-      throw error;
-    },
-  };
+  const initialConfig = createMarkdownConfig(markdown);
 
   const handleChange = (editorState: EditorState) =>
     editorState.read(() =>
@@ -90,6 +51,7 @@ export function MarkdownEditor({
               <RichTextPlugin
                 contentEditable={
                   <ContentEditable
+                    data-markdown-editor
                     aria-label="Document"
                     aria-placeholder="Start writing…"
                     placeholder={

@@ -25,6 +25,8 @@ interface Window {
     ) => Promise<import("./lib/editor-files").FileSearchMatch[]>;
     getFilePath: (name: string) => Promise<string>;
     readFile: (name: string) => Promise<string>;
+    exportPdf: (title: string, html: string) => Promise<string | null>;
+    exportDocx: (title: string, bytes: Uint8Array) => Promise<string | null>;
     /**
      * Writes `<title><extension>`, removing `previousName` if the
      * title changed. Never overwrites another file: on a clash it uses `<title>_N<extension>`.

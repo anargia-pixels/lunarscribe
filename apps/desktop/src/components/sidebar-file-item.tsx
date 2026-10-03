@@ -10,10 +10,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@lunarscribe/components/ui/sidebar";
-import { Copy, Ellipsis, Pencil, Trash2, X } from "lucide-react";
+import { Copy, Ellipsis, FileDown, Pencil, Trash2, X } from "lucide-react";
 import { useRef } from "react";
 
 import type { FileTarget } from "@/lib/editor-files";
+import { isTextFile } from "@/lib/editor-files";
 import { stemOf } from "@/stores/buffer-store";
 
 export type FileMenuState = { key: string; anchor: HTMLElement | null };
@@ -27,6 +28,9 @@ export function SidebarFileItem({
   onOpen,
   onRename,
   onCopyPath,
+  onExportPdf,
+  onExportDocx,
+  isExporting,
   onDelete,
 }: {
   target: FileTarget;
@@ -36,6 +40,9 @@ export function SidebarFileItem({
   onOpen: () => void;
   onRename: () => void;
   onCopyPath: () => void;
+  onExportPdf: () => void;
+  onExportDocx: () => void;
+  isExporting: boolean;
   onDelete: () => void;
 }) {
   const isMenuOpen = menu !== null;
@@ -88,6 +95,18 @@ export function SidebarFileItem({
           <Copy />
           Copy path
         </ContextMenuItem>
+        {isTextFile(target.name) && (
+          <>
+            <ContextMenuItem disabled={isExporting} onClick={onExportPdf}>
+              <FileDown />
+              Export as PDF
+            </ContextMenuItem>
+            <ContextMenuItem disabled={isExporting} onClick={onExportDocx}>
+              <FileDown />
+              Export as DOCX
+            </ContextMenuItem>
+          </>
+        )}
         <ContextMenuItem variant="destructive" onClick={onDelete}>
           {isExternal ? <X /> : <Trash2 />}
           {isExternal ? "Remove" : "Delete"}

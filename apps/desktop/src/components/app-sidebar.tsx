@@ -23,6 +23,8 @@ import type { FileMenuState } from "@/components/sidebar-file-item";
 import { SidebarFileSection } from "@/components/sidebar-file-section";
 import type { FileTarget } from "@/lib/editor-files";
 import { fileKey } from "@/lib/editor-files";
+import { exportDocx } from "@/lib/export-docx";
+import { exportPdf } from "@/lib/export-pdf";
 import { runFileAction } from "@/lib/file-feedback";
 import { FILE_SECTIONS } from "@/lib/sidebar-sections";
 import { kindOf, useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
@@ -37,6 +39,7 @@ export function AppSidebar() {
   const [dialog, setDialog] = useState<FileDialogState | null>(null);
   const [menu, setMenu] = useState<FileMenuState | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const openFile = useBufferStore((state) => state.openFile);
   const createBuffer = useBufferStore((state) => state.createBuffer);
@@ -151,6 +154,32 @@ export function AppSidebar() {
     );
   }
 
+  async function exportTarget(target: FileTarget, format: "PDF" | "DOCX") {
+    setIsExporting(true);
+
+    try {
+      await runFileAction(
+        async () => {
+          const path = await (format === "PDF"
+            ? exportPdf(target)
+            : exportDocx(target));
+
+          if (path) {
+            toast.add({
+              type: "success",
+              title: `${format} exported`,
+              description: path,
+            });
+          }
+        },
+        `Unable to export ${format}`,
+        `The ${format} could not be saved.`,
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   return (
     <>
       <Sidebar>
@@ -254,6 +283,9 @@ export function AppSidebar() {
                       onOpen={() => void openTarget(target)}
                       onRename={() => setDialog({ kind: "rename", target })}
                       onCopyPath={() => void copyPath(target)}
+                      onExportPdf={() => void exportTarget(target, "PDF")}
+                      onExportDocx={() => void exportTarget(target, "DOCX")}
+                      isExporting={isExporting}
                       onDelete={() => deleteTarget(target)}
                     />
                   );

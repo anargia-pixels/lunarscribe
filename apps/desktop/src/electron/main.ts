@@ -62,9 +62,6 @@ app.commandLine.appendSwitch("in-process-gpu");
 // Runs the network service inside the main process instead of a utility process.
 app.commandLine.appendSwitch("enable-features", "NetworkServiceInProcess2");
 
-// Skips V8's optimizing compiler, which this app's light JS does not need.
-app.commandLine.appendSwitch("js-flags", "--lite-mode");
-
 /** Opens the editor window and loads the renderer from Vite in dev or disk in production. */
 function createWindow() {
   const window = new BrowserWindow({

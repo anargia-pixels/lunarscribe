@@ -8,6 +8,12 @@ import {
 import type { ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
 import { useRef, useState } from "react";
 
+export type DrawingEditorProps = {
+  scene: string;
+  theme: "light" | "dark";
+  onChange: (scene: string) => void;
+};
+
 /** Parses and validates a saved scene; an empty or unreadable one opens a blank canvas. */
 function parseScene(scene: string): ExcalidrawInitialDataState | null {
   if (!scene) {
@@ -29,15 +35,7 @@ function parseScene(scene: string): ExcalidrawInitialDataState | null {
 }
 
 /** Excalidraw canvas for a drawing; reports the scene as JSON whenever its elements change. */
-export function DrawingEditor({
-  scene,
-  theme,
-  onChange,
-}: {
-  scene: string;
-  theme: "light" | "dark";
-  onChange: (scene: string) => void;
-}) {
+export function DrawingEditor({ scene, theme, onChange }: DrawingEditorProps) {
   // Excalidraw owns the scene after mount, so the saved one is only read once.
   const [initialData] = useState(() => parseScene(scene));
 

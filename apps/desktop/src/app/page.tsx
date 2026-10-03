@@ -1,16 +1,64 @@
-import { DrawingEditor } from "@lunarscribe/components/editor/drawing-editor";
+import type {
+  DrawingEditor,
+  DrawingEditorProps,
+} from "@lunarscribe/components/editor/drawing-editor";
 import { MarkdownEditor } from "@lunarscribe/components/editor/markdown-editor";
 import { Hint } from "@lunarscribe/components/hint/hint";
-import { Alert, AlertDescription } from "@lunarscribe/components/ui/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@lunarscribe/components/ui/alert";
 import { Button } from "@lunarscribe/components/ui/button";
 import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { EditorFileDropZone } from "@/components/editor-file-drop-zone";
 import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+
+/** Loads the drawing canvas only when a drawing buffer opens. */
+function LazyDrawingEditor(props: DrawingEditorProps) {
+  const [Canvas, setCanvas] = useState<typeof DrawingEditor | null>(null);
+  const [hasLoadFailed, setHasLoadFailed] = useState(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    void import("@lunarscribe/components/editor/drawing-editor").then(
+      ({ DrawingEditor: canvas }) => {
+        if (!isCancelled) {
+          setCanvas(() => canvas);
+        }
+      },
+      (error) => {
+        if (!isCancelled) {
+          console.error("Unable to load drawing editor.", error);
+          setHasLoadFailed(true);
+        }
+      },
+    );
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  if (hasLoadFailed) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Unable to load drawing editor</AlertTitle>
+        <AlertDescription>
+          Save your open buffers, then restart Lunarscribe to try again.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return Canvas === null ? null : <Canvas {...props} />;
+}
 
 /** Editor page for the active buffer. */
 export default function Page() {
@@ -86,7 +134,7 @@ export default function Page() {
         </Alert>
       )}
       {buffer.kind === "drawing" ? (
-        <DrawingEditor
+        <LazyDrawingEditor
           key={buffer.id}
           scene={buffer.content}
           theme={theme}

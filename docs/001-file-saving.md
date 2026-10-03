@@ -240,6 +240,10 @@ stays in its action dialog so the user can retry. Copy path reports success in a
 page alert includes each path and remains visible until the user selects Dismiss or opens
 another external-file batch. An unrelated successful save does not clear that alert.
 
+A failed drawing-editor load shows a separate alert. It tells the user to save open
+buffers and restart Lunarscribe. The load failure does not update the buffer's scene or
+start a save.
+
 Disk operations use `writeFile()`, links, exclusive copies, and removal calls. They do not
 form one atomic transaction. A failed write can leave a partial file. If removal of an old
 path fails after a successful write, both names can remain on disk. External Rename uses
@@ -300,3 +304,10 @@ are requested:
     batch.
 12. Open row actions with both right-click and the action button. Only one menu stays
     open, it uses the correct anchor, and closing restores focus to the action button.
+13. Create a drawing and open a saved `.draw` file. Both show the canvas. Switch to a
+    markdown buffer while the drawing editor loads; the late load must not replace it.
+14. In a temporary production build, make the drawing JavaScript or CSS chunk unavailable
+    before its first load. Create a drawing or open a saved `.draw` file. The page shows
+    "Unable to load drawing editor" and restart instructions. The failure does not change
+    the buffer's scene or produce an unhandled promise rejection. Restore the chunk,
+    restart, and verify that both drawing paths show the canvas.

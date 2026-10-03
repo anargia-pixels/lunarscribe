@@ -1,0 +1,77 @@
+@import "katex/dist/katex.min.css";
+
+.editor-math {
+  color: var(--foreground);
+}
+
+.editor-math-inline {
+  display: inline;
+  vertical-align: baseline;
+}
+
+.editor-math-block {
+  margin-block: 1rem;
+}
+
+.editor-math [data-math-preview] {
+  height: auto;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  vertical-align: baseline;
+  white-space: normal;
+  transition: none;
+}
+
+.editor-math [data-math-preview]:active {
+  transform: none;
+}
+
+.editor-math-block [data-math-preview],
+.editor-math-block [data-math-render] {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+}
+
+[data-math-source] {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: baseline;
+  gap: 0.25rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-code);
+}
+
+.editor-math-inline [data-math-source] [data-slot="input"] {
+  width: auto;
+  min-width: 4ch;
+  field-sizing: content;
+  font-family: inherit;
+}
+
+.editor-math-block [data-math-source] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+[data-math-source] [data-slot="textarea"] {
+  font-family: inherit;
+}
+
+[data-math-source] [data-math-render] {
+  color: var(--foreground);
+}
+
+.editor-math .katex-display {
+  margin-block: 0.75rem;
+}
+
+.editor-math .katex-error {
+  color: var(--destructive) !important;
+  white-space: pre-wrap;
+  font-family: var(--font-code);
+}

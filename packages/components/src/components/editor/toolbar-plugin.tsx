@@ -43,12 +43,19 @@ import {
   Pilcrow,
   Quote,
   Redo2,
+  Sigma,
   SquareCode,
+  SquareSigma,
   Strikethrough,
+  Subscript,
+  Superscript,
   Table,
+  Underline,
   Undo2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+
+import { INSERT_MATH_COMMAND } from "./plugins/math-plugin";
 
 const TEXT_FORMATS: {
   format: TextFormatType;
@@ -58,9 +65,17 @@ const TEXT_FORMATS: {
 }[] = [
   { format: "bold", label: "Bold", icon: Bold, shortcut: "B" },
   { format: "italic", label: "Italic", icon: Italic, shortcut: "I" },
+  { format: "underline", label: "Underline", icon: Underline, shortcut: "U" },
   { format: "strikethrough", label: "Strikethrough", icon: Strikethrough },
+  { format: "superscript", label: "Superscript", icon: Superscript },
+  { format: "subscript", label: "Subscript", icon: Subscript },
   { format: "code", label: "Inline code", icon: Code },
 ];
+
+const MATH_INSERTIONS = [
+  { label: "Insert inline math", inline: true, icon: Sigma },
+  { label: "Insert math block", inline: false, icon: SquareSigma },
+] as const;
 
 /** Block-level conversions; lists go through commands so ListPlugin can merge siblings. */
 const BLOCKS: {
@@ -251,6 +266,21 @@ export function ToolbarPlugin() {
               size="icon-sm"
               aria-label={label}
               onClick={() => apply(editor)}
+            >
+              <Icon />
+            </Button>
+          </Hint>
+        ))}
+        <ToolbarSeparator />
+        {MATH_INSERTIONS.map(({ label, inline, icon: Icon }) => (
+          <Hint key={label} label={label}>
+            <Button
+              variant="fluid"
+              size="icon-sm"
+              aria-label={label}
+              onClick={() =>
+                editor.dispatchCommand(INSERT_MATH_COMMAND, inline)
+              }
             >
               <Icon />
             </Button>

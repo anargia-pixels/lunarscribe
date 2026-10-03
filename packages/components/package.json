@@ -33,6 +33,7 @@
     "date-fns": "catalog:",
     "embla-carousel-react": "catalog:",
     "input-otp": "catalog:",
+    "katex": "catalog:",
     "lexical": "catalog:",
     "lucide-react": "catalog:",
     "react-day-picker": "catalog:",
@@ -46,6 +47,7 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@types/katex": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "react": "catalog:",

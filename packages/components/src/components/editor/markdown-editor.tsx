@@ -30,6 +30,8 @@ import { editorTheme } from "./editor-theme";
 import { CodeHighlightPlugin } from "./plugins/code-highlight-plugin";
 import { FindPlugin } from "./plugins/find-plugin";
 import { MARKDOWN_TRANSFORMERS } from "./plugins/markdown-transformers";
+import { MathNode } from "./plugins/math-node";
+import { MathPlugin } from "./plugins/math-plugin";
 import { TableCellMenuPlugin } from "./plugins/table-cell-menu-plugin";
 import { ToolbarPlugin } from "./toolbar-plugin";
 
@@ -47,6 +49,7 @@ const MARKDOWN_NODES = [
   TableRowNode,
   TableCellNode,
   HorizontalRuleNode,
+  MathNode,
 ];
 
 /**
@@ -113,6 +116,7 @@ export function MarkdownEditor({
         hasHorizontalScroll
       />
       <CodeHighlightPlugin />
+      <MathPlugin />
       <LinkPlugin />
       <MarkdownShortcutPlugin transformers={MARKDOWN_TRANSFORMERS} />
       <OnChangePlugin ignoreSelectionChange onChange={handleChange} />

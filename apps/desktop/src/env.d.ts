@@ -12,8 +12,14 @@ interface Window {
       path: string,
     ) => Promise<import("./lib/editor-files").OpenedExternalFile>;
     saveExternalFile: (path: string, markdown: string) => Promise<void>;
+    renameExternalFile: (
+      path: string,
+      sourcePath: string,
+      title: string,
+    ) => Promise<import("./lib/editor-files").ExternalFile>;
     onExternalFilesOpened: (listener: (paths: string[]) => void) => () => void;
     listFiles: () => Promise<string[]>;
+    getFilePath: (name: string) => Promise<string>;
     readFile: (name: string) => Promise<string>;
     /**
      * Writes `<title><extension>`, removing `previousName` if the

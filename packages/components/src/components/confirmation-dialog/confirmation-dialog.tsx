@@ -1,68 +1,19 @@
-import { Alert, AlertDescription } from "@lunarscribe/components/ui/alert";
-import { Button } from "@lunarscribe/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@lunarscribe/components/ui/dialog";
+import { ActionDialog } from "@lunarscribe/components/action-dialog/action-dialog";
+import type { ComponentProps } from "react";
 
-/** A controlled confirmation dialog; the caller performs the action and reports its result. */
+/** Destructive confirmation using the shared action-dialog form. */
 export function ConfirmationDialog({
-  open,
-  onOpenChange,
-  title,
-  description,
   confirmLabel = "Confirm",
-  onConfirm,
-  pending = false,
-  error,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  description: string;
-  confirmLabel?: string;
-  onConfirm: () => void;
-  pending?: boolean;
-  error?: string | null;
-}) {
+  ...props
+}: Omit<
+  ComponentProps<typeof ActionDialog>,
+  "confirmVariant" | "children" | "confirmLabel"
+> & { confirmLabel?: string }) {
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!pending) {
-          onOpenChange(nextOpen);
-        }
-      }}
-    >
-      <DialogContent showCloseButton={!pending}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <DialogFooter>
-          <DialogClose render={<Button variant="outline" disabled={pending} />}>
-            Cancel
-          </DialogClose>
-          <Button
-            variant="destructive"
-            disabled={pending}
-            aria-busy={pending}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ActionDialog
+      {...props}
+      confirmLabel={confirmLabel}
+      confirmVariant="destructive"
+    />
   );
 }

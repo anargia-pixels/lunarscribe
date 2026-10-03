@@ -7,6 +7,7 @@
   "include": [
     "electron.vite.config.ts",
     "src/electron/**/*.ts",
-    "src/lib/editor-files.ts"
+    "src/lib/editor-files.ts",
+    "src/lib/operation-queue.ts"
   ]
 }

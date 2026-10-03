@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 
-import type { FileExtension, OpenedExternalFile } from "../lib/editor-files";
+import type {
+  ExternalFile,
+  FileExtension,
+  OpenedExternalFile,
+} from "../lib/editor-files";
 
 /** Exposes file operations and lifecycle events without Node access in the renderer. */
 contextBridge.exposeInMainWorld("lunarscribe", {
@@ -10,6 +14,12 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     ipcRenderer.invoke("external-files:read", path),
   saveExternalFile: (path: string, markdown: string): Promise<void> =>
     ipcRenderer.invoke("external-files:save", path, markdown),
+  renameExternalFile: (
+    path: string,
+    sourcePath: string,
+    title: string,
+  ): Promise<ExternalFile> =>
+    ipcRenderer.invoke("external-files:rename", path, sourcePath, title),
   onExternalFilesOpened: (listener: (paths: string[]) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, paths: string[]) =>
       listener(paths);
@@ -23,6 +33,8 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     };
   },
   listFiles: () => ipcRenderer.invoke("files:list"),
+  getFilePath: (name: string): Promise<string> =>
+    ipcRenderer.invoke("files:path", name),
   readFile: (name: string) => ipcRenderer.invoke("files:read", name),
   saveFile: (
     previousName: string | null,

@@ -1,0 +1,29 @@
+[data-sidebar-file-section] {
+  transition: flex-grow 200ms ease-out;
+}
+
+[data-sidebar-file-section] [data-sidebar="group-label"] {
+  text-transform: uppercase;
+}
+
+[data-sidebar-file-section] [data-slot="collapsible-content"] {
+  transition: opacity 200ms ease-out;
+}
+
+[data-sidebar-file-section]
+  [data-slot="collapsible-content"][data-starting-style],
+[data-sidebar-file-section]
+  [data-slot="collapsible-content"][data-ending-style] {
+  opacity: 0;
+}
+
+[data-sidebar-file-item] [data-slot="sidebar-menu-button"] {
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sidebar-file-section],
+  [data-sidebar-file-section] [data-slot="collapsible-content"] {
+    transition: none;
+  }
+}

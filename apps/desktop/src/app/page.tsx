@@ -2,6 +2,7 @@ import { DrawingEditor } from "@lunarscribe/components/editor/drawing-editor";
 import { MarkdownEditor } from "@lunarscribe/components/editor/markdown-editor";
 import { Hint } from "@lunarscribe/components/hint/hint";
 import { Alert, AlertDescription } from "@lunarscribe/components/ui/alert";
+import { Button } from "@lunarscribe/components/ui/button";
 import { Input } from "@lunarscribe/components/ui/input";
 import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
@@ -21,6 +22,7 @@ export default function Page() {
   const renameBuffer = useBufferStore((state) => state.renameBuffer);
   const setContent = useBufferStore((state) => state.setContent);
   const theme = useAppearanceStore((state) => state.theme);
+  const clearFileError = useBufferStore((state) => state.clearFileError);
   const fileError = useBufferStore((state) => state.fileError);
 
   useEffect(() => {
@@ -86,6 +88,9 @@ export default function Page() {
         <Alert variant="destructive">
           <AlertDescription className="whitespace-pre-wrap">
             {fileError}
+            <Button variant="ghost" size="sm" onClick={clearFileError}>
+              Dismiss
+            </Button>
           </AlertDescription>
         </Alert>
       )}

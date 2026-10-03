@@ -1,19 +1,26 @@
-import { Debouncer } from "@tanstack/pacer/debouncer";
+import { errorMessage } from "@lunarscribe/utils/error-message";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import { getFileExtension } from "@/lib/editor-files";
-import type { ExternalFile } from "@/lib/editor-files";
+import {
+  BUFFER_EXTENSIONS,
+  stemOf,
+  fileKey,
+  getFileExtension,
+  INVALID_FILE_TITLE_CHARACTERS,
+} from "@/lib/editor-files";
+import type { ExternalFile, FileTarget } from "@/lib/editor-files";
+import { createOperationQueue } from "@/lib/operation-queue";
+import { createBufferFileWrites } from "@/stores/file-writes";
 
-/** File extension of each buffer kind. */
-const EXTENSIONS = { markdown: ".md", drawing: ".draw" } as const;
+export { stemOf } from "@/lib/editor-files";
 
 // Types
 
-type BufferKind = keyof typeof EXTENSIONS;
+type BufferKind = keyof typeof BUFFER_EXTENSIONS;
 
 /** One open document; `content` is the source of truth its editor loads from and saves to. */
-type TextBuffer = {
+export type TextBuffer = {
   id: string;
   title: string;
   kind: BufferKind;
@@ -25,14 +32,16 @@ type TextBuffer = {
   externalPath: string | null;
 };
 
-type BufferStore = {
+export type BufferStore = {
   buffers: TextBuffer[];
   activeId: string;
   /** File shown when the app last closed, reopened on launch; null for an unsaved buffer. */
   lastOpenedFileName: string | null;
   externalFiles: ExternalFile[];
   lastOpenedExternalPath: string | null;
+  /** Failed external opens, retained until dismissed or another batch is opened. */
   fileError: string | null;
+  clearFileError: () => void;
   renameBuffer: (id: string, title: string) => void;
   setContent: (id: string, content: string) => void;
   saveActiveBuffer: () => Promise<string>;
@@ -40,6 +49,10 @@ type BufferStore = {
   openExternalFiles: (paths: string[]) => Promise<void>;
   createBuffer: (kind: BufferKind, fileNames: string[]) => void;
   deleteFile: (name: string) => Promise<void>;
+  renameFile: (target: FileTarget, title: string) => Promise<void>;
+  removeExternalFile: (
+    target: Extract<FileTarget, { kind: "external" }>,
+  ) => Promise<void>;
 };
 
 /** Markdown shown by the welcome buffer on first launch. */
@@ -57,19 +70,17 @@ Type markdown shortcuts and they turn into rich text:
 
 /** A file's kind, from its extension. */
 export function kindOf(fileName: string): BufferKind {
-  return getFileExtension(fileName) === EXTENSIONS.drawing
+  return getFileExtension(fileName) === BUFFER_EXTENSIONS.drawing
     ? "drawing"
     : "markdown";
 }
 
-/** A file's name without its extension, which is its buffer title. */
-export function stemOf(fileName: string) {
-  return fileName.slice(0, fileName.lastIndexOf("."));
-}
-
 /** Buffer titles are snake_case: lowercase, with whitespace and slashes turned into `_`. */
 export function toBufferTitle(input: string) {
-  return input.toLowerCase().replaceAll(/[\s/\\]/gu, "_");
+  return input
+    .toLowerCase()
+    .replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_")
+    .replaceAll(/\s/gu, "_");
 }
 
 /** Returns a copy of `buffers` with the buffer that has `id` patched. */
@@ -102,7 +113,106 @@ function createWelcomeBuffer(): TextBuffer {
 
 const initialBuffer = createWelcomeBuffer();
 
-let pendingFileOpen = Promise.resolve();
+// One queue implementation orders file identities, stable buffer IDs, and external selection.
+const queueOperation = createOperationQueue();
+
+function findFileBuffer(target: FileTarget) {
+  return (
+    useBufferStore
+      .getState()
+      .buffers.find((buffer) =>
+        target.kind === "saved"
+          ? buffer.fileName === target.name
+          : buffer.externalPath === target.path,
+      ) ?? null
+  );
+}
+
+const FILE_OPERATION_POLICIES = {
+  renameSaved: { save: "keep", close: false },
+  renameExternal: { save: "flush", close: false },
+  delete: { save: "keep", close: true },
+  remove: { save: "flush", close: true },
+} as const;
+
+type FileOperationPolicy =
+  (typeof FILE_OPERATION_POLICIES)[keyof typeof FILE_OPERATION_POLICIES];
+
+/** Resolve once, then serialize against saves and apply the operation's explicit save policy. */
+function applyFileOperation(
+  target: FileTarget,
+  policy: FileOperationPolicy,
+  operation: (buffer: TextBuffer | null) => Promise<void>,
+) {
+  const apply = async () => {
+    await bufferRestored;
+
+    const open = findFileBuffer(target);
+
+    if (!open) {
+      await operation(null);
+
+      return;
+    }
+
+    await bufferFileWrites.queueBufferWrite(open.id, async () => {
+      const buffer =
+        useBufferStore
+          .getState()
+          .buffers.find((candidate) => candidate.id === open.id) ?? null;
+
+      if (buffer && policy.save === "flush") {
+        await bufferFileWrites.writeBuffer(buffer.id, "manual");
+      }
+
+      await operation(buffer);
+
+      if (policy.close) {
+        closeFileBuffer(buffer);
+      }
+    });
+  };
+
+  // External opens and lifecycle actions share request order, including unopened tracked entries.
+  const key = target.kind === "external" ? "external-files" : fileKey(target);
+
+  return queueOperation(key, apply);
+}
+
+/** Closing an active file consistently returns to an untouched welcome buffer. */
+function selectFallbackBuffer(buffers: TextBuffer[], activeId: string) {
+  const active = buffers.find((buffer) => buffer.id === activeId);
+
+  const fallback =
+    active ??
+    buffers.find(
+      (buffer) =>
+        buffer.fileName === null &&
+        buffer.externalPath === null &&
+        buffer.content === WELCOME_MARKDOWN,
+    ) ??
+    createWelcomeBuffer();
+
+  return {
+    buffers: buffers.includes(fallback) ? buffers : [...buffers, fallback],
+    activeId: fallback.id,
+  };
+}
+
+/** Called only after the disk operation succeeds, so failures retain edits and their timer. */
+function closeFileBuffer(buffer: TextBuffer | null) {
+  if (!buffer) {
+    return;
+  }
+
+  bufferFileWrites.discardSaveTimer(buffer.id);
+  useBufferStore.setState((state) =>
+    selectFallbackBuffer(
+      state.buffers.filter((candidate) => candidate.id !== buffer.id),
+      state.activeId,
+    ),
+  );
+}
 
 /**
  * Open buffers and the active selection; each edit is saved to disk 2s after typing stops.
@@ -117,6 +227,7 @@ export const useBufferStore = create<BufferStore>()(
       externalFiles: [],
       lastOpenedExternalPath: null,
       fileError: null,
+      clearFileError: () => set({ fileError: null }),
 
       renameBuffer: (id, rawTitle) => {
         const title = toBufferTitle(rawTitle);
@@ -124,59 +235,35 @@ export const useBufferStore = create<BufferStore>()(
         set((state) => ({
           buffers: patchBuffer(state.buffers, id, { title }),
         }));
-        scheduleSave(id);
+        bufferFileWrites.scheduleSave(id);
       },
 
       setContent: (id, content) => {
         set((state) => ({
           buffers: patchBuffer(state.buffers, id, { content }),
         }));
-        scheduleSave(id);
+        bufferFileWrites.scheduleSave(id);
       },
 
       saveActiveBuffer: async () => {
         const id = get().activeId;
-        saveDebouncers.get(id)?.cancel();
+        const result = await bufferFileWrites.saveBufferNow(id);
 
-        const fileName = await saveBuffer(id, true);
-
-        if (fileName === null) {
+        if (result.status !== "saved") {
           throw new Error("The buffer is no longer open.");
         }
 
-        set({ fileError: null });
-
-        return fileName;
+        return result.fileName;
       },
 
-      openFile: async (name) => {
-        const open = get().buffers.find((buffer) => buffer.fileName === name);
+      openFile: (name) =>
+        queueOperation(fileKey({ kind: "saved", name }), async () => {
+          await bufferRestored;
+          await openSavedFile(name);
+        }),
 
-        if (open) {
-          set({ activeId: open.id });
-
-          return;
-        }
-
-        const content = await window.lunarscribe.readFile(name);
-
-        const buffer: TextBuffer = {
-          id: crypto.randomUUID(),
-          title: stemOf(name),
-          kind: kindOf(name),
-          content,
-          fileName: name,
-          externalPath: null,
-        };
-
-        set((state) => ({
-          buffers: [...state.buffers, buffer],
-          activeId: buffer.id,
-        }));
-      },
-
-      openExternalFiles: (paths) => {
-        const openFiles = async () => {
+      openExternalFiles: (paths) =>
+        queueOperation("external-files", async () => {
           await bufferRestored;
 
           const failed: string[] = [];
@@ -186,19 +273,13 @@ export const useBufferStore = create<BufferStore>()(
               await openExternalFile(path);
             } catch (error) {
               failed.push(
-                `${path}: ${error instanceof Error ? error.message : "Unable to open text file."}`,
+                `${path}: ${errorMessage(error, "Unable to open text file.")}`,
               );
             }
           }
 
           set({ fileError: failed.length ? failed.join("\n") : null });
-        };
-
-        // Keep the selection in request order even when file reads take different amounts of time.
-        pendingFileOpen = pendingFileOpen.then(openFiles, openFiles);
-
-        return pendingFileOpen;
-      },
+        }),
 
       createBuffer: (kind, fileNames) => {
         // An empty, never-saved buffer is reused instead of stacking up more untitled ones.
@@ -242,56 +323,76 @@ export const useBufferStore = create<BufferStore>()(
         }));
       },
 
-      deleteFile: async (name) => {
-        const open = get().buffers.find((buffer) => buffer.fileName === name);
+      // Delete discards pending edits only after deletion; Remove flushes them before closing.
+      deleteFile: (name) =>
+        applyFileOperation(
+          { kind: "saved", name },
+          FILE_OPERATION_POLICIES.delete,
+          async (buffer) => {
+            await window.lunarscribe.deleteFile(buffer?.fileName ?? name);
+          },
+        ),
 
-        if (!open) {
-          await window.lunarscribe.deleteFile(name);
+      renameFile: (target, rawTitle) =>
+        applyFileOperation(
+          target,
+          target.kind === "external"
+            ? FILE_OPERATION_POLICIES.renameExternal
+            : FILE_OPERATION_POLICIES.renameSaved,
+          async (buffer) => {
+            if (target.kind === "external") {
+              await renameExternalFile(target.path, rawTitle);
 
-          return;
-        }
+              return;
+            }
 
-        await queueBufferWrite(open.id, async () => {
-          // An earlier queued save may have renamed the file.
-          const fileName =
-            get().buffers.find((buffer) => buffer.id === open.id)?.fileName ??
-            name;
+            const title = toBufferTitle(rawTitle.trim());
 
-          await window.lunarscribe.deleteFile(fileName);
+            if (!title) {
+              throw new Error("Enter a name for the file.");
+            }
 
-          // Drop the buffer so later queued saves cannot recreate the file.
-          saveDebouncers.get(open.id)?.cancel();
-          saveDebouncers.delete(open.id);
+            if (!buffer) {
+              const content = await window.lunarscribe.readFile(target.name);
+              await window.lunarscribe.saveFile(
+                target.name,
+                title,
+                getFileExtension(target.name) ??
+                  BUFFER_EXTENSIONS[kindOf(target.name)],
+                content,
+              );
 
-          const buffers = get().buffers.filter(
-            (buffer) => buffer.id !== open.id,
-          );
+              return;
+            }
 
-          if (get().activeId !== open.id) {
-            set({ buffers });
+            set((state) => ({
+              buffers: patchBuffer(state.buffers, buffer.id, { title }),
+            }));
 
-            return null;
-          }
+            try {
+              await bufferFileWrites.writeBuffer(buffer.id, "manual");
+            } catch (cause) {
+              // A failed sidebar rename must not turn into a delayed rename via autosave.
+              set((state) => ({
+                buffers: state.buffers.map((candidate) =>
+                  candidate.id === buffer.id && candidate.title === title
+                    ? { ...candidate, title: buffer.title }
+                    : candidate,
+                ),
+              }));
+              throw cause;
+            }
+          },
+        ),
 
-          // Deleting the shown file falls back to the welcome text, reusing an untouched copy.
-          const welcome =
-            buffers.find(
-              (buffer) =>
-                buffer.fileName === null &&
-                buffer.externalPath === null &&
-                buffer.content === WELCOME_MARKDOWN,
-            ) ?? createWelcomeBuffer();
-
-          set({
-            buffers: buffers.includes(welcome)
-              ? buffers
-              : [...buffers, welcome],
-            activeId: welcome.id,
-          });
-
-          return null;
-        });
-      },
+      removeExternalFile: (target) =>
+        applyFileOperation(target, FILE_OPERATION_POLICIES.remove, async () => {
+          set((state) => ({
+            externalFiles: state.externalFiles.filter(
+              (file) => file.path !== target.path,
+            ),
+          }));
+        }),
     }),
     {
       name: "lunarscribe-buffers",
@@ -304,6 +405,63 @@ export const useBufferStore = create<BufferStore>()(
   ),
 );
 
+/** Reuse an open saved buffer, or read it before selecting it. */
+async function openSavedFile(name: string) {
+  const open = findFileBuffer({ kind: "saved", name });
+
+  if (open) {
+    useBufferStore.setState({ activeId: open.id });
+
+    return;
+  }
+
+  const content = await window.lunarscribe.readFile(name);
+
+  const buffer: TextBuffer = {
+    id: crypto.randomUUID(),
+    title: stemOf(name),
+    kind: kindOf(name),
+    content,
+    fileName: name,
+    externalPath: null,
+  };
+
+  useBufferStore.setState((state) => ({
+    buffers: [...state.buffers, buffer],
+    activeId: buffer.id,
+  }));
+}
+
+/** Rename a tracked source entry and patch both its canonical path and any open buffer. */
+async function renameExternalFile(path: string, title: string) {
+  const file = useBufferStore
+    .getState()
+    .externalFiles.find((candidate) => candidate.path === path);
+
+  if (!file) {
+    throw new Error("The external file is no longer tracked.");
+  }
+
+  await window.lunarscribe.readExternalFile(file.sourcePath ?? path);
+
+  const renamed = await window.lunarscribe.renameExternalFile(
+    path,
+    file.sourcePath ?? path,
+    title,
+  );
+
+  useBufferStore.setState((state) => ({
+    externalFiles: state.externalFiles.map((candidate) =>
+      candidate.path === path ? renamed : candidate,
+    ),
+    buffers: state.buffers.map((buffer) =>
+      buffer.externalPath === path
+        ? { ...buffer, externalPath: renamed.path, title: stemOf(renamed.name) }
+        : buffer,
+    ),
+  }));
+}
+
 /** Opens one external buffer, retaining its source path and reusing an already-open buffer. */
 async function openExternalFile(path: string) {
   const { buffers, externalFiles } = useBufferStore.getState();
@@ -311,7 +469,7 @@ async function openExternalFile(path: string) {
   const openBuffer = buffers.find((buffer) => buffer.externalPath === path);
 
   if (openBuffer) {
-    useBufferStore.setState({ activeId: openBuffer.id, fileError: null });
+    useBufferStore.setState({ activeId: openBuffer.id });
 
     return;
   }
@@ -329,7 +487,7 @@ async function openExternalFile(path: string) {
     );
 
     if (existingBuffer) {
-      return { activeId: existingBuffer.id, fileError: null };
+      return { activeId: existingBuffer.id };
     }
 
     const buffer: TextBuffer = {
@@ -359,10 +517,11 @@ async function openExternalFile(path: string) {
           )
         : [...state.externalFiles, externalFile],
       activeId: buffer.id,
-      fileError: null,
     };
   });
 }
+
+const bufferFileWrites = createBufferFileWrites(useBufferStore);
 
 // Persisted selection
 
@@ -395,10 +554,7 @@ async function restoreLastBuffer() {
   if (lastOpenedExternalPath) {
     await openExternalFile(lastOpenedExternalPath).catch((error) => {
       useBufferStore.setState({
-        fileError:
-          error instanceof Error
-            ? error.message
-            : "Unable to reopen text file.",
+        fileError: `${lastOpenedExternalPath}: ${errorMessage(error, "Unable to reopen text file.")}`,
       });
     });
 
@@ -406,120 +562,14 @@ async function restoreLastBuffer() {
   }
 
   if (lastOpenedFileName) {
-    await useBufferStore
-      .getState()
-      .openFile(lastOpenedFileName)
-      .catch(() => useBufferStore.setState({ lastOpenedFileName: null }));
+    await openSavedFile(lastOpenedFileName).catch(() =>
+      useBufferStore.setState({ lastOpenedFileName: null }),
+    );
   }
 }
 
 /** File-open requests wait for restoration so their selection wins on cold launch. */
 const bufferRestored = restoreLastBuffer();
-
-// Saving to disk
-
-const pendingBufferWrites = new Map<string, Promise<string | null>>();
-
-/** Orders saves and deletion for each buffer; a failed write does not block retries. */
-async function queueBufferWrite(
-  id: string,
-  write: () => Promise<string | null>,
-): Promise<string | null> {
-  const previousWrite = pendingBufferWrites.get(id);
-
-  const pendingWrite = previousWrite
-    ? previousWrite.then(write, write)
-    : write();
-
-  pendingBufferWrites.set(id, pendingWrite);
-
-  try {
-    return await pendingWrite;
-  } finally {
-    if (pendingBufferWrites.get(id) === pendingWrite) {
-      pendingBufferWrites.delete(id);
-    }
-  }
-}
-
-/** Queues a save so an earlier autosave cannot overwrite it or create a second file. */
-function saveBuffer(id: string, force = false): Promise<string | null> {
-  return queueBufferWrite(id, () => writeBuffer(id, force));
-}
-
-/** Writes the latest buffer and records its file name; a manual save also creates an empty file. */
-async function writeBuffer(id: string, force: boolean): Promise<string | null> {
-  const buffer = useBufferStore
-    .getState()
-    .buffers.find((candidate) => candidate.id === id);
-
-  if (!buffer) {
-    return null;
-  }
-
-  if (buffer.externalPath) {
-    await window.lunarscribe.saveExternalFile(
-      buffer.externalPath,
-      buffer.content,
-    );
-
-    return (
-      useBufferStore
-        .getState()
-        .externalFiles.find((file) => file.path === buffer.externalPath)
-        ?.name ?? buffer.title
-    );
-  }
-
-  // Autosave waits for a new buffer to have content; manual saves may create empty files.
-  if (!force && buffer.fileName === null && !buffer.content.trim()) {
-    return null;
-  }
-
-  const fileName = await window.lunarscribe.saveFile(
-    buffer.fileName,
-    buffer.title,
-    getFileExtension(buffer.fileName ?? "") ?? EXTENSIONS[buffer.kind],
-    buffer.content,
-  );
-
-  useBufferStore.setState((state) => ({
-    buffers: patchBuffer(state.buffers, id, { fileName }),
-  }));
-
-  return fileName;
-}
-
-const saveDebouncers = new Map<string, Debouncer<() => undefined>>();
-
-/** Restarts the buffer's 2s save timer. */
-function scheduleSave(id: string) {
-  const debouncer =
-    saveDebouncers.get(id) ??
-    new Debouncer(
-      () => {
-        void saveBuffer(id).catch((error) => {
-          useBufferStore.setState({
-            fileError:
-              error instanceof Error
-                ? error.message
-                : "Unable to save the buffer.",
-          });
-        });
-      },
-      { wait: 2000 },
-    );
-
-  saveDebouncers.set(id, debouncer);
-  debouncer.maybeExecute();
-}
-
-// Closing the window must not drop edits still waiting on their timer.
-window.addEventListener("beforeunload", () => {
-  for (const debouncer of saveDebouncers.values()) {
-    debouncer.flush();
-  }
-});
 
 // Hooks
 

@@ -1,92 +1,125 @@
-import { ConfirmationDialog } from "@lunarscribe/components/confirmation-dialog/confirmation-dialog";
 import { FluidHighlight } from "@lunarscribe/components/fluid-motion/fluid-motion";
 import { Hint } from "@lunarscribe/components/hint/hint";
 import { Button } from "@lunarscribe/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@lunarscribe/components/ui/collapsible";
 import { DialogTrigger } from "@lunarscribe/components/ui/dialog";
-import { ScrollArea } from "@lunarscribe/components/ui/scroll-area";
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from "@lunarscribe/components/ui/sidebar";
+import { toast } from "@lunarscribe/components/ui/toast";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
-import { ChevronDown, FilePlus, PenTool, Settings, Trash2 } from "lucide-react";
+import { FilePlus, PenTool, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
 
 import { DarkModeToggle } from "@/components/darkmode-toggle";
+import { DeleteFileDialog } from "@/components/delete-file-dialog";
+import { RenameFileDialog } from "@/components/rename-file-dialog";
 import { SettingsDialog } from "@/components/settings-dialog/settings-dialog";
-import {
-  kindOf,
-  stemOf,
-  useActiveBuffer,
-  useBufferStore,
-} from "@/stores/buffer-store";
-import { useSidebarStore } from "@/stores/sidebar-store";
-import type { SidebarSection } from "@/stores/sidebar-store";
+import { SidebarFileItem } from "@/components/sidebar-file-item";
+import type { FileMenuState } from "@/components/sidebar-file-item";
+import { SidebarFileSection } from "@/components/sidebar-file-section";
+import type { FileTarget } from "@/lib/editor-files";
+import { fileKey } from "@/lib/editor-files";
+import { runFileAction } from "@/lib/file-feedback";
+import { FILE_SECTIONS } from "@/lib/sidebar-sections";
+import { kindOf, useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+
+type FileDialogState =
+  | { kind: "rename"; target: FileTarget }
+  | { kind: "delete"; target: Extract<FileTarget, { kind: "saved" }> };
 
 /** Sidebar groups for saved buffers and tracked external files. */
 export function AppSidebar() {
   const [files, setFiles] = useState<string[]>([]);
-  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<FileDialogState | null>(null);
+  const [menu, setMenu] = useState<FileMenuState | null>(null);
+
   const openFile = useBufferStore((state) => state.openFile);
   const createBuffer = useBufferStore((state) => state.createBuffer);
   const deleteFile = useBufferStore((state) => state.deleteFile);
+  const renameFile = useBufferStore((state) => state.renameFile);
+
+  const removeExternalFile = useBufferStore(
+    (state) => state.removeExternalFile,
+  );
+
   const activeBuffer = useActiveBuffer();
   const externalFiles = useBufferStore((state) => state.externalFiles);
+
   const openExternalFiles = useBufferStore((state) => state.openExternalFiles);
 
-  const fileGroups = [
-    {
-      section: "notes",
-      label: "Notes",
-      files: files.filter((name) => kindOf(name) === "markdown"),
-    },
-    {
-      section: "drawings",
-      label: "Drawings",
-      files: files.filter((name) => kindOf(name) === "drawing"),
-    },
-  ] satisfies { section: SidebarSection; label: string; files: string[] }[];
+  const fileGroups = FILE_SECTIONS.map((section) => {
+    const targets: FileTarget[] =
+      section.kind === "external"
+        ? externalFiles.map((file) => ({
+            kind: "external",
+            path: file.path,
+            name: file.name,
+          }))
+        : [];
+
+    return { ...section, files: targets };
+  });
+
+  for (const name of files) {
+    const kind = kindOf(name);
+    const group = fileGroups.find((section) => section.kind === kind);
+    group?.files.push({ kind: "saved", name });
+  }
 
   useEffect(() => {
-    void window.lunarscribe.listFiles().then(setFiles);
+    void runFileAction(
+      async () => {
+        setFiles(await window.lunarscribe.listFiles());
+      },
+      "Unable to list files",
+      "The saved file list could not be loaded.",
+    );
 
     return window.lunarscribe.onFilesChanged(setFiles);
   }, []);
 
-  async function confirmDelete() {
-    if (!fileToDelete || !deleteDialogOpen || isDeleting) {
+  function openTarget(target: FileTarget) {
+    return runFileAction(
+      () =>
+        target.kind === "saved"
+          ? openFile(target.name)
+          : openExternalFiles([target.path]),
+      "Unable to open file",
+      "The file could not be opened.",
+    );
+  }
+
+  function copyPath(target: FileTarget) {
+    return runFileAction(
+      async () => {
+        const path =
+          target.kind === "external"
+            ? target.path
+            : await window.lunarscribe.getFilePath(target.name);
+
+        await navigator.clipboard.writeText(path);
+        toast.add({ type: "success", title: "Path copied", description: path });
+      },
+      "Unable to copy path",
+      "The path could not be copied.",
+    );
+  }
+
+  function deleteTarget(target: FileTarget) {
+    if (target.kind === "saved") {
+      setDialog({ kind: "delete", target });
+
       return;
     }
 
-    setIsDeleting(true);
-    setDeleteError(null);
-
-    try {
-      await deleteFile(fileToDelete);
-      setDeleteDialogOpen(false);
-    } catch (error) {
-      setDeleteError(
-        error instanceof Error ? error.message : "Unable to delete the file.",
-      );
-    } finally {
-      setIsDeleting(false);
-    }
+    void runFileAction(
+      () => removeExternalFile(target),
+      "External file was not removed",
+      "Changes could not be saved.",
+    );
   }
 
   return (
@@ -139,121 +172,64 @@ export function AppSidebar() {
         </SidebarHeader>
       </TooltipProvider>
       <SidebarContent className="overflow-hidden">
-        {fileGroups.map((group) => (
+        {fileGroups.map((section) => (
           <SidebarFileSection
-            key={group.section}
-            section={group.section}
-            label={group.label}
-            count={group.files.length}
+            key={section.section}
+            section={section.section}
+            label={section.label}
+            count={section.files.length}
           >
             <SidebarMenu>
-              {group.files.map((name) => (
-                <SidebarMenuItem key={name} className="overflow-clip">
-                  <SidebarMenuButton
-                    size="compact"
-                    isActive={name === activeBuffer?.fileName}
-                    onClick={() => void openFile(name)}
-                  >
-                    <span>{stemOf(name)}</span>
-                  </SidebarMenuButton>
-                  <SidebarMenuAction
-                    render={<Button variant="destructive" size="icon-xs" />}
-                    showOnHover
-                    aria-label={`Delete ${name}`}
-                    onClick={() => {
-                      setFileToDelete(name);
-                      setDeleteError(null);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 />
-                  </SidebarMenuAction>
-                </SidebarMenuItem>
-              ))}
+              {section.files.map((target) => {
+                const key = fileKey(target);
+
+                const isActive =
+                  target.kind === "saved"
+                    ? target.name === activeBuffer?.fileName
+                    : target.path === activeBuffer?.externalPath;
+
+                return (
+                  <SidebarFileItem
+                    key={key}
+                    target={target}
+                    isActive={isActive}
+                    menu={menu?.key === key ? menu : null}
+                    onMenuChange={(open, anchor) =>
+                      setMenu((current) => {
+                        if (open) {
+                          return { key, anchor };
+                        }
+
+                        return current?.key === key ? null : current;
+                      })
+                    }
+                    onOpen={() => void openTarget(target)}
+                    onRename={() => setDialog({ kind: "rename", target })}
+                    onCopyPath={() => void copyPath(target)}
+                    onDelete={() => deleteTarget(target)}
+                  />
+                );
+              })}
             </SidebarMenu>
           </SidebarFileSection>
         ))}
-        <SidebarFileSection
-          section="external-files"
-          label="External files"
-          count={externalFiles.length}
-        >
-          <SidebarMenu>
-            {externalFiles.map((file) => (
-              <SidebarMenuItem key={file.path} className="overflow-clip">
-                <SidebarMenuButton
-                  size="compact"
-                  isActive={file.path === activeBuffer?.externalPath}
-                  title={file.path}
-                  onClick={() => void openExternalFiles([file.path])}
-                >
-                  <span>{file.name}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarFileSection>
       </SidebarContent>
-      <ConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        title="Delete file?"
-        description={`Are you sure you want to delete “${fileToDelete ?? ""}”? This cannot be undone.`}
-        confirmLabel="Delete"
-        onConfirm={() => void confirmDelete()}
-        pending={isDeleting}
-        error={deleteError}
-      />
+      {dialog?.kind === "rename" && (
+        <RenameFileDialog
+          key={fileKey(dialog.target)}
+          name={dialog.target.name}
+          onClose={() => setDialog(null)}
+          onRename={(title) => renameFile(dialog.target, title)}
+        />
+      )}
+      {dialog?.kind === "delete" && (
+        <DeleteFileDialog
+          key={fileKey(dialog.target)}
+          name={dialog.target.name}
+          onClose={() => setDialog(null)}
+          onDelete={() => deleteFile(dialog.target.name)}
+        />
+      )}
     </Sidebar>
-  );
-}
-
-/** Each expanded section shares the available height and scrolls below its fixed label. */
-function SidebarFileSection({
-  section,
-  label,
-  count,
-  children,
-}: {
-  section: SidebarSection;
-  label: string;
-  count: number;
-  children: ReactNode;
-}) {
-  const open = useSidebarStore((state) => state.sectionsOpen[section] ?? true);
-  const setSectionOpen = useSidebarStore((state) => state.setSectionOpen);
-
-  return (
-    <Collapsible
-      variant="section"
-      open={open}
-      onOpenChange={(nextOpen) => setSectionOpen(section, nextOpen)}
-      className="group/section flex min-h-14 shrink-0 grow-0 basis-14 flex-col data-open:grow"
-    >
-      <SidebarGroup className="min-h-0 flex-1">
-        <SidebarGroupLabel
-          render={<CollapsibleTrigger variant="section" aria-label={label} />}
-          className="h-10 w-full justify-start"
-        >
-          <span>
-            {label}({count})
-          </span>
-          <ChevronDown className="ml-auto transition-transform duration-200 ease-out group-data-closed/section:-rotate-90 motion-reduce:transition-none" />
-        </SidebarGroupLabel>
-        <CollapsibleContent
-          variant="section"
-          keepMounted
-          className="flex min-h-0 flex-1 flex-col overflow-hidden"
-        >
-          <ScrollArea
-            render={<section />}
-            aria-label={label}
-            className="min-h-0 flex-1 [&>[data-slot=scroll-area-viewport]]:overscroll-contain"
-          >
-            {children}
-          </ScrollArea>
-        </CollapsibleContent>
-      </SidebarGroup>
-    </Collapsible>
   );
 }

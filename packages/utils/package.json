@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./error-message": "./src/error-message.ts",
     "./cn": "./src/cn.ts",
     "./try-catch": "./src/try-catch.ts",
     "./fonts.css": "./src/fonts.css"

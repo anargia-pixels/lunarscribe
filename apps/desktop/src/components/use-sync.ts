@@ -11,8 +11,8 @@ import { useSyncStore } from "@/stores/sync-store";
 function reportConflicts(conflicts: SyncConflict[]) {
   if (conflicts.length) {
     toast.add({
-      type: "warning",
-      title: "Sync needs your attention",
+      type: "error",
+      title: "Sync conflict",
       description: createElement(
         "div",
         { className: "flex flex-col gap-2" },
@@ -34,6 +34,15 @@ function reportConflicts(conflicts: SyncConflict[]) {
 /** Connects background notifications and protects buffers with pending edits. */
 export function useSync() {
   useEffect(() => {
+    let successTimer: ReturnType<typeof setTimeout> | undefined;
+    let hasPendingEdits = false;
+    let hasBufferConflicts = false;
+
+    const clearSuccess = () => {
+      clearTimeout(successTimer);
+      useSyncStore.setState({ hasSyncedSuccessfully: false });
+    };
+
     const protect = () => {
       const names: string[] = [];
 
@@ -47,6 +56,12 @@ export function useSync() {
         }
       }
 
+      hasPendingEdits = names.length > 0;
+
+      if (hasPendingEdits) {
+        clearSuccess();
+      }
+
       window.lunarscribe.protectSyncFiles(names);
     };
 
@@ -55,6 +70,19 @@ export function useSync() {
 
     const receiveStatus = (status: SyncStatus) => {
       useSyncStore.setState(status);
+
+      if (
+        status.busy ||
+        status.error ||
+        status.needsSignIn ||
+        !status.provider
+      ) {
+        clearSuccess();
+      }
+
+      if (status.busy) {
+        hasBufferConflicts = false;
+      }
 
       if (status.error && !status.busy) {
         toast.add({
@@ -72,20 +100,30 @@ export function useSync() {
       receiveStatus(status);
     });
 
-    const unsubscribeResult = window.lunarscribe.onSyncResult((result) =>
-      reportConflicts(result.conflicts),
-    );
+    const unsubscribeResult = window.lunarscribe.onSyncResult((result) => {
+      reportConflicts(result.conflicts);
+      clearSuccess();
+
+      if (!result.conflicts.length && !hasPendingEdits && !hasBufferConflicts) {
+        useSyncStore.setState({ hasSyncedSuccessfully: true });
+        successTimer = setTimeout(clearSuccess, 3000);
+      }
+    });
 
     const unsubscribeFiles = window.lunarscribe.onSyncedFiles((changes) => {
+      const conflicts = useBufferStore.getState().applySyncedFiles(changes);
+
+      if (conflicts.length) {
+        hasBufferConflicts = true;
+        clearSuccess();
+      }
+
       reportConflicts(
-        useBufferStore
-          .getState()
-          .applySyncedFiles(changes)
-          .map((name) => ({
-            name,
-            reason:
-              "This buffer has pending edits. They were preserved; compare them with the saved file before continuing.",
-          })),
+        conflicts.map((name) => ({
+          name,
+          reason:
+            "This buffer has pending edits. They were preserved; compare them with the saved file before continuing.",
+        })),
       );
     });
 
@@ -109,6 +147,7 @@ export function useSync() {
 
     return () => {
       isActive = false;
+      clearSuccess();
       unsubscribeBuffers();
       unsubscribeStatus();
       unsubscribeResult();

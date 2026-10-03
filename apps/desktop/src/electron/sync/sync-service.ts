@@ -1,3 +1,4 @@
+import { lstat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { errorMessage } from "@lunarscribe/utils/error-message";
@@ -10,6 +11,7 @@ import { refreshTokens, signIn } from "./auth/oauth";
 import type { OAuthProvider } from "./auth/oauth";
 import {
   applySyncPulls,
+  contentHash,
   isSavedFileName,
   planSync,
   readLocalSyncFiles,
@@ -18,6 +20,7 @@ import { createDropboxApi } from "./providers/dropbox";
 import {
   connectGithub,
   disconnectGithub,
+  forceWriteGithub,
   syncGithub,
 } from "./providers/github";
 import { createGoogleDriveApi } from "./providers/google-drive";
@@ -156,19 +159,18 @@ export function registerSync(
     );
   }
 
-  /** Cloud providers compare file hashes and reject stale remote revisions. */
+  /** Compare with the shared base and reject concurrent remote writes. */
   async function syncCloud(name: string | null): Promise<SyncResult> {
     const remoteProvider = createCloudProvider();
     const remote = await remoteProvider.read();
     const local = await queue(folder, () => readLocalSyncFiles(folder));
 
     const plan = planSync(
-      local.files,
+      local,
       remote,
       settings.baseline,
       getProtectedNames(),
       name,
-      local.blockedNames,
     );
 
     await remoteProvider.write(plan.push, remote);
@@ -176,7 +178,7 @@ export function registerSync(
     return queue(folder, async () => {
       const changes = await applySyncPulls(
         folder,
-        local.files,
+        local,
         plan,
         settings.baseline,
         getProtectedNames,
@@ -227,6 +229,56 @@ export function registerSync(
     return getStatus();
   });
   ipcMain.handle("sync:run", (_event, name: string | null) => sync(name));
+  ipcMain.handle("sync:force", (_event, name: string) =>
+    runSyncOperation(async (): Promise<SyncResult> => {
+      if (!isSavedFileName(name)) {
+        throw new Error("Only saved markdown and drawings can be synced.");
+      }
+
+      const local = await queue(folder, async () => {
+        const path = join(folder, name);
+        const metadata = await lstat(path);
+
+        if (!metadata.isFile()) {
+          throw new Error("The selected path is not a regular saved file.");
+        }
+
+        return {
+          content: await readFile(path, "utf8"),
+          modifiedAt: metadata.mtimeMs,
+        };
+      });
+
+      if (settings.provider === "github" && settings.account) {
+        await forceWriteGithub(
+          folder,
+          settings.account,
+          name,
+          local.content,
+          queue,
+        );
+      } else {
+        await createCloudProvider().forceWrite(
+          name,
+          local.content,
+          local.modifiedAt,
+        );
+        Object.defineProperty(settings.baseline, name, {
+          value: contentHash(local.content),
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
+      }
+
+      const result = { conflicts: [], pushed: 1, pulled: 0 };
+      settings.lastSyncedAt = new Date().toISOString();
+      await persistence.save(settings);
+      broadcast("sync:result", result);
+
+      return result;
+    }),
+  );
   ipcMain.handle("sync:connect", async (_event, selected: SyncProvider) => {
     await runSyncOperation(async () => {
       if (!Object.hasOwn(SYNC_PROVIDERS, selected)) {

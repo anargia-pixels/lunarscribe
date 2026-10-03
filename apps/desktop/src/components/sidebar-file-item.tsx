@@ -10,7 +10,15 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@lunarscribe/components/ui/sidebar";
-import { Copy, Ellipsis, FileDown, Pencil, Trash2, X } from "lucide-react";
+import {
+  CloudUpload,
+  Copy,
+  Ellipsis,
+  FileDown,
+  Pencil,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useRef } from "react";
 
 import type { FileTarget } from "@/lib/editor-files";
@@ -31,6 +39,8 @@ export function SidebarFileItem({
   onExportPdf,
   onExportDocx,
   isExporting,
+  canForceSync,
+  onForceSync,
   onDelete,
 }: {
   target: FileTarget;
@@ -43,6 +53,8 @@ export function SidebarFileItem({
   onExportPdf: () => void;
   onExportDocx: () => void;
   isExporting: boolean;
+  canForceSync: boolean;
+  onForceSync: () => void;
   onDelete: () => void;
 }) {
   const isMenuOpen = menu !== null;
@@ -106,6 +118,12 @@ export function SidebarFileItem({
               Export as DOCX
             </ContextMenuItem>
           </>
+        )}
+        {!isExternal && (
+          <ContextMenuItem disabled={!canForceSync} onClick={onForceSync}>
+            <CloudUpload />
+            Force changes to remote
+          </ContextMenuItem>
         )}
         <ContextMenuItem variant="destructive" onClick={onDelete}>
           {isExternal ? <X /> : <Trash2 />}

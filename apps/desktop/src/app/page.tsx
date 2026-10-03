@@ -18,6 +18,7 @@ import { EditorFileDropZone } from "@/components/editor-file-drop-zone";
 import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+import { useSyncStore } from "@/stores/sync-store";
 
 /** Loads the drawing canvas only when a drawing buffer opens. */
 function LazyDrawingEditor(props: DrawingEditorProps) {
@@ -67,6 +68,10 @@ export default function Page() {
   const theme = useAppearanceStore((state) => state.theme);
   const clearFileError = useBufferStore((state) => state.clearFileError);
   const fileError = useBufferStore((state) => state.fileError);
+
+  const hasSyncedSuccessfully = useSyncStore(
+    (state) => state.hasSyncedSuccessfully,
+  );
 
   useEffect(() => {
     const preventFileNavigation = (event: DragEvent) => {
@@ -121,6 +126,11 @@ export default function Page() {
           >
             {filePath}
           </span>
+          <output className="text-muted-foreground ml-1 shrink-0 select-none">
+            {hasSyncedSuccessfully && buffer.fileName && !buffer.externalPath
+              ? "- Sync successful"
+              : null}
+          </output>
         </header>
       </TooltipProvider>
       {fileError && (

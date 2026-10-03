@@ -5,18 +5,10 @@ import { reportFileError } from "@/lib/file-feedback";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";
 
-/** Report a shortcut push without repeating background error toasts. */
+/** Push a shortcut save without repeating sync feedback. */
 async function pushSavedFile(fileName: string) {
   try {
-    const syncResult = await window.lunarscribe.syncFiles(fileName);
-
-    if (!syncResult.conflicts.length) {
-      toast.add({
-        type: "success",
-        title: "File synced",
-        description: createElement("code", null, fileName),
-      });
-    }
+    await window.lunarscribe.syncFiles(fileName);
   } catch (cause) {
     if (!useSyncStore.getState().error) {
       reportFileError(

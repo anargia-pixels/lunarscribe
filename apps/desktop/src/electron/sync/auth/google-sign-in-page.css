@@ -1,5 +1,14 @@
 /* Fonts */
 @font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../../../../../../packages/utils/src/fonts/pixelify-sans-latin-wght-normal.woff2?inline")
+    format("woff2");
+}
+
+@font-face {
   font-family: Poppins;
   font-style: normal;
   font-weight: 400;
@@ -29,6 +38,7 @@
   --background: #f5f1e6;
   --surface: #fffcf5;
   --foreground: #4a3f35;
+  --primary: #a67c52;
   --muted: #7d6b56;
   --accent: #82559d;
   --border: #dbd0ba;
@@ -42,6 +52,7 @@
     --background: #1e1e2e;
     --surface: #181825;
     --foreground: #cdd6f4;
+    --primary: #cba6f7;
     --muted: #a6adc8;
     --accent: #cba6f7;
     --border: #45475a;
@@ -75,15 +86,17 @@ body {
 [data-part="brand"] {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 28px;
-  font-weight: 600;
-  font-size: 18px;
+  color: var(--primary);
+  font:
+    400 30px/36px "Pixelify Sans",
+    ui-sans-serif,
+    sans-serif,
+    system-ui;
 }
-[data-part="brand"] svg {
-  width: 24px;
-  height: 24px;
-  color: var(--accent);
+[data-part="brand"] img {
+  flex-shrink: 0;
 }
 [data-part="connection"] {
   display: grid;

@@ -28,6 +28,7 @@ import { exportPdf } from "@/lib/export-pdf";
 import { runFileAction } from "@/lib/file-feedback";
 import { FILE_SECTIONS } from "@/lib/sidebar-sections";
 import { kindOf, useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+import { useSyncStore } from "@/stores/sync-store";
 
 type FileDialogState =
   | { kind: "rename"; target: FileTarget }
@@ -40,11 +41,17 @@ export function AppSidebar() {
   const [menu, setMenu] = useState<FileMenuState | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isForcingSync, setIsForcingSync] = useState(false);
+
+  const canForceSync = useSyncStore(
+    (state) => state.provider !== null && !state.busy && !state.needsSignIn,
+  );
 
   const openFile = useBufferStore((state) => state.openFile);
   const createBuffer = useBufferStore((state) => state.createBuffer);
   const deleteFile = useBufferStore((state) => state.deleteFile);
   const renameFile = useBufferStore((state) => state.renameFile);
+  const forceSyncFile = useBufferStore((state) => state.forceSyncFile);
 
   const removeExternalFile = useBufferStore(
     (state) => state.removeExternalFile,
@@ -184,6 +191,31 @@ export function AppSidebar() {
     }
   }
 
+  async function forceSyncTarget(target: FileTarget) {
+    if (target.kind !== "saved" || isForcingSync) {
+      return;
+    }
+
+    setIsForcingSync(true);
+
+    try {
+      await runFileAction(
+        async () => {
+          await forceSyncFile(target.name);
+          toast.add({
+            type: "success",
+            title: "Remote copy replaced",
+            description: <code>{target.name}</code>,
+          });
+        },
+        "Unable to force changes to remote",
+        "The remote copy could not be replaced.",
+      );
+    } finally {
+      setIsForcingSync(false);
+    }
+  }
+
   return (
     <>
       <Sidebar>
@@ -297,6 +329,8 @@ export function AppSidebar() {
                       onExportPdf={() => void exportTarget(target, "PDF")}
                       onExportDocx={() => void exportTarget(target, "DOCX")}
                       isExporting={isExporting}
+                      canForceSync={canForceSync && !isForcingSync}
+                      onForceSync={() => void forceSyncTarget(target)}
                       onDelete={() => deleteTarget(target)}
                     />
                   );

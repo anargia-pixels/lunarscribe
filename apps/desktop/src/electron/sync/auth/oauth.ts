@@ -133,7 +133,7 @@ async function signInGoogle(
         response.setHeader("Referrer-Policy", "no-referrer");
         response.setHeader(
           "Content-Security-Policy",
-          `default-src 'none'; script-src 'nonce-${nonce}' https://accounts.google.com; connect-src 'self' https://accounts.google.com; frame-src https://accounts.google.com; style-src 'unsafe-inline'; font-src data:; img-src https://accounts.google.com; base-uri 'none'; frame-ancestors 'none'`,
+          `default-src 'none'; script-src 'nonce-${nonce}' https://accounts.google.com; connect-src 'self' https://accounts.google.com; frame-src https://accounts.google.com; style-src 'unsafe-inline'; font-src data:; img-src data: https://accounts.google.com; base-uri 'none'; frame-ancestors 'none'`,
         );
         response.end(createGoogleSignInPage(clientId, state, nonce));
 

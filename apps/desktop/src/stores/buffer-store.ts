@@ -49,6 +49,7 @@ export type BufferStore = {
   renameBuffer: (id: string, title: string) => void;
   setContent: (id: string, content: string) => void;
   saveActiveBuffer: () => Promise<string>;
+  forceSyncFile: (name: string) => Promise<void>;
   openFile: (name: string) => Promise<void>;
   openExternalFiles: (paths: string[]) => Promise<void>;
   createBuffer: (kind: BufferKind, fileNames: string[]) => void;
@@ -139,6 +140,7 @@ const FILE_OPERATION_POLICIES = {
   renameExternal: { save: "flush", close: false },
   delete: { save: "keep", close: true },
   remove: { save: "flush", close: true },
+  forceSync: { save: "flush", close: false },
 } as const;
 
 type FileOperationPolicy =
@@ -305,6 +307,19 @@ export const useBufferStore = create<BufferStore>()(
 
         return result.fileName;
       },
+
+      forceSyncFile: (name) =>
+        applyFileOperation(
+          { kind: "saved", name },
+          FILE_OPERATION_POLICIES.forceSync,
+          async (buffer) => {
+            const current = buffer
+              ? get().buffers.find((candidate) => candidate.id === buffer.id)
+              : null;
+
+            await window.lunarscribe.forceSyncFile(current?.fileName ?? name);
+          },
+        ),
 
       openFile: (name) =>
         queueOperation(fileKey({ kind: "saved", name }), async () => {

@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
-import { lstat, mkdir, rm, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
+import { lstat, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
 
@@ -25,13 +25,18 @@ const execute = promisify(execFile);
 const REPOSITORY_NAME = "lunarscribe-bak-files";
 
 /** Keep CLI commands noninteractive and limit their runtime and output. */
-async function command(binary: string, args: string[], cwd: string) {
+async function command(
+  binary: string,
+  args: string[],
+  cwd: string,
+  environment = process.env,
+) {
   const { stdout } = await execute(binary, args, {
     cwd,
     timeout: 60_000,
     maxBuffer: 32 * 1024 * 1024,
     env: {
-      ...process.env,
+      ...environment,
       PATH: [
         // Include executables omitted by app launchers.
         process.env["PATH"] ?? "/usr/bin:/bin",
@@ -49,7 +54,11 @@ async function command(binary: string, args: string[], cwd: string) {
 }
 
 /** Disable hooks and use gh for credentials without changing global settings. */
-function createGitCommand(folder: string, account: string): GitCommand {
+function createGitCommand(
+  folder: string,
+  account: string,
+  indexPath?: string,
+): GitCommand {
   if (!/^[a-zA-Z0-9-]+$/u.test(account)) {
     throw new Error(
       "Stored GitHub account is invalid. Disconnect and reconnect.",
@@ -71,7 +80,13 @@ function createGitCommand(folder: string, account: string): GitCommand {
     `${key}=${value}`,
   ]);
 
-  return (...args) => command("git", [...flags, ...args], folder);
+  const environment = { ...process.env };
+
+  if (indexPath) {
+    environment["GIT_INDEX_FILE"] = indexPath;
+  }
+
+  return (...args) => command("git", [...flags, ...args], folder, environment);
 }
 
 /** Check visibility again before each push to prevent public backups. */
@@ -398,19 +413,12 @@ async function applyMerge(
 }
 
 // Synchronization
-/** Fetch outside the save queue; commit and merge inside it; then push. */
-export async function syncGithub(
+/** Fetch the backup branch after checking the account and repository access. */
+async function fetchGithubRemote(
   folder: string,
   account: string,
-  name: string | null,
-  queue: ReturnType<typeof createOperationQueue>,
-  getProtectedNames: () => Set<string>,
-  onApplied: (changes: SyncedFileChange[]) => void,
-): Promise<SyncResult> {
-  const git = createGitCommand(folder, account);
-  await queue(folder, () => initializeRepository(folder, account, git));
-
-  // Fetch: verify the account and read the full remote branch history.
+  git: GitCommand,
+) {
   if (
     (await command("gh", ["api", "user", "--jq", ".login"], folder)) !== account
   ) {
@@ -433,6 +441,93 @@ export async function syncGithub(
       `+refs/heads/${branch}:refs/remotes/origin/${branch}`,
     );
     remote = await git("rev-parse", `origin/${branch}`);
+  }
+
+  return { branch, remote };
+}
+
+/** Replace one remote file without changing other files or local Git history. */
+export async function forceWriteGithub(
+  folder: string,
+  account: string,
+  name: string,
+  content: string,
+  queue: ReturnType<typeof createOperationQueue>,
+) {
+  const temporary = await mkdtemp(join(tmpdir(), "lunarscribe-force-"));
+
+  try {
+    const git = createGitCommand(folder, account, join(temporary, "index"));
+    await queue(folder, () => initializeRepository(folder, account, git));
+    const path = join(temporary, "content");
+    await writeFile(path, content, { mode: 0o600 });
+    const blob = await git("hash-object", "-w", "--no-filters", "--", path);
+
+    // Rebuild from the latest remote tree if another device wins the push.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const { branch, remote } = await fetchGithubRemote(folder, account, git);
+      await git("read-tree", remote ?? "--empty");
+      await git("update-index", "--add", "--cacheinfo", "100644", blob, name);
+      const tree = await git("write-tree");
+
+      const parents = remote ? ["-p", remote] : [];
+
+      const revision = await git(
+        "commit-tree",
+        tree,
+        ...parents,
+        "-m",
+        "Force selected Lunarscribe file to remote",
+      );
+
+      await requirePrivateRepository(folder, account);
+
+      try {
+        await git("push", "origin", `${revision}:refs/heads/${branch}`);
+      } catch {
+        if (attempt < 2) continue;
+
+        throw new Error(
+          "GitHub could not replace the remote copy. Check your connection and repository access, then retry.",
+        );
+      }
+
+      if (remote === null) {
+        await command(
+          "gh",
+          [
+            "repo",
+            "edit",
+            `${account}/${REPOSITORY_NAME}`,
+            "--default-branch",
+            branch,
+          ],
+          folder,
+        );
+      }
+
+      return;
+    }
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+}
+
+/** Fetch outside the save queue; commit and merge inside it; then push. */
+export async function syncGithub(
+  folder: string,
+  account: string,
+  name: string | null,
+  queue: ReturnType<typeof createOperationQueue>,
+  getProtectedNames: () => Set<string>,
+  onApplied: (changes: SyncedFileChange[]) => void,
+): Promise<SyncResult> {
+  const git = createGitCommand(folder, account);
+  await queue(folder, () => initializeRepository(folder, account, git));
+
+  const { branch, remote } = await fetchGithubRemote(folder, account, git);
+
+  if (remote) {
     await validateTree(git, remote);
   }
 

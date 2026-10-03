@@ -1,8 +1,10 @@
 import { Button } from "@lunarscribe/components/ui/button";
 import { Separator } from "@lunarscribe/components/ui/separator";
-import { FileText, FolderSync, Moon, PenTool } from "lucide-react";
+import { FileText, FolderSync, PenTool } from "lucide-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+
+import appIcon from "../../../../../../assets/icons/32x32.png?inline";
 
 import styles from "./google-sign-in-page.css?inline";
 
@@ -36,7 +38,7 @@ function GoogleSignInLayout() {
     <div data-part="page">
       {/* Brand */}
       <header data-part="brand">
-        <Moon aria-hidden="true" />
+        <img src={appIcon} alt="" width={32} height={32} />
         <span>Lunarscribe</span>
       </header>
       <main data-part="connection" aria-labelledby="heading">

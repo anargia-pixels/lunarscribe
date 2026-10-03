@@ -15,6 +15,7 @@ interface Window {
     syncFiles: (
       name: string | null,
     ) => Promise<import("./lib/sync").SyncResult>;
+    forceSyncFile: (name: string) => Promise<import("./lib/sync").SyncResult>;
     cancelSyncSignIn: () => void;
     protectSyncFiles: (names: string[]) => void;
     onSyncStatus: (

@@ -55,6 +55,17 @@ export function jsonNumber(value: JsonValue, key: string) {
   throw new Error(`Sync received an invalid ${key} field.`);
 }
 
+/** Reject invalid modification dates before comparing file versions. */
+export function jsonTimestamp(value: JsonValue, key: string) {
+  const timestamp = Date.parse(jsonString(value, key));
+
+  if (!Number.isFinite(timestamp)) {
+    throw new Error(`Sync received an invalid ${key} timestamp.`);
+  }
+
+  return timestamp;
+}
+
 export function jsonBoolean(value: JsonValue, key: string) {
   const field = jsonField(value, key);
 

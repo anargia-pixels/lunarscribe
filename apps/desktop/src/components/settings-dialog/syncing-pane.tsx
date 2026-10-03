@@ -215,7 +215,7 @@ export function SyncingPane() {
           to save and push the active saved file. External files stay local.{" "}
           {selected === "github"
             ? "GitHub checks incoming merges before pulling. Compatible markdown edits merge automatically; conflicts preserve both versions and show a toast."
-            : "Different local and remote versions are preserved with a toast. On the first sync, existing copies must match or be kept under different names."}
+            : "Changes on one side sync normally. Divergent edits preserve both copies and show an error toast. On the first sync, the newer modification time selects the copy to keep."}
         </p>
         {selected === "google-drive" && (
           <p className="text-muted-foreground text-sm text-pretty">

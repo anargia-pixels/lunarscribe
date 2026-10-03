@@ -1,10 +1,20 @@
 import { isSavedFileName } from "../files";
-import { jsonArray, jsonBoolean, jsonString, parseJson } from "../json";
+import {
+  jsonArray,
+  jsonBoolean,
+  jsonString,
+  jsonTimestamp,
+  parseJson,
+} from "../json";
 import type { FileSyncProvider, RemoteFiles } from "./types";
 import { SyncSignInRequired } from "./types";
 
 // Dropbox destination
 const BACKUP_FOLDER_PATH = "/lunarscribe-bak-files";
+
+type WriteMode =
+  | { ".tag": "add" | "overwrite" }
+  | { ".tag": "update"; update: string };
 
 /** Access only the Dropbox App folder with the current account token. */
 export function createDropboxApi(accessToken: () => Promise<string>) {
@@ -93,6 +103,42 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
 
   /** Use immutable download revisions and conditional writes for each sync. */
   function createProvider(): FileSyncProvider {
+    async function upload(
+      name: string,
+      content: string,
+      modifiedAt: number,
+      mode: WriteMode,
+      strictConflict: boolean,
+    ) {
+      const response = await request(
+        "files/upload",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "Dropbox-API-Arg": JSON.stringify({
+              path: `${BACKUP_FOLDER_PATH}/${name}`,
+              client_modified: new Date(Math.floor(modifiedAt / 1000) * 1000)
+                .toISOString()
+                .replace(".000Z", "Z"),
+              mode,
+              autorename: false,
+              strict_conflict: strictConflict,
+              mute: true,
+            }).replaceAll(
+              /[\u007f-\uffff]/g,
+              (character) =>
+                `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+            ),
+          },
+          body: content,
+        },
+        true,
+      );
+
+      checkResponse(response);
+    }
+
     return {
       /** Read each file at the revision returned by the folder listing. */
       async read() {
@@ -115,7 +161,13 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
             }
 
             if (jsonString(file, ".tag") !== "file") {
-              files.set(name, { content: "", revision: "", blocked: true });
+              files.set(name, {
+                content: "",
+                revision: "",
+                modifiedAt: 0,
+                modifiedAtPrecisionMs: 1000,
+                blocked: true,
+              });
 
               continue;
             }
@@ -137,6 +189,8 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
             files.set(name, {
               content: await download.text(),
               revision: jsonString(file, "rev"),
+              modifiedAt: jsonTimestamp(file, "client_modified"),
+              modifiedAtPrecisionMs: 1000,
             });
           }
 
@@ -166,35 +220,20 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
 
             checkResponse(response);
           } else {
-            const response = await request(
-              "files/upload",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/octet-stream",
-                  "Dropbox-API-Arg": JSON.stringify({
-                    path,
-                    mode: revision
-                      ? { ".tag": "update", update: revision }
-                      : { ".tag": "add" },
-                    autorename: false,
-                    strict_conflict: true,
-                    mute: true,
-                  }).replaceAll(
-                    /[\u007f-\uffff]/g,
-                    (character) =>
-                      `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
-                  ),
-                },
-                body: change.content,
-              },
+            await upload(
+              change.name,
+              change.content,
+              change.modifiedAt,
+              revision
+                ? { ".tag": "update", update: revision }
+                : { ".tag": "add" },
               true,
             );
-
-            checkResponse(response);
           }
         }
       },
+      forceWrite: (name, content, modifiedAt) =>
+        upload(name, content, modifiedAt, { ".tag": "overwrite" }, false),
     };
   }
 

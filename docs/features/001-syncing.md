@@ -49,21 +49,40 @@ to sign in again.
 Sync starts after you connect. It then runs every five minutes while Lunarscribe has an
 open window. It skips a scheduled run if sync is busy or sign-in is required.
 
-| Action                  | Result                                        |
-| ----------------------- | --------------------------------------------- |
-| Select **Sync now**     | Download and upload changes to saved files.   |
-| Press `Ctrl+S` on Linux | Save the active buffer, then upload its file. |
-| Press `Cmd+S` on macOS  | Save the active buffer, then upload its file. |
+| Action                                                            | Result                                                                               |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Select **Sync now**                                               | Download and upload changes to saved files.                                          |
+| Press `Ctrl+S` on Linux                                           | Save the active buffer, then upload its file.                                        |
+| Press `Cmd+S` on macOS                                            | Save the active buffer, then upload its file.                                        |
+| Select **Force changes to remote** in a saved file's sidebar menu | Save pending buffer edits, then replace that file's remote copy with the local copy. |
 
 Automatic local saves still run after two seconds without edits.
 
+Successful background sync and save-shortcut uploads do not show a success toast. A small
+**- Sync successful** message appears beside the active saved file's path for three
+seconds. Pending edits, a new sync, or a sync problem clear the message. Conflicts and
+errors still show toasts.
+
 GitHub fetches remote history and commits saved local changes. It then checks for merge
 conflicts before it updates your files. It can combine compatible markdown edits. It does
-not combine drawing edits. The app never adds conflict markers to your files or forces a
-push.
+not combine drawing edits. The app never adds conflict markers to your files. Normal sync
+does not overwrite conflicting remote changes.
 
-Google Drive and Dropbox compare each file with its last synced version. They also check
-the remote version before they replace a file.
+Google Drive and Dropbox compare each file with its last synced version. This version is
+the shared base, like a Git commit. A local-only change uploads. A remote-only change
+downloads if it is not older than the local file. If the remote copy is older, the local
+copy uploads instead. If both copies changed from the shared base and differ from each
+other, sync keeps both and reports a conflict. If both copies contain the same writing,
+sync accepts that version even if both changed independently.
+
+Before a file has sync history, the newer modification time selects the copy to keep. If
+the copies differ and their times are equal, sync reports a conflict. Modification times
+depend on the devices' clocks. Uploads and downloads keep the original file modification
+time, so copying an old version does not make it newer. Drive uses `modifiedDate`; Dropbox
+uses `client_modified`, which has one-second precision.
+
+Both providers check the remote revision before an ordinary replacement. If another device
+changes the remote copy during sync, retry to compare the latest versions.
 
 If GitHub needs to download changes or upload other files, select **Sync now** before you
 use the save shortcut.
@@ -72,23 +91,68 @@ After a file has synced, a deletion can remove its copy on other devices. Google
 moves deleted files to the trash. If another device edited the deleted file, sync reports
 a conflict.
 
+### Divergent edits
+
+For Drive and Dropbox, different local and remote copies do not by themselves mean a
+conflict. The app compares both copies with the last synced version, called the shared
+base. Edits are divergent only when both copies changed from that base and differ from
+each other.
+
+For example, suppose the shared base is version `A`:
+
+| Local copy | Remote copy | Result                                                           |
+| ---------- | ----------- | ---------------------------------------------------------------- |
+| `A`        | `A`         | No transfer is needed.                                           |
+| `B`        | `A`         | Upload the local edit. The remote copy is still the base.        |
+| `A`        | `B`         | Download the remote edit if it is not older than the local copy. |
+| `B`        | `B`         | Accept the matching version as the new base.                     |
+| `B`        | `C`         | Preserve both copies and show a **Sync conflict** error toast.   |
+
+Drive and Dropbox compare whole files. They do not merge edits to separate lines. A
+deletion on one side and an edit on the other also count as divergent changes. Once a
+shared base exists, modification times do not resolve divergence. Use **Force changes to
+remote** to select the local copy explicitly.
+
+### Force changes to remote
+
+Right-click a saved markdown or drawing file in the sidebar, or open its ellipsis menu.
+Select **Force changes to remote** to replace its remote copy with the local copy. This
+action works with GitHub, Google Drive, and Dropbox. It ignores previous sync history and
+remote edits, and creates the remote file if it is missing. Remote edits to the selected
+file are overwritten. Other remote files stay unchanged.
+
+If the file has an open buffer, the app saves its pending edits before the upload. The
+action does not download remote changes. It is unavailable for external files, while sync
+is busy, or when no provider is connected or sign-in is required.
+
+GitHub adds a commit to the current remote branch without changing local Git history. If
+another device updates the branch during the upload, the app retries from the latest
+remote version. Google Drive keeps one local copy under the selected name and moves
+duplicate copies to the trash. A Google document under that name is replaced with a saved
+file. Dropbox uses an overwrite upload. A remote folder at the selected file path must be
+renamed before this action can replace the file.
+
 ## Resolve a sync problem
 
 The app shows a toast for sync errors or required sign-in. The Syncing section also shows
 errors. A failed sync does not undo a successful local save.
 
-If a file has a conflict, the toast shows its name and the reason. The app keeps both
-copies. Google Drive and Dropbox continue to sync files without conflicts. GitHub stops
-until you resolve the conflict.
+If a file has a conflict, a persistent **Sync conflict** error toast shows its name and
+the reason. Divergent edits mean both copies changed since their last synced version and
+differ from each other. The app keeps both copies. Google Drive and Dropbox continue to
+sync files without conflicts. GitHub stops until you resolve the conflict.
 
-On the first Google Drive or Dropbox sync, existing copies can differ. The app has no
-previous version to compare. It keeps both copies and shows a toast. This message does not
-mean that sign-in failed.
+On the first Google Drive or Dropbox sync, existing copies can differ. The app uses their
+modification times until it has a shared base. Equal times with different contents require
+you to choose a copy. This message does not mean that sign-in failed.
 
 Unsaved edits in an open buffer can also block a download. The app updates open buffers
 that have no pending edits.
 
-To resolve a conflict:
+To keep the local copy of a conflicted file, select **Force changes to remote** in its
+sidebar menu. This overwrites the remote edits to that file.
+
+To compare and keep both versions:
 
 1. Copy pending buffer edits to a safe location.
 2. Compare the local file with the provider's copy.
@@ -163,6 +227,21 @@ Sync code is in `apps/desktop/src/electron/sync/`:
 GitHub uses `git merge-tree --write-tree HEAD origin/<branch>` to check a merge. This
 command does not change the working files. A conflict stops sync before the app applies
 the merge.
+
+Drive and Dropbox use SHA-256 hashes of the saved local writing, the downloaded remote
+writing, and the shared base. The `baseline` object in `sync/sync-settings.json` stores
+the last acknowledged hash for each filename. It stores one comparison base per file, not
+a Git commit graph or earlier file versions. `planSync` in `files.ts` reports divergence
+when a base exists and all three conditions are true:
+
+```ts
+localHash !== baseHash && remoteHash !== baseHash && localHash !== remoteHash;
+```
+
+An absent file has a `null` hash. Files with matching hashes become acknowledged versions.
+Successful uploads, downloads, and forced replacements update the base. A conflict leaves
+the previous base unchanged. First-sync comparisons use modification times because there
+is no base yet.
 
 Get the user data folder with `app.getPath("userData")`.
 

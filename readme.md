@@ -28,9 +28,10 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
   opens the last selected saved file.
 - **Syncing:** Settings → General → Syncing connects GitHub, Google Drive, or Dropbox.
   Saved markdown and drawings sync every five minutes while the app is open. The save
-  shortcut also pushes the active saved file. Conflicts and sync failures show toasts.
-  Google Drive and Dropbox use browser sign-in without bundled OAuth secrets. Drive
-  requires browser sign-in again when its access token expires. Refer to
+  shortcut also pushes the active saved file. Successful sync shows a message beside the
+  file path for three seconds. Conflicts and sync failures show toasts. Google Drive and
+  Dropbox use browser sign-in without bundled OAuth secrets. Drive requires browser
+  sign-in again when its access token expires. Refer to
   [Syncing saved writing](docs/features/001-syncing.md) for setup and conflict behavior.
 - **External files:** The editor opens `.md`, `.markdown`, and `.txt` files. You can drag
   files into the markdown editor or give their paths to the desktop app. Packaged apps
@@ -39,7 +40,9 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
 - **Sidebar:** The sidebar has Notes, Drawings, and External files sections. Each section
   shows its file count and has separate scroll controls. The app keeps the sidebar
   visibility and section settings between app starts. File actions are Rename, Copy path,
-  Delete for saved files, and Remove for external entries. Delete requires confirmation.
+  Delete for saved files, and Remove for external entries. **Force changes to remote**
+  replaces a saved file's remote copy with the local copy for any connected provider.
+  Delete requires confirmation.
 - **Search:** Find shows matching text in the active buffer. It has controls for case
   matching, whole-word matching, and the next and previous matches. The fff search finds
   saved files by name or text. Results show highlighted matches and line previews.

@@ -8,7 +8,5 @@ export const useSyncStore = create<SyncStatus>(() => ({
   busy: false,
   lastSyncedAt: null,
   error: null,
-  googleConfigured: false,
-  dropboxConfigured: false,
   needsSignIn: false,
 }));

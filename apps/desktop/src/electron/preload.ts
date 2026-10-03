@@ -17,11 +17,8 @@ import type {
 contextBridge.exposeInMainWorld("lunarscribe", {
   platform: process.platform,
   getSyncStatus: (): Promise<SyncStatus> => ipcRenderer.invoke("sync:status"),
-  connectSync: (
-    provider: SyncProvider,
-    clientId: string,
-  ): Promise<SyncStatus> =>
-    ipcRenderer.invoke("sync:connect", provider, clientId),
+  connectSync: (provider: SyncProvider): Promise<SyncStatus> =>
+    ipcRenderer.invoke("sync:connect", provider),
   disconnectSync: (): Promise<SyncStatus> =>
     ipcRenderer.invoke("sync:disconnect"),
   syncFiles: (name: string | null): Promise<SyncResult> =>

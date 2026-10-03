@@ -1,16 +1,24 @@
-import { basename } from "node:path";
+import { createHash } from "node:crypto";
 
-import { getFileExtension } from "../../lib/editor-files";
-import { jsonArray, jsonField, jsonString, parseJson } from "./json";
-import type { FileSyncProvider, RemoteFiles } from "./provider";
-import { SyncSignInRequired } from "./provider";
+import { isSavedFileName } from "../files";
+import { jsonArray, jsonField, jsonString, parseJson } from "../json";
+import type { FileSyncProvider, RemoteFiles } from "./types";
+import { SyncSignInRequired } from "./types";
 
+// Drive metadata
 const API = "https://www.googleapis.com/drive/v2/files";
 
-type DriveFile = { id: string; title: string; etag: string; mimeType: string };
+type DriveFile = {
+  id: string;
+  title: string;
+  etag: string;
+  mimeType: string;
+  md5Checksum: string;
+};
 
 /** v2 exposes metadata ETags for conditional updates and trash operations. */
 export function createGoogleDriveApi(accessToken: () => Promise<string>) {
+  /** Report request failures without exposing remote response bodies. */
   async function request(url: string, options: RequestInit = {}) {
     const response = await fetch(url, {
       ...options,
@@ -23,7 +31,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
 
     if (response.status === 412) {
       throw new Error(
-        "Google Drive changed on another device. The remote file was preserved; retry sync.",
+        "Google Drive no longer matches the sync snapshot. The remote file was preserved; retry sync.",
       );
     }
 
@@ -42,6 +50,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
     return response;
   }
 
+  /** Read all metadata pages before comparing remote file versions. */
   async function list(query: string) {
     const files: DriveFile[] = [];
     let pageToken = "";
@@ -50,7 +59,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
       const parameters = new URLSearchParams({
         q: query,
         maxResults: "1000",
-        fields: "items(id,title,etag,mimeType),nextPageToken",
+        fields: "items(id,title,etag,mimeType,md5Checksum),nextPageToken",
         pageToken,
       });
 
@@ -65,6 +74,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
             title: jsonString(metadata, "title"),
             etag: jsonString(metadata, "etag"),
             mimeType: jsonString(metadata, "mimeType"),
+            md5Checksum: jsonString(metadata, "md5Checksum", true),
           });
         }
       }
@@ -75,7 +85,8 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
     return files;
   }
 
-  async function folder() {
+  /** Use one app-owned backup folder; reject duplicate destinations. */
+  async function getOrCreateFolder() {
     const folders = await list(
       "title = 'lunarscribe-bak-files' and mimeType = 'application/vnd.google-apps.folder' and trashed = false and 'me' in owners",
     );
@@ -106,27 +117,23 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
     return jsonString(createdFolder, "id");
   }
 
-  function provider(folderId: string): FileSyncProvider {
-    const identities = new Map<string, DriveFile>();
-
+  /** Keep remote IDs and revisions in the snapshot used for each write. */
+  function createProvider(folderId: string): FileSyncProvider {
     return {
+      /** Verify downloaded bytes before acknowledging a remote version. */
       async read() {
-        identities.clear();
         const files: RemoteFiles = new Map();
 
         for (const file of await list(
           `'${folderId}' in parents and trashed = false`,
         )) {
-          if (
-            file.title !== basename(file.title) ||
-            !getFileExtension(file.title)
-          ) {
+          if (!isSavedFileName(file.title)) {
             continue;
           }
 
           if (files.has(file.title)) {
             throw new Error(
-              `Google Drive contains multiple versions of ${file.title}. Both copies were preserved; resolve the duplicate before syncing.`,
+              `Google Drive contains multiple versions of ${JSON.stringify(file.title)}. Both copies were preserved; resolve the duplicate before syncing.`,
             );
           }
 
@@ -140,12 +147,23 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
             continue;
           }
 
+          // Media downloads use checksums; metadata uses separate ETags.
           const response = await request(
             `${API}/${encodeURIComponent(file.id)}?alt=media`,
-            { headers: { "If-Match": file.etag } },
           );
 
-          const content = await response.text();
+          const bytes = Buffer.from(await response.arrayBuffer());
+
+          if (
+            !file.md5Checksum ||
+            createHash("md5").update(bytes).digest("hex") !== file.md5Checksum
+          ) {
+            throw new Error(
+              `Google Drive could not verify ${JSON.stringify(file.title)} against the sync snapshot. The local and remote files were preserved; retry sync.`,
+            );
+          }
+
+          const content = bytes.toString("utf8");
 
           const current = parseJson(
             await (
@@ -157,51 +175,52 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
 
           if (jsonString(current, "etag") !== file.etag) {
             throw new Error(
-              `Google Drive changed ${file.title} while it was being read. Retry sync.`,
+              `Google Drive changed ${JSON.stringify(file.title)} while it was being read. Retry sync.`,
             );
           }
 
-          identities.set(file.title, file);
-          files.set(file.title, { content, revision: file.etag });
+          files.set(file.title, { id: file.id, content, revision: file.etag });
         }
 
         return files;
       },
+      /** Use the snapshot revision to reject concurrent remote changes. */
       async write(changes, snapshot) {
         for (const change of changes) {
-          const file = identities.get(change.name);
+          const file = snapshot.get(change.name);
+          const id = file?.id;
 
-          if (file && !snapshot.get(change.name)?.revision) {
+          if (file && (!id || !file.revision)) {
             throw new Error(
               "The Google Drive sync snapshot is incomplete. Retry sync.",
             );
           }
 
           if (change.content === null) {
-            if (file) {
-              await request(`${API}/${encodeURIComponent(file.id)}/trash`, {
+            if (file && id) {
+              await request(`${API}/${encodeURIComponent(id)}/trash`, {
                 method: "POST",
-                headers: { "If-Match": file.etag },
+                headers: { "If-Match": file.revision },
               });
             }
 
             continue;
           }
 
-          if (file) {
+          if (file && id) {
             await request(
-              `https://www.googleapis.com/upload/drive/v2/files/${encodeURIComponent(file.id)}?uploadType=media`,
+              `https://www.googleapis.com/upload/drive/v2/files/${encodeURIComponent(id)}?uploadType=media`,
               {
                 method: "PUT",
                 headers: {
                   "Content-Type": "application/octet-stream",
-                  "If-Match": file.etag,
+                  "If-Match": file.revision,
                 },
                 body: change.content,
               },
             );
           } else {
-            // Duplicate names created concurrently remain separate copies, never overwrites.
+            // Concurrent creation keeps separate copies of the same name.
             const boundary = `lunarscribe-${crypto.randomUUID()}`;
 
             const metadata = {
@@ -225,7 +244,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
     };
   }
 
-  async function account() {
+  async function getAccountEmail() {
     const profile = parseJson(
       await (
         await request(
@@ -243,5 +262,5 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
     return jsonString(user, "emailAddress");
   }
 
-  return { folder, provider, account };
+  return { getOrCreateFolder, createProvider, getAccountEmail };
 }

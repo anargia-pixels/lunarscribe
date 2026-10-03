@@ -31,6 +31,10 @@ function excalidrawFonts(): Plugin {
 export default defineConfig({
   main: {
     build: {
+      // The sign-in page renders shared controls; bundle their TypeScript sources for Electron.
+      externalizeDeps: {
+        exclude: ["@lunarscribe/components", "@lunarscribe/utils"],
+      },
       lib: { entry: resolve(__dirname, "src/electron/main.ts") },
     },
   },

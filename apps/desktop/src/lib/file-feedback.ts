@@ -1,7 +1,9 @@
 import { toast } from "@lunarscribe/components/ui/toast";
 import { errorMessage } from "@lunarscribe/utils/error-message";
 
-/** Transient file failures use toasts; failed external opens remain in the page alert. */
+import { formatFileMessage } from "./file-message";
+
+/** Report file action failures while external-open errors stay on the page. */
 export function reportFileError(
   cause: unknown,
   title: string,
@@ -10,11 +12,11 @@ export function reportFileError(
   toast.add({
     type: "error",
     title,
-    description: errorMessage(cause, fallback),
+    description: formatFileMessage(errorMessage(cause, fallback)),
   });
 }
 
-/** Handles a user action's rejection before an event handler discards its promise. */
+/** Report action failures before an event handler discards the promise. */
 export async function runFileAction(
   action: () => Promise<void>,
   title: string,

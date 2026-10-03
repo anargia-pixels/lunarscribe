@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { SyncBaseline, SyncProvider } from "../../lib/sync";
+import type { OAuthTokens } from "./auth/oauth";
 import {
   jsonField,
   jsonNumber,
@@ -11,8 +12,8 @@ import {
   parseJson,
 } from "./json";
 import type { JsonValue } from "./json";
-import type { OAuthTokens } from "./oauth";
 
+// Stored state
 export type SyncSettings = {
   provider: SyncProvider | null;
   account: string | null;
@@ -33,8 +34,8 @@ export function createEmptySettings(): SyncSettings {
   };
 }
 
+/** Keep the destination when legacy encrypted tokens require sign-in. */
 function parseStoredTokens(storedTokens: JsonValue): OAuthTokens | null {
-  // Legacy encrypted strings require browser sign-in again, without a keyring dependency.
   if (storedTokens === null || storedTokens === String(storedTokens)) {
     return null;
   }
@@ -59,10 +60,13 @@ function parseStoredTokens(storedTokens: JsonValue): OAuthTokens | null {
   return tokens;
 }
 
+// Settings storage
+/** Read settings and replace their JSON atomically with owner-only access. */
 export function createSyncSettings(directory: string) {
   const path = join(directory, "sync-settings.json");
 
   return {
+    /** Treat a missing file as first setup; reject invalid stored state. */
     async load(): Promise<SyncSettings> {
       let serialized: string;
 
@@ -105,6 +109,7 @@ export function createSyncSettings(directory: string) {
         lastSyncedAt: jsonString(storedSettings, "lastSyncedAt", true) || null,
       };
     },
+    /** Replace the settings file only after the complete JSON is written. */
     async save(settings: SyncSettings) {
       await mkdir(directory, { recursive: true, mode: 0o700 });
       const temporary = `${path}.${randomUUID()}.tmp`;

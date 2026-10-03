@@ -10,7 +10,6 @@ interface Window {
     getSyncStatus: () => Promise<import("./lib/sync").SyncStatus>;
     connectSync: (
       provider: import("./lib/sync").SyncProvider,
-      clientId: string,
     ) => Promise<import("./lib/sync").SyncStatus>;
     disconnectSync: () => Promise<import("./lib/sync").SyncStatus>;
     syncFiles: (

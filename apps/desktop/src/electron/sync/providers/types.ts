@@ -1,6 +1,8 @@
+// Provider contracts
 export type RemoteFile = {
   content: string;
   revision: string;
+  id?: string; // Drive uses this locator for conditional writes.
   blocked?: boolean;
 };
 
@@ -11,10 +13,11 @@ export type RemoteChange = {
   content: string | null;
 };
 
+/** Pause background sync until the user signs in again. */
 export class SyncSignInRequired extends Error {}
 
-/** Each provider rejects writes if the remote revision has changed since read. */
-export interface FileSyncProvider {
+/** Each adapter rejects writes if its snapshot revision is stale. */
+export type FileSyncProvider = {
   read: () => Promise<RemoteFiles>;
   write: (changes: RemoteChange[], snapshot: RemoteFiles) => Promise<void>;
-}
+};

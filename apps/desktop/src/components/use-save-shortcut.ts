@@ -1,10 +1,11 @@
 import { toast } from "@lunarscribe/components/ui/toast";
-import { useEffect } from "react";
+import { createElement, useEffect } from "react";
 
 import { reportFileError } from "@/lib/file-feedback";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";
 
+/** Report a shortcut push without repeating background error toasts. */
 async function pushSavedFile(fileName: string) {
   try {
     const syncResult = await window.lunarscribe.syncFiles(fileName);
@@ -13,7 +14,7 @@ async function pushSavedFile(fileName: string) {
       toast.add({
         type: "success",
         title: "File synced",
-        description: fileName,
+        description: createElement("code", null, fileName),
       });
     }
   } catch (cause) {
@@ -27,7 +28,7 @@ async function pushSavedFile(fileName: string) {
   }
 }
 
-/** Captures save before an editor or Electron can treat it as export or browser save. */
+/** Capture the save shortcut before the editor or Electron processes it. */
 export function useSaveShortcut() {
   useEffect(() => {
     const handleSaveShortcut = async (event: KeyboardEvent) => {
@@ -61,7 +62,7 @@ export function useSaveShortcut() {
         toast.add({
           type: "success",
           title: "File saved",
-          description: fileName,
+          description: createElement("code", null, fileName),
         });
 
         if (buffer?.fileName && useSyncStore.getState().provider) {

@@ -1,37 +1,47 @@
-import { basename, join } from "node:path";
+import { join } from "node:path";
 
 import { errorMessage } from "@lunarscribe/utils/error-message";
 import { app, BrowserWindow, ipcMain } from "electron";
 
-import { getFileExtension } from "../../lib/editor-files";
 import type { createOperationQueue } from "../../lib/operation-queue";
 import type { SyncProvider, SyncResult, SyncStatus } from "../../lib/sync";
 import { SYNC_PROVIDERS } from "../../lib/sync";
-import { DROPBOX_CLIENT_ID, GOOGLE_CLIENT_ID } from "./client-ids";
-import { createDropboxApi } from "./dropbox";
-import { connectGithub, createGithubProvider } from "./github";
-import { createGoogleDriveApi } from "./google-drive";
-import { applySyncPulls, readLocalSyncFiles } from "./local-files";
-import { refreshTokens, signIn } from "./oauth";
-import type { OAuthProvider } from "./oauth";
-import { planSync } from "./plan";
-import type { FileSyncProvider } from "./provider";
-import { SyncSignInRequired } from "./provider";
+import { refreshTokens, signIn } from "./auth/oauth";
+import type { OAuthProvider } from "./auth/oauth";
+import {
+  applySyncPulls,
+  isSavedFileName,
+  planSync,
+  readLocalSyncFiles,
+} from "./files";
+import { createDropboxApi } from "./providers/dropbox";
+import {
+  connectGithub,
+  disconnectGithub,
+  syncGithub,
+} from "./providers/github";
+import { createGoogleDriveApi } from "./providers/google-drive";
+import type { FileSyncProvider } from "./providers/types";
+import { SyncSignInRequired } from "./providers/types";
+import publicCredentials from "./public-creds.json";
 import { createEmptySettings, createSyncSettings } from "./settings";
 
+// Background schedule
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
-function broadcast<T>(channel: string, data: T) {
+/** Send public sync state and file changes to every open window. */
+function broadcast<T>(channel: string, payload: T) {
   for (const window of BrowserWindow.getAllWindows()) {
-    window.webContents.send(channel, data);
+    window.webContents.send(channel, payload);
   }
 }
 
-/** One queue coordinates synchronization, local saves, renames, and deletions. */
+/** Register sync IPC and scheduling with the documents save queue. */
 export function registerSync(
   folder: string,
   queue: ReturnType<typeof createOperationQueue>,
 ) {
+  // Load saved state before accepting IPC operations.
   const directory = join(app.getPath("userData"), "sync");
   const persistence = createSyncSettings(directory);
   let settings = createEmptySettings();
@@ -65,27 +75,13 @@ export function registerSync(
     busy: isBusy,
     lastSyncedAt: settings.lastSyncedAt,
     error,
-    googleConfigured: Boolean(GOOGLE_CLIENT_ID),
-    dropboxConfigured: Boolean(DROPBOX_CLIENT_ID),
     needsSignIn,
   });
 
-  const notify = () => broadcast("sync:status", getStatus());
+  const broadcastStatus = () => broadcast("sync:status", getStatus());
 
-  function getClientId(selected: OAuthProvider, publicClientId: string) {
-    const enteredClientId = publicClientId.trim();
-
-    if (enteredClientId) {
-      return enteredClientId;
-    }
-
-    if (settings.provider === selected && settings.tokens) {
-      return settings.tokens.clientId;
-    }
-
-    return selected === "google-drive" ? GOOGLE_CLIENT_ID : DROPBOX_CLIENT_ID;
-  }
-
+  // Access tokens stay in the main process.
+  /** Refresh expired tokens, or require sign-in when refresh is absent. */
   async function getAccessToken(provider: OAuthProvider) {
     if (!settings.tokens || settings.provider !== provider) {
       throw new SyncSignInRequired("Reconnect your sync account.");
@@ -95,8 +91,7 @@ export function registerSync(
 
     if (tokens.expiresAt <= Date.now() + 60_000) {
       if (!tokens.refreshToken) {
-        needsSignIn = true;
-        throw new Error(
+        throw new SyncSignInRequired(
           "Google Drive needs browser sign-in again. Open Settings → Syncing and select Sign in again. Your writing is safe.",
         );
       }
@@ -109,25 +104,24 @@ export function registerSync(
     return tokens.accessToken;
   }
 
-  function createProvider(): FileSyncProvider {
-    if (settings.provider === "github" && settings.account) {
-      return createGithubProvider(directory, settings.account);
-    }
-
+  /** Build a cloud adapter with the current token and saved destination. */
+  function createCloudProvider(): FileSyncProvider {
     if (settings.provider === "google-drive" && settings.folderId) {
       return createGoogleDriveApi(() =>
         getAccessToken("google-drive"),
-      ).provider(settings.folderId);
+      ).createProvider(settings.folderId);
     }
 
     if (settings.provider === "dropbox") {
-      return createDropboxApi(() => getAccessToken("dropbox")).provider();
+      return createDropboxApi(() => getAccessToken("dropbox")).createProvider();
     }
 
     throw new Error("Connect a sync provider first.");
   }
 
-  async function run<T>(operation: () => Promise<T>) {
+  // Sync operations
+  /** Allow one sync operation and broadcast its status to all windows. */
+  async function runSyncOperation<T>(operation: () => Promise<T>) {
     await loaded;
 
     if (isBusy) {
@@ -138,7 +132,7 @@ export function registerSync(
 
     isBusy = true;
     error = null;
-    notify();
+    broadcastStatus();
 
     try {
       return await operation();
@@ -151,134 +145,152 @@ export function registerSync(
       throw new Error(error);
     } finally {
       isBusy = false;
-      notify();
+      broadcastStatus();
     }
   }
 
+  /** Protect pending buffer edits across all open windows. */
   function getProtectedNames() {
     return new Set(
       [...protectedByWindow.values()].flatMap((names) => [...names]),
     );
   }
 
-  async function sync(name: string | null): Promise<SyncResult> {
-    return run(async () => {
-      if (
-        name !== null &&
-        (name !== basename(name) || !getFileExtension(name))
-      ) {
-        throw new Error("Only saved markdown and drawings can be synced.");
-      }
+  /** Cloud providers compare file hashes and reject stale remote revisions. */
+  async function syncCloud(name: string | null): Promise<SyncResult> {
+    const remoteProvider = createCloudProvider();
+    const remote = await remoteProvider.read();
+    const local = await queue(folder, () => readLocalSyncFiles(folder));
 
-      const remoteProvider = createProvider();
-      const remote = await remoteProvider.read();
-      const local = await queue(folder, () => readLocalSyncFiles(folder));
+    const plan = planSync(
+      local.files,
+      remote,
+      settings.baseline,
+      getProtectedNames(),
+      name,
+      local.blockedNames,
+    );
 
-      const plan = planSync(
+    await remoteProvider.write(plan.push, remote);
+
+    return queue(folder, async () => {
+      const changes = await applySyncPulls(
+        folder,
         local.files,
-        remote,
+        plan,
         settings.baseline,
-        getProtectedNames(),
-        name,
-        local.blockedNames,
+        getProtectedNames,
+        (change) => broadcast("sync:files", [change]),
       );
 
-      await remoteProvider.write(plan.push, remote);
+      settings.baseline = plan.acknowledged;
 
-      return queue(folder, async () => {
-        const changes = await applySyncPulls(
-          folder,
-          local.files,
-          plan,
-          settings.baseline,
-          getProtectedNames,
-          (change) => broadcast("sync:files", [change]),
-        );
-
-        settings.baseline = plan.acknowledged;
-        settings.lastSyncedAt = new Date().toISOString();
-        await persistence.save(settings);
-
-        const syncResult = {
-          conflicts: plan.conflicts,
-          pushed: plan.push.length,
-          pulled: changes.length,
-        };
-
-        broadcast("sync:result", syncResult);
-
-        return syncResult;
-      });
+      return {
+        conflicts: plan.conflicts,
+        pushed: plan.push.length,
+        pulled: changes.length,
+      };
     });
   }
 
+  /** Keep Git merges and cloud comparisons behind the same status events. */
+  async function sync(name: string | null): Promise<SyncResult> {
+    return runSyncOperation(async () => {
+      if (name !== null && !isSavedFileName(name)) {
+        throw new Error("Only saved markdown and drawings can be synced.");
+      }
+
+      const syncResult =
+        settings.provider === "github" && settings.account
+          ? await syncGithub(
+              folder,
+              settings.account,
+              name,
+              queue,
+              getProtectedNames,
+              (changes) => broadcast("sync:files", changes),
+            )
+          : await syncCloud(name);
+
+      settings.lastSyncedAt = new Date().toISOString();
+      await persistence.save(settings);
+      broadcast("sync:result", syncResult);
+
+      return syncResult;
+    });
+  }
+
+  // Renderer requests
   ipcMain.handle("sync:status", async () => {
     await loaded;
 
     return getStatus();
   });
   ipcMain.handle("sync:run", (_event, name: string | null) => sync(name));
-  ipcMain.handle(
-    "sync:connect",
-    async (_event, selected: SyncProvider, publicClientId: string) => {
-      await run(async () => {
-        if (!Object.hasOwn(SYNC_PROVIDERS, selected)) {
-          throw new Error("Unknown sync provider.");
-        }
+  ipcMain.handle("sync:connect", async (_event, selected: SyncProvider) => {
+    await runSyncOperation(async () => {
+      if (!Object.hasOwn(SYNC_PROVIDERS, selected)) {
+        throw new Error("Unknown sync provider.");
+      }
 
-        const next = createEmptySettings();
-        next.provider = selected;
+      const next = createEmptySettings();
+      next.provider = selected;
 
-        if (selected === "github") {
-          next.account = await connectGithub(directory);
-        } else {
-          authorization = new AbortController();
+      if (selected === "github") {
+        next.account = await connectGithub(folder, queue);
+      } else {
+        authorization = new AbortController();
 
-          try {
-            const tokens = await signIn(
-              selected,
-              getClientId(selected, publicClientId),
-              authorization.signal,
-            );
+        try {
+          const tokens = await signIn(
+            selected,
+            selected === "google-drive"
+              ? publicCredentials.googleClientId
+              : publicCredentials.dropboxAppKey,
+            authorization.signal,
+          );
 
-            next.tokens = tokens;
+          next.tokens = tokens;
 
-            if (selected === "google-drive") {
-              const api = createGoogleDriveApi(async () => tokens.accessToken);
-              next.folderId = await api.folder();
-              next.account = await api.account();
-            } else {
-              next.account = await createDropboxApi(
-                async () => tokens.accessToken,
-              ).connect();
-            }
-
-            authorization.signal.throwIfAborted();
-          } finally {
-            authorization = null;
+          if (selected === "google-drive") {
+            const api = createGoogleDriveApi(async () => tokens.accessToken);
+            next.folderId = await api.getOrCreateFolder();
+            next.account = await api.getAccountEmail();
+          } else {
+            next.account = await createDropboxApi(
+              async () => tokens.accessToken,
+            ).connect();
           }
+
+          authorization.signal.throwIfAborted();
+        } finally {
+          authorization = null;
         }
+      }
 
-        // Reconnecting the same destination keeps deletion history and conflict comparisons.
-        if (
-          settings.provider === next.provider &&
-          settings.account === next.account &&
-          settings.folderId === next.folderId
-        ) {
-          next.baseline = settings.baseline;
-          next.lastSyncedAt = settings.lastSyncedAt;
-        }
+      // Keep comparison history when the same destination reconnects.
+      if (
+        settings.provider === next.provider &&
+        settings.account === next.account &&
+        settings.folderId === next.folderId
+      ) {
+        next.baseline = settings.baseline;
+        next.lastSyncedAt = settings.lastSyncedAt;
+      }
 
-        await persistence.save(next);
-        settings = next;
-        needsSignIn = false;
-      });
+      await persistence.save(next);
+      settings = next;
+      needsSignIn = false;
+    });
 
-      return getStatus();
-    },
-  );
+    return getStatus();
+  });
   ipcMain.handle("sync:disconnect", async () => {
-    await run(async () => {
+    await runSyncOperation(async () => {
+      if (settings.provider === "github") {
+        await queue(folder, () => disconnectGithub(folder));
+      }
+
       const next = createEmptySettings();
       await persistence.save(next);
       settings = next;
@@ -298,6 +310,7 @@ export function registerSync(
     protectedByWindow.set(event.sender.id, new Set(names));
   });
 
+  // Run background sync only while an app window is open.
   const timer = setInterval(() => {
     void loaded
       .then(async () => {

@@ -1,13 +1,14 @@
-import { basename } from "node:path";
+import { isSavedFileName } from "../files";
+import { jsonArray, jsonBoolean, jsonString, parseJson } from "../json";
+import type { FileSyncProvider, RemoteFiles } from "./types";
+import { SyncSignInRequired } from "./types";
 
-import { getFileExtension } from "../../lib/editor-files";
-import { jsonArray, jsonBoolean, jsonString, parseJson } from "./json";
-import type { FileSyncProvider, RemoteFiles } from "./provider";
-import { SyncSignInRequired } from "./provider";
-
+// Dropbox destination
 const BACKUP_FOLDER_PATH = "/lunarscribe-bak-files";
 
+/** Access only the Dropbox App folder with the current account token. */
 export function createDropboxApi(accessToken: () => Promise<string>) {
+  /** Return raw status so folder setup can distinguish a missing path. */
   async function request(route: string, options: RequestInit, content = false) {
     const response = await fetch(
       `https://${content ? "content" : "api"}.dropboxapi.com/2/${route}`,
@@ -24,6 +25,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
     return response;
   }
 
+  /** Send metadata requests as JSON through the same authenticated client. */
   async function rpc(route: string, body: string) {
     return request(route, {
       method: "POST",
@@ -32,7 +34,8 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
     });
   }
 
-  function check(response: Response) {
+  /** Report status failures without exposing remote response bodies. */
+  function checkResponse(response: Response) {
     if (response.status === 401) {
       throw new SyncSignInRequired(
         "Dropbox needs sign-in again. Open Settings → Syncing and select Sign in again.",
@@ -48,6 +51,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
     }
   }
 
+  /** Create the backup folder when absent, then return the account email. */
   async function connect() {
     const existing = await rpc(
       "files/get_metadata",
@@ -63,14 +67,13 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
         );
       }
     } else {
-      // Only a path/not_found response authorizes folder creation.
+      // Create a folder only when Dropbox reports path/not_found.
+      if (existing.status !== 409) checkResponse(existing);
+
       const failure = parseJson(await existing.text());
 
-      if (
-        existing.status !== 409 ||
-        !jsonString(failure, "error_summary").startsWith("path/not_found/")
-      ) {
-        check(existing);
+      if (!jsonString(failure, "error_summary").startsWith("path/not_found/")) {
+        checkResponse(existing);
       }
 
       const created = await rpc(
@@ -78,18 +81,20 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
         JSON.stringify({ path: BACKUP_FOLDER_PATH, autorename: false }),
       );
 
-      check(created);
+      checkResponse(created);
     }
 
     const response = await rpc("users/get_current_account", "null");
-    check(response);
+    checkResponse(response);
     const account = parseJson(await response.text());
 
     return jsonString(account, "email");
   }
 
-  function provider(): FileSyncProvider {
+  /** Use immutable download revisions and conditional writes for each sync. */
+  function createProvider(): FileSyncProvider {
     return {
+      /** Read each file at the revision returned by the folder listing. */
       async read() {
         const files: RemoteFiles = new Map();
 
@@ -99,13 +104,13 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
         );
 
         while (true) {
-          check(response);
+          checkResponse(response);
           const page = parseJson(await response.text());
 
           for (const file of jsonArray(page, "entries")) {
             const name = jsonString(file, "name");
 
-            if (name !== basename(name) || !getFileExtension(name)) {
+            if (!isSavedFileName(name)) {
               continue;
             }
 
@@ -128,7 +133,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
               true,
             );
 
-            check(download);
+            checkResponse(download);
             files.set(name, {
               content: await download.text(),
               revision: jsonString(file, "rev"),
@@ -147,6 +152,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
 
         return files;
       },
+      /** Reject replacements and deletions when the saved revision changed. */
       async write(changes, snapshot) {
         for (const change of changes) {
           const revision = snapshot.get(change.name)?.revision;
@@ -158,7 +164,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
               JSON.stringify({ path, parent_rev: revision }),
             );
 
-            check(response);
+            checkResponse(response);
           } else {
             const response = await request(
               "files/upload",
@@ -185,12 +191,12 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
               true,
             );
 
-            check(response);
+            checkResponse(response);
           }
         }
       },
     };
   }
 
-  return { connect, provider };
+  return { connect, createProvider };
 }

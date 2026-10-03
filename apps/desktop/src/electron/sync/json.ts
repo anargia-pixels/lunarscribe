@@ -1,3 +1,4 @@
+// JSON boundary
 export type JsonValue =
   | string
   | number
@@ -6,20 +7,26 @@ export type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
-/** JSON.parse limits the input to JSON values; field readers enforce the provider contract. */
+/** Parse JSON without copying remote response data into error messages. */
 export function parseJson(text: string): JsonValue {
-  return JSON.parse(text);
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("Sync received invalid JSON.");
+  }
 }
 
+/** Reject arrays and primitives before reading JSON object fields. */
 function properties(value: JsonValue) {
   if (value === null || Array.isArray(value) || Object(value) !== value) {
     throw new Error("Sync received an invalid JSON object.");
   }
 
-  // SAFETY: JSON.parse produced this value, and the checks exclude null, arrays, and primitives.
+  // SAFETY: Parsed JSON passed the object checks above.
   return value as { [key: string]: JsonValue };
 }
 
+// Field readers
 export function jsonField(value: JsonValue, key: string) {
   return properties(value)[key];
 }
@@ -68,6 +75,7 @@ export function jsonArray(value: JsonValue, key: string) {
   return field;
 }
 
+/** Read saved hashes as own properties without changing the prototype. */
 export function jsonStrings(value: JsonValue) {
   const result: Record<string, string> = {};
 

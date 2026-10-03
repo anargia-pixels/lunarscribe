@@ -133,7 +133,11 @@ export function AppSidebar() {
             : await window.lunarscribe.getFilePath(target.name);
 
         await navigator.clipboard.writeText(path);
-        toast.add({ type: "success", title: "Path copied", description: path });
+        toast.add({
+          type: "success",
+          title: "Path copied",
+          description: <code>{path}</code>,
+        });
       },
       "Unable to copy path",
       "The path could not be copied.",
@@ -168,7 +172,7 @@ export function AppSidebar() {
             toast.add({
               type: "success",
               title: `${format} exported`,
-              description: path,
+              description: <code>{path}</code>,
             });
           }
         },

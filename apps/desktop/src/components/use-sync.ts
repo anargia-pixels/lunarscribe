@@ -1,17 +1,31 @@
 import { toast } from "@lunarscribe/components/ui/toast";
-import { useEffect } from "react";
+import { createElement, useEffect } from "react";
 
 import { reportFileError } from "@/lib/file-feedback";
-import type { SyncStatus } from "@/lib/sync";
+import { formatFileMessage } from "@/lib/file-message";
+import type { SyncConflict, SyncStatus } from "@/lib/sync";
 import { stemOf, useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";
 
-function reportConflicts(names: string[]) {
-  if (names.length) {
+/** Keep conflicts visible until the user dismisses the toast. */
+function reportConflicts(conflicts: SyncConflict[]) {
+  if (conflicts.length) {
     toast.add({
       type: "warning",
       title: "Sync needs your attention",
-      description: `Sync left these paths unchanged: ${names.join(", ")}. Review the local and remote copies before retrying sync.`,
+      description: createElement(
+        "div",
+        { className: "flex flex-col gap-2" },
+        ...conflicts.map(({ name, reason }) =>
+          createElement(
+            "p",
+            { key: name },
+            createElement("code", null, name),
+            ": ",
+            reason,
+          ),
+        ),
+      ),
       timeout: 0,
     });
   }
@@ -46,7 +60,7 @@ export function useSync() {
         toast.add({
           type: "error",
           title: status.needsSignIn ? "Sign-in required" : "Sync failed",
-          description: status.error,
+          description: formatFileMessage(status.error),
         });
       }
     };
@@ -63,7 +77,16 @@ export function useSync() {
     );
 
     const unsubscribeFiles = window.lunarscribe.onSyncedFiles((changes) => {
-      reportConflicts(useBufferStore.getState().applySyncedFiles(changes));
+      reportConflicts(
+        useBufferStore
+          .getState()
+          .applySyncedFiles(changes)
+          .map((name) => ({
+            name,
+            reason:
+              "This buffer has pending edits. They were preserved; compare them with the saved file before continuing.",
+          })),
+      );
     });
 
     let isActive = true;

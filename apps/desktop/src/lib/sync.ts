@@ -12,8 +12,6 @@ export type SyncStatus = {
   busy: boolean;
   lastSyncedAt: string | null;
   error: string | null;
-  googleConfigured: boolean;
-  dropboxConfigured: boolean;
   needsSignIn: boolean;
 };
 
@@ -24,9 +22,14 @@ export type SyncedFileChange = {
 };
 
 export type SyncResult = {
-  conflicts: string[];
+  conflicts: SyncConflict[];
   pushed: number;
   pulled: number;
+};
+
+export type SyncConflict = {
+  name: string;
+  reason: string;
 };
 
 /** The last acknowledged hash distinguishes a remote edit from a local edit. */

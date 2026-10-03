@@ -93,7 +93,10 @@ function ToastDescription({
   return (
     <ToastPrimitive.Description
       data-slot="toast-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(
+        "text-muted-foreground [&_code]:bg-muted [&_code]:text-foreground max-h-60 overflow-y-auto text-sm [&_code]:rounded [&_code]:px-1 [&_code]:font-mono [&_code]:break-all",
+        className,
+      )}
       {...props}
     />
   );

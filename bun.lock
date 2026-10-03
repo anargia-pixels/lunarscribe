@@ -16,7 +16,7 @@
     },
     "apps/desktop": {
       "name": "desktop",
-      "version": "0.1.0",
+      "version": "0.0.13",
       "dependencies": {
         "@ff-labs/fff-node": "catalog:",
         "@lunarscribe/components": "workspace:*",

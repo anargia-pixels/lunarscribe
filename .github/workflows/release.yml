@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            script: package:linux
+            asset: lunarscribe-linux-x86_64.AppImage
+          - runner: macos-15-intel
+            script: package:macos:x64
+            asset: lunarscribe-macos-x64.dmg
+          - runner: macos-15
+            script: package:macos:arm64
+            asset: lunarscribe-macos-arm64.dmg
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Check the release version
+        run: |
+          version=$(jq -r .version apps/desktop/package.json)
+          test "$GITHUB_REF_NAME" = "v$version"
+      - run: bun install --frozen-lockfile
+      - run: bun run format:check
+      - run: bun run lint
+      - run: bun run check-types
+      - run: bun run build --force
+      - run: bun run ${{ matrix.script }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: apps/desktop/dist/${{ matrix.asset }}
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Create checksums
+        working-directory: release
+        run: sha256sum lunarscribe-* > sha256sums.txt
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* install.sh \
+            --verify-tag --title "Lunarscribe $GITHUB_REF_NAME" --generate-notes

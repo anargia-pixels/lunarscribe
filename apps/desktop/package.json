@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "0.1.0",
+  "version": "0.0.13",
   "description": "Lunarscribe Markdown writing app",
   "private": true,
   "type": "module",
@@ -76,6 +76,7 @@
       }
     ],
     "linux": {
+      "artifactName": "lunarscribe-linux-${arch}.${ext}",
       "target": [
         "deb",
         "AppImage"
@@ -89,10 +90,14 @@
       "maintainer": "Lunarscribe contributors"
     },
     "mac": {
+      "artifactName": "lunarscribe-macos-${arch}.${ext}",
       "target": [
         "dmg"
       ],
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "notarize": false
     },
     "asarUnpack": [
       "node_modules/@ff-labs/**",

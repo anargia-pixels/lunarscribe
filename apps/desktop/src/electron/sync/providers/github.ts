@@ -90,27 +90,6 @@ function createGitCommand(
   return (...args) => command("git", [...flags, ...args], folder, environment);
 }
 
-/** Check visibility again before each push to prevent public backups. */
-async function requirePrivateRepository(folder: string, account: string) {
-  const visibility = await command(
-    "gh",
-    [
-      "repo",
-      "view",
-      `${account}/${REPOSITORY_NAME}`,
-      "--json",
-      "isPrivate",
-      "--jq",
-      ".isPrivate",
-    ],
-    folder,
-  );
-
-  if (visibility !== "true") {
-    throw new Error("lunarscribe-bak-files must be private before syncing.");
-  }
-}
-
 // Repository connection
 /** Initialize history in Documents without adopting a different remote. */
 async function initializeRepository(
@@ -154,7 +133,7 @@ async function initializeRepository(
   );
 }
 
-/** Connect gh's account to a private backup and initialize local Git history. */
+/** Connect gh's account to the backup, creating it private, and initialize local Git history. */
 export async function connectGithub(
   folder: string,
   queue: ReturnType<typeof createOperationQueue>,
@@ -208,7 +187,6 @@ export async function connectGithub(
     await command("gh", ["repo", "create", repository, "--private"], folder);
   }
 
-  await requirePrivateRepository(folder, account);
   await queue(folder, () =>
     initializeRepository(folder, account, createGitCommand(folder, account)),
   );
@@ -414,12 +392,8 @@ async function applyMerge(
 }
 
 // Synchronization
-/** Fetch the backup branch after checking the account and repository access. */
-async function fetchGithubRemote(
-  folder: string,
-  account: string,
-  git: GitCommand,
-) {
+/** Stop when gh is signed in to a different account than the connected one. */
+async function checkGithubAccount(folder: string, account: string) {
   if (
     (await command("gh", ["api", "user", "--jq", ".login"], folder)) !== account
   ) {
@@ -427,24 +401,61 @@ async function fetchGithubRemote(
       `Use gh auth switch to sign in as ${account}, then retry GitHub sync.`,
     );
   }
+}
 
-  await requirePrivateRepository(folder, account);
+/** Fetch the backup branch after checking the gh account. */
+async function fetchGithubRemote(
+  folder: string,
+  account: string,
+  git: GitCommand,
+) {
+  // Run the read-only lookup alongside the account check, but report the check first.
+  const [accountCheck, lookup] = await Promise.allSettled([
+    checkGithubAccount(folder, account),
+    git("ls-remote", "--symref", "origin", "HEAD"),
+  ]);
 
-  const heads = await git("ls-remote", "--symref", "origin", "HEAD");
+  if (accountCheck.status === "rejected") throw accountCheck.reason;
+
+  if (lookup.status === "rejected") throw lookup.reason;
+
+  const heads = lookup.value;
+
   const branch = /ref: refs\/heads\/(\S+)\s+HEAD/u.exec(heads)?.[1] ?? "main";
+  const head = /^([0-9a-f]+)\tHEAD$/mu.exec(heads)?.[1] ?? null;
   let remote: string | null = null;
 
   if (heads) {
-    await git(
-      "fetch",
-      "--no-tags",
-      "origin",
-      `+refs/heads/${branch}:refs/remotes/origin/${branch}`,
-    );
+    // Skip the download when this device already has the remote commit.
+    if (head && (await hasCommit(git, head))) {
+      await git("update-ref", `refs/remotes/origin/${branch}`, head);
+    } else {
+      await git(
+        "fetch",
+        "--no-tags",
+        "origin",
+        `+refs/heads/${branch}:refs/remotes/origin/${branch}`,
+      );
+    }
+
     remote = await git("rev-parse", `origin/${branch}`);
   }
 
   return { branch, remote };
+}
+
+/** Exit 1 means the object is missing; other failures stop synchronization. */
+async function hasCommit(git: GitCommand, revision: string) {
+  try {
+    await git("cat-file", "-e", revision);
+
+    return true;
+  } catch (cause) {
+    if (cause instanceof Error && "code" in cause && cause.code === 1)
+      return false;
+
+    throw cause;
+  }
 }
 
 /** Replace one remote file without changing other files or local Git history. */
@@ -480,8 +491,6 @@ export async function forceWriteGithub(
         "-m",
         "Force selected Lunarscribe file to remote",
       );
-
-      await requirePrivateRepository(folder, account);
 
       try {
         await git("push", "origin", `${revision}:refs/heads/${branch}`);
@@ -610,8 +619,6 @@ export async function syncGithub(
 
   // Push: keep normal fast-forward checks if another device updates GitHub.
   if (prepared.conflicts.length === 0) {
-    await requirePrivateRepository(folder, account);
-
     try {
       await git("push", "origin", `${prepared.revision}:refs/heads/${branch}`);
     } catch {

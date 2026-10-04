@@ -162,7 +162,7 @@ export function registerSync(
   /** Compare with the shared base and reject concurrent remote writes. */
   async function syncCloud(name: string | null): Promise<SyncResult> {
     const remoteProvider = createCloudProvider();
-    const remote = await remoteProvider.read();
+    const remote = await remoteProvider.read(name);
     const local = await queue(folder, () => readLocalSyncFiles(folder));
 
     const plan = planSync(

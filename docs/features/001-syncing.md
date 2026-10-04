@@ -27,7 +27,8 @@ gh auth login
 ```
 
 Lunarscribe finds your `lunarscribe-bak-files` repository. If it does not exist, the app
-creates a private repository. An existing repository must be private.
+creates it as a private repository. Lunarscribe does not check visibility afterwards, so
+you can make the repository public to share it.
 
 The app creates `.git` inside the Lunarscribe documents folder. New repositories use the
 `main` branch. Existing backups keep their default branch.

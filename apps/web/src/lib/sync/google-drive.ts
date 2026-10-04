@@ -1,3 +1,4 @@
+import { mapConcurrent } from "@lunarscribe/utils/map-concurrent";
 import {
   jsonArray,
   jsonField,
@@ -9,7 +10,10 @@ import type {
   FileSyncProvider,
   RemoteFiles,
 } from "@lunarscribe/utils/sync/types";
-import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
+import {
+  SYNC_CONCURRENCY,
+  SyncSignInRequired,
+} from "@lunarscribe/utils/sync/types";
 
 import { contentHash, isSavedFileName } from "@/lib/sync/files";
 
@@ -183,13 +187,17 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
 
     return {
       /** Verify downloaded bytes before acknowledging a remote version. */
-      async read() {
+      async read(name) {
         const files: RemoteFiles = new Map();
+        const downloads: DriveFile[] = [];
 
         for (const file of await list(
           `'${folderId}' in parents and trashed = false`,
         )) {
-          if (!isSavedFileName(file.title)) {
+          if (
+            !isSavedFileName(file.title) ||
+            (name !== null && file.title !== name)
+          ) {
             continue;
           }
 
@@ -199,19 +207,22 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
             );
           }
 
-          if (file.mimeType.startsWith("application/vnd.google-apps.")) {
-            files.set(file.title, {
-              content: "",
-              revision: file.etag,
-              modifiedAt: file.modifiedAt,
-              modifiedAtPrecisionMs: 1,
-              blocked: true,
-            });
+          // Reserve the name so a duplicate is caught before any download.
+          files.set(file.title, {
+            content: "",
+            revision: file.etag,
+            modifiedAt: file.modifiedAt,
+            modifiedAtPrecisionMs: 1,
+            blocked: true,
+          });
 
-            continue;
+          if (!file.mimeType.startsWith("application/vnd.google-apps.")) {
+            downloads.push(file);
           }
+        }
 
-          // Media downloads use checksums; metadata uses separate ETags.
+        // The checksum ties the bytes to the listed ETag; writes recheck it with If-Match.
+        await mapConcurrent(downloads, SYNC_CONCURRENCY, async (file) => {
           const response = await request(
             `${API}/${encodeURIComponent(file.id)}?alt=media`,
           );
@@ -230,20 +241,6 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
             );
           }
 
-          const current = parseJson(
-            await (
-              await request(
-                `${API}/${encodeURIComponent(file.id)}?fields=id,title,etag,mimeType`,
-              )
-            ).text(),
-          );
-
-          if (jsonString(current, "etag") !== file.etag) {
-            throw new Error(
-              `Google Drive changed ${JSON.stringify(file.title)} while it was being read. Retry sync.`,
-            );
-          }
-
           files.set(file.title, {
             id: file.id,
             content,
@@ -251,13 +248,13 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
             modifiedAt: file.modifiedAt,
             modifiedAtPrecisionMs: 1,
           });
-        }
+        });
 
         return files;
       },
       /** Use the snapshot revision to reject concurrent remote changes. */
       async write(changes, snapshot) {
-        for (const change of changes) {
+        await mapConcurrent(changes, SYNC_CONCURRENCY, async (change) => {
           const file = snapshot.get(change.name);
           const id = file?.id;
 
@@ -275,7 +272,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
               });
             }
 
-            continue;
+            return;
           }
 
           await upload(
@@ -285,7 +282,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
             id,
             file?.revision,
           );
-        }
+        });
       },
       async forceWrite(name, content, modifiedAt) {
         const escapedName = name.replaceAll(/['\\]/gu, "\\$&");

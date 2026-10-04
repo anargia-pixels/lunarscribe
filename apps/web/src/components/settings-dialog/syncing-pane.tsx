@@ -1,4 +1,9 @@
 import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@lunarscribe/components/ui/alert";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Label } from "@lunarscribe/components/ui/label";
 import {
@@ -9,7 +14,9 @@ import {
   SelectValue,
 } from "@lunarscribe/components/ui/select";
 import { Separator } from "@lunarscribe/components/ui/separator";
+import { Spinner } from "@lunarscribe/components/ui/spinner";
 import { toast } from "@lunarscribe/components/ui/toast";
+import { redactEmail } from "@lunarscribe/utils/redact-email";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 
@@ -24,6 +31,9 @@ import { SYNC_PROVIDERS } from "@/lib/sync/sync-types";
 import type { SyncProvider, SyncStatus } from "@/lib/sync/sync-types";
 import { useSyncStore } from "@/stores/sync-store";
 
+/** Connecting, or signing in again, signs in first and then syncs. */
+type ConnectStage = "signing-in" | "syncing";
+
 function getConnectionLabel(status: SyncStatus) {
   if (!status.provider) {
     return "Sync is off";
@@ -32,8 +42,24 @@ function getConnectionLabel(status: SyncStatus) {
   const providerLabel = `Connected to ${SYNC_PROVIDERS[status.provider]}`;
 
   return status.account
-    ? `${providerLabel} · ${status.account}`
+    ? `${providerLabel} · ${redactEmail(status.account)}`
     : providerLabel;
+}
+
+/** Tell the user what the slow first connection is waiting on. */
+function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
+  if (stage === "syncing") {
+    return {
+      title: "Syncing your files…",
+      description:
+        "Right after connecting, this can take a few seconds. You can keep writing while it finishes.",
+    };
+  }
+
+  return {
+    title: `Waiting for you to sign in to ${SYNC_PROVIDERS[provider]}…`,
+    description: "Finish signing in in the pop-up window, then come back here.",
+  };
 }
 
 export function SyncingPane() {
@@ -45,17 +71,21 @@ export function SyncingPane() {
 
   const selected = status.provider ?? selection;
 
-  const [isConnecting, setConnecting] = useState(false);
+  const [connectStage, setConnectStage] = useState<ConnectStage | null>(null);
   const [isPending, setPending] = useState(false);
 
   const isDisabled = status.busy || isPending;
 
+  const connectMessage =
+    connectStage && getConnectMessage(connectStage, selected);
+
   async function connect() {
-    setConnecting(true);
+    setConnectStage("signing-in");
     setPending(true);
 
     try {
       useSyncStore.setState(await connectSync(selected));
+      setConnectStage("syncing");
       await syncFiles(null);
     } catch (cause) {
       if (!useSyncStore.getState().error) {
@@ -66,7 +96,7 @@ export function SyncingPane() {
         );
       }
     } finally {
-      setConnecting(false);
+      setConnectStage(null);
       setPending(false);
     }
   }
@@ -81,7 +111,7 @@ export function SyncingPane() {
         toast.add({
           type: "success",
           title: "Sync complete",
-          description: `${result.pushed} pushed, ${result.pulled} pulled.`,
+          description: `${result.pushed} sent, ${result.pulled} received.`,
         });
       }
     } catch (cause) {
@@ -120,8 +150,9 @@ export function SyncingPane() {
       <header className="flex flex-col gap-1">
         <h2 className="text-base font-medium">Syncing</h2>
         <p className="text-muted-foreground text-sm text-pretty">
-          Sync saved markdown and drawings across devices. One provider runs
-          every five minutes while a Lunarscribe tab is open.
+          Back up your saved notes and drawings and keep them the same on all
+          your devices. Lunarscribe syncs every five minutes while a tab is
+          open.
         </p>
       </header>
       <div className="flex max-w-lg flex-col gap-4">
@@ -149,7 +180,7 @@ export function SyncingPane() {
           </Select>
         </div>
         <p className="text-muted-foreground text-sm text-pretty">
-          {`Sign in to ${SYNC_PROVIDERS[selected]} in a pop-up window. Lunarscribe finds or creates the lunarscribe-bak-files folder. Credentials are saved in this browser.`}
+          {`You will sign in to ${SYNC_PROVIDERS[selected]} in a pop-up window. Lunarscribe saves your files in a folder called lunarscribe-bak-files. Your sign-in stays in this browser.`}
         </p>
         <div className="flex flex-wrap gap-2">
           {status.provider ? (
@@ -171,7 +202,7 @@ export function SyncingPane() {
                 }}
               >
                 <RefreshCw />
-                {status.busy && !isConnecting ? "Syncing…" : "Sync now"}
+                {status.busy && !connectStage ? "Syncing…" : "Sync now"}
               </Button>
               <Button
                 variant="outline"
@@ -190,17 +221,24 @@ export function SyncingPane() {
                 void connect();
               }}
             >
-              {isConnecting
+              {connectStage
                 ? "Connecting…"
                 : `Connect ${SYNC_PROVIDERS[selected]}`}
             </Button>
           )}
-          {isConnecting && (
+          {connectStage === "signing-in" && (
             <Button variant="outline" onClick={cancelSyncSignIn}>
               Cancel sign-in
             </Button>
           )}
         </div>
+        {connectMessage && (
+          <Alert>
+            <Spinner aria-hidden="true" />
+            <AlertTitle>{connectMessage.title}</AlertTitle>
+            <AlertDescription>{connectMessage.description}</AlertDescription>
+          </Alert>
+        )}
         <div aria-live="polite" className="flex flex-col gap-1 text-sm">
           <p>{getConnectionLabel(status)}</p>
           {status.lastSyncedAt && (
@@ -212,16 +250,15 @@ export function SyncingPane() {
         </div>
         <Separator />
         <p className="text-muted-foreground text-sm text-pretty">
-          Press {isMac ? "Cmd+S" : "Ctrl+S"} to save and push the active saved
-          file. External files stay local. Changes on one side sync normally.
-          Divergent edits preserve both copies and show an error toast. On the
-          first sync, the newer modification time selects the copy to keep.
+          Press {isMac ? "Cmd+S" : "Ctrl+S"} to save the open file and sync it
+          right away. Files opened from outside Lunarscribe are not synced. If a
+          note changed on two devices, Lunarscribe keeps both copies and lets
+          you know. On the first sync, the most recently edited copy is kept.
         </p>
         {selected === "google-drive" && (
           <p className="text-muted-foreground text-sm text-pretty">
-            Google Drive asks you to sign in again when its access token
-            expires, about once an hour. Background sync resumes after you sign
-            in again.
+            Google Drive asks you to sign in again about once an hour. Syncing
+            picks up again after you sign in.
           </p>
         )}
       </div>

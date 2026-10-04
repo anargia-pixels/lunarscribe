@@ -1,13 +1,17 @@
-import { contentHash, isSavedFileName } from "@/lib/sync/files";
 import {
   jsonArray,
   jsonField,
   jsonString,
   jsonTimestamp,
   parseJson,
-} from "@/lib/sync/json";
-import type { FileSyncProvider, RemoteFiles } from "@/lib/sync/types";
-import { SyncSignInRequired } from "@/lib/sync/types";
+} from "@lunarscribe/utils/sync/json";
+import type {
+  FileSyncProvider,
+  RemoteFiles,
+} from "@lunarscribe/utils/sync/types";
+import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
+
+import { contentHash, isSavedFileName } from "@/lib/sync/files";
 
 // Drive metadata
 const API = "https://www.googleapis.com/drive/v2/files";

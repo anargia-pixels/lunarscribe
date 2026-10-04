@@ -94,6 +94,7 @@
         "class-variance-authority": "catalog:",
         "cmdk": "catalog:",
         "date-fns": "catalog:",
+        "docx": "catalog:",
         "embla-carousel-react": "catalog:",
         "input-otp": "catalog:",
         "katex": "catalog:",

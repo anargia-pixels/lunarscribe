@@ -1,3 +1,8 @@
+import {
+  COLOR_THEMES,
+  findColorTheme,
+  type ColorPalette,
+} from "@lunarscribe/components/themes/color-themes";
 import { Button } from "@lunarscribe/components/ui/button";
 import {
   Select,
@@ -11,11 +16,6 @@ import type { CSSProperties } from "react";
 
 import { FontSettings } from "@/components/settings-dialog/font-settings";
 import { type Theme, useAppearanceStore } from "@/stores/appearance-store";
-import {
-  COLOR_THEMES,
-  findColorTheme,
-  type ColorPalette,
-} from "@/themes/color-themes";
 
 /** Stands for the colors written in globals.css rather than a color theme. */
 const DEFAULT_COLOR_THEME = "default";

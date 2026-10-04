@@ -1,4 +1,9 @@
 import {
+  COLOR_TOKENS,
+  findColorTheme,
+  type ColorPalette,
+} from "@lunarscribe/components/themes/color-themes";
+import {
   createContext,
   type ReactNode,
   useContext,
@@ -7,11 +12,6 @@ import {
 import { flushSync } from "react-dom";
 
 import { useAppearanceStore } from "@/stores/appearance-store";
-import {
-  COLOR_TOKENS,
-  findColorTheme,
-  type ColorPalette,
-} from "@/themes/color-themes";
 
 /** Where the dark mode toggle was pressed; the incoming theme is revealed from this point. */
 type ThemeRevealOrigin = {

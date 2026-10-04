@@ -1,8 +1,8 @@
+import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
+import { formatFileMessage } from "@lunarscribe/components/lib/file-message";
 import { toast } from "@lunarscribe/components/ui/toast";
 import { createElement, useEffect } from "react";
 
-import { reportFileError } from "@/lib/file-feedback";
-import { formatFileMessage } from "@/lib/file-message";
 import type { SyncConflict, SyncStatus } from "@/lib/sync";
 import { stemOf, useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";
@@ -144,6 +144,9 @@ export function useSync() {
           );
         }
       });
+
+    // Downloads from this sync reach the buffers through the listeners above.
+    window.lunarscribe.startupSync();
 
     return () => {
       isActive = false;

@@ -4,7 +4,9 @@ import { homedir, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
 
-import type { createOperationQueue } from "../../../lib/operation-queue";
+import type { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
+
 import type {
   SyncConflict,
   SyncResult,
@@ -12,7 +14,6 @@ import type {
 } from "../../../lib/sync";
 import { getFileChanges, isSavedFileName, readLocalSyncFiles } from "../files";
 import type { LocalSyncFiles } from "../files";
-import { SyncSignInRequired } from "./types";
 
 // Git commands
 type GitCommand = (...args: string[]) => Promise<string>;

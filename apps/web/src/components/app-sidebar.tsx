@@ -1,5 +1,7 @@
 import { DeleteFileDialog } from "@lunarscribe/components/file-dialog/delete-file-dialog";
 import { RenameFileDialog } from "@lunarscribe/components/file-dialog/rename-file-dialog";
+import { useSearchShortcut } from "@lunarscribe/components/hooks/use-search-shortcut";
+import { runFileAction } from "@lunarscribe/components/lib/file-feedback";
 import { FileSearchDialog } from "@lunarscribe/components/search/file-search-dialog";
 import { SettingsDialog } from "@lunarscribe/components/settings-dialog/settings-dialog";
 import { AppSidebarHeader } from "@lunarscribe/components/sidebar/app-sidebar-header";
@@ -12,6 +14,7 @@ import {
   SidebarMenu,
 } from "@lunarscribe/components/ui/sidebar";
 import { toast } from "@lunarscribe/components/ui/toast";
+import { FILE_SECTIONS } from "@lunarscribe/utils/sidebar-sections";
 import { useEffect, useState } from "react";
 
 import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
@@ -23,11 +26,9 @@ import { fileKey, isTextFile } from "@/lib/editor-files";
 import { exportDocx } from "@/lib/export-docx";
 import { exportPdf } from "@/lib/export-pdf";
 import { pickTextFiles } from "@/lib/external-files";
-import { runFileAction } from "@/lib/file-feedback";
 import { searchFiles } from "@/lib/file-search";
 import { MOD_KEY_LABEL } from "@/lib/platform";
 import { listFiles, onFilesChanged, readFile } from "@/lib/saved-files";
-import { FILE_SECTIONS } from "@/lib/sidebar-sections";
 import {
   kindOf,
   stemOf,
@@ -96,32 +97,7 @@ export function AppSidebar() {
     group?.files.push({ kind: "saved", name });
   }
 
-  useEffect(() => {
-    const handleSearchShortcut = (event: KeyboardEvent) => {
-      if (
-        event.key.toLowerCase() !== "e" ||
-        !event.ctrlKey ||
-        event.metaKey ||
-        event.altKey ||
-        event.shiftKey ||
-        event.isComposing
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (!event.repeat) {
-        setIsSearchOpen(true);
-      }
-    };
-
-    window.addEventListener("keydown", handleSearchShortcut, true);
-
-    return () =>
-      window.removeEventListener("keydown", handleSearchShortcut, true);
-  }, []);
+  useSearchShortcut(() => setIsSearchOpen(true));
 
   useEffect(() => {
     void runFileAction(

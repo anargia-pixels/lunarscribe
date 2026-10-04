@@ -1,3 +1,5 @@
+import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
+import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import { Debouncer } from "@tanstack/pacer/debouncer";
 import type { StoreApi } from "zustand";
 
@@ -7,8 +9,6 @@ import {
   stemOf,
 } from "@/lib/editor-files";
 import { saveExternalFile } from "@/lib/external-files";
-import { reportFileError } from "@/lib/file-feedback";
-import { createOperationQueue } from "@/lib/operation-queue";
 import { saveFile } from "@/lib/saved-files";
 import type { BufferStore } from "@/stores/buffer-store";
 
@@ -131,25 +131,7 @@ export function createBufferFileWrites(store: StoreApi<BufferStore>) {
     }
   });
   window.addEventListener("pagehide", flushSaveTimers);
-
-  // Browser storage writes are asynchronous, so ask before leaving with unsaved edits.
-  window.addEventListener("beforeunload", (event) => {
-    flushSaveTimers();
-
-    const hasUnsavedEdits = store
-      .getState()
-      .buffers.some(
-        (buffer) =>
-          buffer.content !== buffer.savedContent &&
-          (buffer.fileName !== null ||
-            buffer.externalId !== null ||
-            buffer.content.trim() !== ""),
-      );
-
-    if (hasUnsavedEdits) {
-      event.preventDefault();
-    }
-  });
+  window.addEventListener("beforeunload", flushSaveTimers);
 
   function discardSaveTimer(id: string) {
     saveDebouncers.get(id)?.cancel();

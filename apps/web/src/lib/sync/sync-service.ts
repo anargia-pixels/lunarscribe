@@ -1,4 +1,6 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import type { FileSyncProvider } from "@lunarscribe/utils/sync/types";
+import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
 
 import { createDropboxApi } from "@/lib/sync/dropbox";
 import {
@@ -25,8 +27,6 @@ import type {
   SyncResult,
   SyncStatus,
 } from "@/lib/sync/sync-types";
-import type { FileSyncProvider } from "@/lib/sync/types";
-import { SyncSignInRequired } from "@/lib/sync/types";
 
 /**
  * Browser counterpart of the desktop sync service. Each tab runs its own copy; a Web Lock
@@ -83,7 +83,8 @@ function reloadSettings() {
 
 reloadSettings();
 
-function getStatus(): SyncStatus {
+// Public API, matching the desktop preload bridge.
+export function getSyncStatus(): SyncStatus {
   return {
     provider: settings.provider,
     account: settings.account,
@@ -101,7 +102,7 @@ function emit<T>(listeners: Set<(value: T) => void>, value: T) {
 }
 
 function emitStatus() {
-  emit(statusListeners, getStatus());
+  emit(statusListeners, getSyncStatus());
 }
 
 function emitResult(result: SyncResult) {
@@ -184,8 +185,14 @@ function createCloudProvider(): FileSyncProvider {
 }
 
 // Sync operations
+/** Another tab holds the sync lock. */
+class SyncLockHeld extends Error {}
+
 /** Allow one sync operation across tabs and report its status. */
-async function runSyncOperation<T>(operation: () => Promise<T>) {
+async function runSyncOperation<T>(
+  operation: () => Promise<T>,
+  isBackground = false,
+) {
   if (isBusy) {
     throw new Error(
       "A sync operation is already running. Try again when it finishes.",
@@ -203,7 +210,7 @@ async function runSyncOperation<T>(operation: () => Promise<T>) {
       { ifAvailable: true },
       (lock) => {
         if (!lock) {
-          throw new Error(
+          throw new SyncLockHeld(
             "Another Lunarscribe tab is syncing. Try again when it finishes.",
           );
         }
@@ -212,6 +219,11 @@ async function runSyncOperation<T>(operation: () => Promise<T>) {
       },
     );
   } catch (cause) {
+    // A background run skips without an error when another tab syncs.
+    if (isBackground && cause instanceof SyncLockHeld) {
+      throw cause;
+    }
+
     if (cause instanceof SyncSignInRequired) {
       needsSignIn = true;
     }
@@ -270,28 +282,28 @@ function finishSync(result: SyncResult) {
   return result;
 }
 
-// Public API, matching the desktop preload bridge.
-export function getSyncStatus() {
-  return getStatus();
+/** Rejects names that cloud sync must not read or write. */
+function assertSavedFileName(name: string) {
+  if (!isSavedFileName(name)) {
+    throw new Error("Only saved markdown and drawings can be synced.");
+  }
 }
 
 /** Syncs every saved file, or pushes one when `name` is set. */
-export function syncFiles(name: string | null) {
+export function syncFiles(name: string | null, isBackground = false) {
   return runSyncOperation(async () => {
-    if (name !== null && !isSavedFileName(name)) {
-      throw new Error("Only saved markdown and drawings can be synced.");
+    if (name !== null) {
+      assertSavedFileName(name);
     }
 
     return finishSync(await syncCloud(name));
-  });
+  }, isBackground);
 }
 
 /** Overwrites the remote copy with the saved file. */
 export function forceSyncFile(name: string) {
   return runSyncOperation(async (): Promise<SyncResult> => {
-    if (!isSavedFileName(name)) {
-      throw new Error("Only saved markdown and drawings can be synced.");
-    }
+    assertSavedFileName(name);
 
     const local = (await readLocalSyncFiles()).get(name);
 
@@ -367,7 +379,7 @@ export async function connectSync(selected: SyncProvider) {
     needsSignIn = false;
   });
 
-  return getStatus();
+  return getSyncStatus();
 }
 
 export async function disconnectSync() {
@@ -378,7 +390,7 @@ export async function disconnectSync() {
     needsSignIn = false;
   });
 
-  return getStatus();
+  return getSyncStatus();
 }
 
 export function cancelSyncSignIn() {
@@ -411,9 +423,21 @@ export function onSyncedFiles(listener: (changes: SyncedFileChange[]) => void) {
   return subscribe(filesListeners, listener);
 }
 
-// Background sync runs while a tab is open; the lock skips it if another tab is syncing.
-setInterval(() => {
+// Background sync runs while a tab is open and skips when another tab is syncing.
+function syncInBackground() {
   if (settings.provider && !needsSignIn && !isBusy) {
-    void syncFiles(null).catch(() => undefined);
+    void syncFiles(null, true).catch(() => undefined);
   }
-}, SYNC_INTERVAL_MS);
+}
+
+let hasStartupSynced = false;
+
+/** Starts the one sync that runs when the tab opens; later calls do nothing. */
+export function startupSync() {
+  if (!hasStartupSynced) {
+    hasStartupSynced = true;
+    syncInBackground();
+  }
+}
+
+setInterval(syncInBackground, SYNC_INTERVAL_MS);

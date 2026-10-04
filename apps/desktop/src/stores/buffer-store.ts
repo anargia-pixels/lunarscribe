@@ -1,4 +1,5 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -10,7 +11,6 @@ import {
   INVALID_FILE_TITLE_CHARACTERS,
 } from "@/lib/editor-files";
 import type { ExternalFile, FileTarget } from "@/lib/editor-files";
-import { createOperationQueue } from "@/lib/operation-queue";
 import type { SyncedFileChange } from "@/lib/sync";
 import { createBufferFileWrites } from "@/stores/file-writes";
 

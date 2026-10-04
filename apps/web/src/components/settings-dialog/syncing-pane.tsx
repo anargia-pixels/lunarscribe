@@ -1,3 +1,4 @@
+import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Label } from "@lunarscribe/components/ui/label";
 import {
@@ -12,7 +13,6 @@ import { toast } from "@lunarscribe/components/ui/toast";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 
-import { reportFileError } from "@/lib/file-feedback";
 import { isMac } from "@/lib/platform";
 import {
   cancelSyncSignIn,

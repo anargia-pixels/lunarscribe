@@ -8,6 +8,7 @@
     "./hooks/*": "./src/hooks/*.ts",
     "./lib/*": "./src/lib/*.ts",
     "./globals.css": "./src/styles/globals.css",
+    "./themes/*": "./src/themes/*.ts",
     "./*": "./src/components/*.tsx"
   },
   "scripts": {
@@ -31,6 +32,7 @@
     "class-variance-authority": "catalog:",
     "cmdk": "catalog:",
     "date-fns": "catalog:",
+    "docx": "catalog:",
     "embla-carousel-react": "catalog:",
     "input-otp": "catalog:",
     "katex": "catalog:",

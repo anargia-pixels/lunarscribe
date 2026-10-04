@@ -1,3 +1,5 @@
+import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+
 import {
   deleteRecord,
   getAllRecords,
@@ -11,7 +13,6 @@ import {
   INVALID_FILE_TITLE_CHARACTERS,
 } from "@/lib/editor-files";
 import type { FileExtension } from "@/lib/editor-files";
-import { createOperationQueue } from "@/lib/operation-queue";
 
 /**
  * Saved buffers live in IndexedDB as `<title><extension>` records, standing in for the
@@ -40,23 +41,21 @@ export async function listFiles() {
     .sort((left, right) => left.localeCompare(right));
 }
 
-async function notifyFilesChanged() {
+async function emitFilesChanged() {
   const files = await listFiles();
 
   for (const listener of listeners) {
     listener(files);
   }
+}
 
+/** Updates listeners in this tab, then tells other tabs to do the same. */
+async function notifyFilesChanged() {
+  await emitFilesChanged();
   channel.postMessage(null);
 }
 
-channel.addEventListener("message", () => {
-  void listFiles().then((files) => {
-    for (const listener of listeners) {
-      listener(files);
-    }
-  });
-});
+channel.addEventListener("message", () => void emitFilesChanged());
 
 export function onFilesChanged(listener: (files: string[]) => void) {
   listeners.add(listener);

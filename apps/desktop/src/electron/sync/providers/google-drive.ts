@@ -1,15 +1,19 @@
 import { createHash } from "node:crypto";
 
-import { isSavedFileName } from "../files";
 import {
   jsonArray,
   jsonField,
   jsonString,
   jsonTimestamp,
   parseJson,
-} from "../json";
-import type { FileSyncProvider, RemoteFiles } from "./types";
-import { SyncSignInRequired } from "./types";
+} from "@lunarscribe/utils/sync/json";
+import type {
+  FileSyncProvider,
+  RemoteFiles,
+} from "@lunarscribe/utils/sync/types";
+import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
+
+import { isSavedFileName } from "../files";
 
 // Drive metadata
 const API = "https://www.googleapis.com/drive/v2/files";

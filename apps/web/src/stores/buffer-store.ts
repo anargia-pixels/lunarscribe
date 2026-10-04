@@ -1,4 +1,5 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -19,7 +20,6 @@ import {
   renameExternalFile as renameExternalHandle,
 } from "@/lib/external-files";
 import type { OpenedExternalFile } from "@/lib/external-files";
-import { createOperationQueue } from "@/lib/operation-queue";
 import * as savedFiles from "@/lib/saved-files";
 import { forceSyncFile } from "@/lib/sync/sync-service";
 import type { SyncedFileChange } from "@/lib/sync/sync-types";
@@ -651,6 +651,10 @@ useBufferStore.subscribe((state) => {
 
 // Reopen the last file; if it is gone, the welcome buffer stays and the selection is cleared.
 async function restoreLastBuffer() {
+  // Read the names first: any state change before the reopen records the welcome buffer.
+  const { lastOpenedFileName, lastOpenedExternalId } =
+    useBufferStore.getState();
+
   try {
     useBufferStore.setState({ externalFiles: await listExternalFiles() });
   } catch (error) {
@@ -658,9 +662,6 @@ async function restoreLastBuffer() {
       fileError: errorMessage(error, "Unable to load external files."),
     });
   }
-
-  const { lastOpenedFileName, lastOpenedExternalId } =
-    useBufferStore.getState();
 
   if (lastOpenedExternalId) {
     // Browsers ask again for file access after a reload, which needs a click.

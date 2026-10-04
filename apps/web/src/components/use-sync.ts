@@ -1,13 +1,14 @@
+import { formatFileMessage } from "@lunarscribe/components/lib/file-message";
 import { toast } from "@lunarscribe/components/ui/toast";
 import { createElement, useEffect } from "react";
 
-import { formatFileMessage } from "@/lib/file-message";
 import {
   getSyncStatus,
   onSyncedFiles,
   onSyncResult,
   onSyncStatus,
   protectSyncFiles,
+  startupSync,
 } from "@/lib/sync/sync-service";
 import type { SyncConflict, SyncStatus } from "@/lib/sync/sync-types";
 import { stemOf, useBufferStore } from "@/stores/buffer-store";
@@ -136,6 +137,9 @@ export function useSync() {
     if (!hasReceivedStatus) {
       receiveStatus(getSyncStatus());
     }
+
+    // Downloads from this sync reach the buffers through the listeners above.
+    startupSync();
 
     return () => {
       clearSuccess();

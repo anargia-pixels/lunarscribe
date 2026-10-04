@@ -1,6 +1,11 @@
-import { jsonNumber, jsonString, parseJson } from "@/lib/sync/json";
+import {
+  jsonNumber,
+  jsonString,
+  parseJson,
+} from "@lunarscribe/utils/sync/json";
+import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
+
 import type { SyncProvider } from "@/lib/sync/sync-types";
-import { SyncSignInRequired } from "@/lib/sync/types";
 
 // Authorization contracts
 export type OAuthTokens = {
@@ -47,7 +52,7 @@ function base64Url(bytes: Uint8Array) {
 function withSignInLimits<T>(
   signal: AbortSignal,
   start: (resolve: (value: T) => void, reject: (error: Error) => void) => void,
-  cleanup: () => void,
+  cleanup?: () => void,
 ) {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let abort = () => {};
@@ -69,7 +74,7 @@ function withSignInLimits<T>(
   }).finally(() => {
     clearTimeout(timeout);
     signal.removeEventListener("abort", abort);
-    cleanup();
+    cleanup?.();
   });
 }
 
@@ -109,42 +114,38 @@ async function signInGoogle(
     throw new Error("Google sign-in could not load. Check your connection.");
   }
 
-  return withSignInLimits<OAuthTokens>(
-    signal,
-    (resolve, reject) => {
-      const client = oauth2.initTokenClient({
-        client_id: clientId,
-        scope: GOOGLE_DRIVE_SCOPE,
-        callback: (response) => {
-          const duration = Number(response.expires_in);
+  return withSignInLimits<OAuthTokens>(signal, (resolve, reject) => {
+    const client = oauth2.initTokenClient({
+      client_id: clientId,
+      scope: GOOGLE_DRIVE_SCOPE,
+      callback: (response) => {
+        const duration = Number(response.expires_in);
 
-          if (response.error || !response.access_token || !(duration > 0)) {
-            reject(new Error("Google sign-in was declined."));
+        if (response.error || !response.access_token || !(duration > 0)) {
+          reject(new Error("Google sign-in was declined."));
 
-            return;
-          }
+          return;
+        }
 
-          resolve({
-            accessToken: response.access_token,
-            refreshToken: "",
-            expiresAt: Date.now() + duration * 1000,
-            clientId,
-          });
-        },
-        error_callback: (error) =>
-          reject(
-            new Error(
-              error.type === "popup_closed"
-                ? "Sign-in cancelled."
-                : "Google sign-in failed. Allow pop-ups for this site, then retry.",
-            ),
+        resolve({
+          accessToken: response.access_token,
+          refreshToken: "",
+          expiresAt: Date.now() + duration * 1000,
+          clientId,
+        });
+      },
+      error_callback: (error) =>
+        reject(
+          new Error(
+            error.type === "popup_closed"
+              ? "Sign-in cancelled."
+              : "Google sign-in failed. Allow pop-ups for this site, then retry.",
           ),
-      });
+        ),
+    });
 
-      client.requestAccessToken();
-    },
-    () => undefined,
-  );
+    client.requestAccessToken();
+  });
 }
 
 // Dropbox
@@ -292,13 +293,15 @@ export function signIn(
   clientId: string,
   signal: AbortSignal,
 ) {
-  if (!clientId.trim()) {
+  const id = clientId.trim();
+
+  if (!id) {
     throw new Error(
       "Enter the app's public OAuth client ID before signing in.",
     );
   }
 
   return provider === "google-drive"
-    ? signInGoogle(clientId.trim(), signal)
-    : signInDropbox(clientId.trim(), signal);
+    ? signInGoogle(id, signal)
+    : signInDropbox(id, signal);
 }

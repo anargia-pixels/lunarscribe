@@ -18,6 +18,8 @@ interface Window {
     forceSyncFile: (name: string) => Promise<import("./lib/sync").SyncResult>;
     cancelSyncSignIn: () => void;
     protectSyncFiles: (names: string[]) => void;
+    /** Starts the one sync that runs when the app opens; later calls do nothing. */
+    startupSync: () => void;
     onSyncStatus: (
       listener: (status: import("./lib/sync").SyncStatus) => void,
     ) => () => void;

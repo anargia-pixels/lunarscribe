@@ -1,13 +1,17 @@
-import { isSavedFileName } from "../files";
 import {
   jsonArray,
   jsonBoolean,
   jsonString,
   jsonTimestamp,
   parseJson,
-} from "../json";
-import type { FileSyncProvider, RemoteFiles } from "./types";
-import { SyncSignInRequired } from "./types";
+} from "@lunarscribe/utils/sync/json";
+import type {
+  FileSyncProvider,
+  RemoteFiles,
+} from "@lunarscribe/utils/sync/types";
+import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
+
+import { isSavedFileName } from "../files";
 
 // Dropbox destination
 const BACKUP_FOLDER_PATH = "/lunarscribe-bak-files";

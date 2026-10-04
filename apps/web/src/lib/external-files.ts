@@ -1,3 +1,5 @@
+import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+
 import {
   deleteRecord,
   getAllRecords,
@@ -11,7 +13,6 @@ import {
   isTextFile,
 } from "@/lib/editor-files";
 import type { ExternalFile } from "@/lib/editor-files";
-import { createOperationQueue } from "@/lib/operation-queue";
 
 /**
  * External files are text files the user picked or dropped. Browsers expose no paths, so
@@ -26,7 +27,7 @@ const queueFileWrite = createOperationQueue();
 /** Whether this browser can write edits back to files outside browser storage. */
 export const canAccessExternalFiles = "showOpenFilePicker" in window;
 
-export const TEXT_FILE_PICKER_TYPES = [
+const TEXT_FILE_PICKER_TYPES = [
   {
     description: "Markdown or text",
     accept: { "text/markdown": [".md", ".markdown"], "text/plain": [".txt"] },
@@ -58,12 +59,14 @@ async function readHandle(handle: FileSystemFileHandle) {
   return (await handle.getFile()).text();
 }
 
-export async function listExternalFiles(): Promise<ExternalFile[]> {
-  const records = await withStore("external-files", "readonly", (store) =>
+function readExternalRecords() {
+  return withStore("external-files", "readonly", (store) =>
     getAllRecords<"external-files">(store),
   );
+}
 
-  return records.map(({ id, name }) => ({ id, name }));
+export async function listExternalFiles(): Promise<ExternalFile[]> {
+  return (await readExternalRecords()).map(({ id, name }) => ({ id, name }));
 }
 
 async function readExternalRecord(id: string) {
@@ -84,11 +87,7 @@ export async function openExternalHandle(
 ): Promise<OpenedExternalFile> {
   const markdown = await readHandle(handle);
 
-  const records = await withStore("external-files", "readonly", (store) =>
-    getAllRecords<"external-files">(store),
-  );
-
-  for (const record of records) {
+  for (const record of await readExternalRecords()) {
     if (await record.handle.isSameEntry(handle)) {
       return { id: record.id, name: record.name, markdown };
     }

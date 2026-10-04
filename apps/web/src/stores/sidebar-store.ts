@@ -1,8 +1,7 @@
+import { isSidebarSection } from "@lunarscribe/utils/sidebar-sections";
+import type { SidebarSection } from "@lunarscribe/utils/sidebar-sections";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-import { isSidebarSection } from "@/lib/sidebar-sections";
-import type { SidebarSection } from "@/lib/sidebar-sections";
 
 type SidebarStore = {
   open: boolean;

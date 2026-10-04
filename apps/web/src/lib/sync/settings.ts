@@ -4,8 +4,9 @@ import {
   jsonString,
   jsonStrings,
   parseJson,
-} from "@/lib/sync/json";
-import type { JsonValue } from "@/lib/sync/json";
+} from "@lunarscribe/utils/sync/json";
+import type { JsonValue } from "@lunarscribe/utils/sync/json";
+
 import type { OAuthTokens } from "@/lib/sync/oauth";
 import type { SyncBaseline, SyncProvider } from "@/lib/sync/sync-types";
 

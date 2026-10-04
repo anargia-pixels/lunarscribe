@@ -2,11 +2,15 @@ import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
+import {
+  jsonNumber,
+  jsonString,
+  parseJson,
+} from "@lunarscribe/utils/sync/json";
+import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
 import { shell } from "electron";
 
 import type { SyncProvider } from "../../../lib/sync";
-import { jsonNumber, jsonString, parseJson } from "../json";
-import { SyncSignInRequired } from "../providers/types";
 import { createGoogleSignInPage } from "./google-sign-in-page";
 
 // Authorization contracts

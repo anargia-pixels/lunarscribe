@@ -64,7 +64,7 @@ export function MarkdownEditor({
                         Start writing…
                       </div>
                     }
-                    className="font-buffer w-full min-w-0 flex-1 cursor-text pb-48 outline-none select-text"
+                    className="font-buffer w-full min-w-0 cursor-text pb-48 outline-none select-text"
                   />
                 }
                 ErrorBoundary={LexicalErrorBoundary}

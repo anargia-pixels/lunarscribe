@@ -1,7 +1,7 @@
+import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
 import { toast } from "@lunarscribe/components/ui/toast";
 import { createElement, useEffect } from "react";
 
-import { reportFileError } from "@/lib/file-feedback";
 import { syncFiles } from "@/lib/sync/sync-service";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";

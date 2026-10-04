@@ -1,3 +1,5 @@
+import type { RemoteChange, RemoteFiles } from "@lunarscribe/utils/sync/types";
+
 import type { SavedFileRecord } from "@/lib/browser-database";
 import { getFileExtension } from "@/lib/editor-files";
 import { applySyncedFile, readAllFiles } from "@/lib/saved-files";
@@ -6,7 +8,6 @@ import type {
   SyncConflict,
   SyncedFileChange,
 } from "@/lib/sync/sync-types";
-import type { RemoteChange, RemoteFiles } from "@/lib/sync/types";
 
 // Sync comparisons
 /** Saved files by name, as read from browser storage when the sync started. */

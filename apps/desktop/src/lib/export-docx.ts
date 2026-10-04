@@ -4,7 +4,7 @@ import { withMarkdownSnapshot } from "@/lib/markdown-export";
 /** Load the Word converter on demand so ordinary editing does not pay its startup cost. */
 export async function exportDocx(target: FileTarget) {
   const [{ createDocxDocument }, { Packer }] = await Promise.all([
-    import("./docx-document"),
+    import("@lunarscribe/components/lib/docx-document"),
     import("docx"),
   ]);
 

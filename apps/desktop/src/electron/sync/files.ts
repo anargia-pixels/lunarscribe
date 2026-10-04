@@ -10,13 +10,14 @@ import {
 } from "node:fs/promises";
 import { basename, join } from "node:path";
 
+import type { RemoteChange, RemoteFiles } from "@lunarscribe/utils/sync/types";
+
 import { getFileExtension } from "../../lib/editor-files";
 import type {
   SyncBaseline,
   SyncConflict,
   SyncedFileChange,
 } from "../../lib/sync";
-import type { RemoteChange, RemoteFiles } from "./providers/types";
 
 // Sync comparisons
 export type LocalSyncFiles = {

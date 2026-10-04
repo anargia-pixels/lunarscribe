@@ -61,6 +61,15 @@ function LazyDrawingEditor(props: DrawingEditorProps) {
   return Canvas === null ? null : <Canvas {...props} />;
 }
 
+/** Sync state shown after a saved file's path. */
+function syncMessage(isSyncing: boolean, hasSyncedSuccessfully: boolean) {
+  if (isSyncing) {
+    return "- Sync in progress";
+  }
+
+  return hasSyncedSuccessfully ? "- Sync successful" : null;
+}
+
 /** Editor page for the active buffer. */
 export default function Page() {
   const buffer = useActiveBuffer();
@@ -72,6 +81,8 @@ export default function Page() {
   const hasSyncedSuccessfully = useSyncStore(
     (state) => state.hasSyncedSuccessfully,
   );
+
+  const isSyncing = useSyncStore((state) => state.busy);
 
   useEffect(() => {
     const preventFileNavigation = (event: DragEvent) => {
@@ -127,8 +138,8 @@ export default function Page() {
             {filePath}
           </span>
           <output className="text-muted-foreground ml-1 shrink-0 select-none">
-            {hasSyncedSuccessfully && buffer.fileName && !buffer.externalPath
-              ? "- Sync successful"
+            {buffer.fileName && !buffer.externalPath
+              ? syncMessage(isSyncing, hasSyncedSuccessfully)
               : null}
           </output>
         </header>

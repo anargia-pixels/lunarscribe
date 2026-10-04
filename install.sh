@@ -133,7 +133,11 @@ download_asset() {
   curl -fL --show-error "${progress[@]}" --retry 3 "$url" -o "$TMP_DIR/$name"
 }
 
-echo "Downloading Lunarscribe $VERSION ($ASSET)..."
+DOWNLOAD_SIZE=$(jq -er --arg name "$ASSET" \
+  '.assets[] | select(.name == $name) | .size | select(type == "number" and . >= 0)' \
+  "$TMP_DIR/release.json") || fail "Release $VERSION does not contain a download size for $ASSET."
+DOWNLOAD_SIZE=$(awk -v bytes="$DOWNLOAD_SIZE" 'BEGIN { printf "%.1f MiB", bytes / 1048576 }')
+echo "Downloading Lunarscribe $VERSION ($ASSET, $DOWNLOAD_SIZE)..."
 download_asset "$ASSET"
 download_asset "sha256sums.txt"
 echo "Verifying download..."

@@ -16,7 +16,7 @@
     },
     "apps/desktop": {
       "name": "desktop",
-      "version": "0.13.17",
+      "version": "0.13.18",
       "dependencies": {
         "@ff-labs/fff-node": "catalog:",
         "@tanstack/pacer": "catalog:",

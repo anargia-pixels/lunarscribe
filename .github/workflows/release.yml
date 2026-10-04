@@ -44,6 +44,7 @@ jobs:
         run: |
           version=$(jq -r .version apps/desktop/package.json)
           test "$RELEASE_TAG" = "v$version"
+          test -s "docs/changelogs/$version.md"
       - run: bun install --frozen-lockfile
       - run: bun run format:check
       - run: bun run lint
@@ -75,11 +76,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          notes_file="docs/changelogs/${RELEASE_TAG#v}.md"
+          test -s "$notes_file"
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release/* install.sh --clobber
+            gh release edit "$RELEASE_TAG" --notes-file "$notes_file"
           else
             gh release create "$RELEASE_TAG" release/* install.sh \
-              --verify-tag --title "Lunarscribe $RELEASE_TAG" --generate-notes
+              --verify-tag --title "Lunarscribe $RELEASE_TAG" --notes-file "$notes_file"
           fi
           old_asset=$(gh release view "$RELEASE_TAG" --json assets \
             --jq '.assets[] | select(.name == "lunarscribe-linux-x86_64.AppImage") | .name')

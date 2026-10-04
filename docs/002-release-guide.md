@@ -31,6 +31,10 @@ If a release has several types of changes, use the largest required increase.
 Documentation changes alone do not require an app version bump unless the user requests a
 release. Use an unused version that is higher than the latest released version.
 
+The packaging tool requires a version with three numbers, such as `0.0.16`. If the user
+requests a version with four numbers, explain this limit and agree on a supported version
+before changing it or publishing the release.
+
 This step is complete when the selected version and the reason for the increase are clear.
 The examples below use `0.0.14` for a patch release. Replace it with the selected version.
 
@@ -39,9 +43,15 @@ The examples below use `0.0.14` for a patch release. Replace it with the selecte
 1. Set `version` in `apps/desktop/package.json` to the selected version, without `v`.
 2. Run `bun install` from the project root to update the desktop workspace version in
    `bun.lock`. Review the diff for unrelated dependency changes.
-3. Update the README or feature docs for changed behavior. Keep historical version
+3. Create `docs/changelogs/<version>.md`, without `v` in the file name. This file is the
+   source for the GitHub release notes. Describe each change in short, everyday sentences
+   that explain what users can now do or what problem was fixed. Use no technical jargon,
+   code names, or commit lists. For example: "Fixed a problem on Linux where you had to
+   open Lunarscribe twice before its window appeared." Include any steps users need to
+   take after updating. Keep published entries when adding a new release.
+4. Update the README or feature docs for changed behavior. Keep historical version
    examples unless their meaning must change.
-4. Run the repository checks:
+5. Run the repository checks:
 
    ```sh
    bun run format
@@ -49,8 +59,8 @@ The examples below use `0.0.14` for a patch release. Replace it with the selecte
    bun run check-types
    ```
 
-5. Review the final diff. Confirm that the package version and the lockfile workspace
-   version match.
+6. Review the final diff. Confirm that the package version and the lockfile workspace
+   version match, and that the changelog describes all changes since the previous release.
 
 The app release version belongs to `apps/desktop/package.json`. The root catalog stores
 dependency versions. Shared package versions do not need to change for an app release.
@@ -71,7 +81,7 @@ user changes. If the app changes are already committed, the version commit can u
 ```sh
 release_version=0.0.14
 release_tag="v$release_version"
-git add apps/desktop/package.json bun.lock
+git add apps/desktop/package.json bun.lock "docs/changelogs/$release_version.md"
 git commit -m "Release $release_tag"
 git push origin HEAD
 git tag -a "$release_tag" -m "Lunarscribe $release_tag"
@@ -108,14 +118,15 @@ job pass. Confirm that the release contains:
 - `sha256sums.txt`
 - `install.sh`
 
-The workflow uploads these files and generates release notes for a new release. The curl
-installer downloads the latest release by default. Its update replaces the application
-folder and preserves the user data folder. Users update with the install command in the
-[README](../readme.md).
+The workflow uploads these files and uses `docs/changelogs/<version>.md` as the release
+notes. Confirm that the published notes match this file and use everyday language. The
+curl installer downloads the latest release by default. Its update replaces the
+application folder and preserves the user data folder. Users update with the install
+command in the [README](../readme.md).
 
-This step is complete when the run passes and all four assets are published. Report the
-version, release URL, and workflow result. If a job fails, report the failure and resolve
-it before claiming that the release is complete.
+This step is complete when the run passes, all four assets are published, and the release
+notes match the changelog. Report the version, release URL, and workflow result. If a job
+fails, report the failure and resolve it before claiming that the release is complete.
 
 ## Rebuild an existing release
 
@@ -129,7 +140,8 @@ gh workflow run release.yml --ref "$release_tag" -f tag="$release_tag"
 Set `release_tag` to the existing tag first. That tag must contain a workflow with
 `workflow_dispatch` support. The `--ref` selects the code to build; the `tag` input
 selects the release to update. Keep them equal when rebuilding the same release. The
-publish job replaces existing assets with the same names.
+publish job replaces existing assets with the same names and updates the release notes
+from the changelog in that tag.
 
 Use a new version for app source changes after publication. Preserve published tags. If an
 older tag lacks manual dispatch support, report that limitation and prepare a new version

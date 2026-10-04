@@ -79,7 +79,21 @@ function createWindow() {
     },
   });
 
-  window.on("ready-to-show", () => window.show());
+  const showWindow = () => {
+    window.off("ready-to-show", showWindow);
+    window.webContents.off("did-finish-load", showWindow);
+
+    if (!window.isDestroyed()) {
+      window.show();
+    }
+  };
+
+  window.once("ready-to-show", showWindow);
+
+  // Wayland can defer the first paint until the hidden window is shown.
+  if (process.platform === "linux") {
+    window.webContents.once("did-finish-load", showWindow);
+  }
 
   window.webContents.setWindowOpenHandler((details) => {
     void shell.openExternal(details.url);

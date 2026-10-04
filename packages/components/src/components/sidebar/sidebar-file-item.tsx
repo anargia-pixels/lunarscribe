@@ -13,6 +13,7 @@ import {
 import {
   CloudUpload,
   Copy,
+  Download,
   Ellipsis,
   FileDown,
   Pencil,
@@ -21,21 +22,25 @@ import {
 } from "lucide-react";
 import { useRef } from "react";
 
-import type { FileTarget } from "@/lib/editor-files";
-import { isTextFile } from "@/lib/editor-files";
-import { stemOf } from "@/stores/buffer-store";
-
 export type FileMenuState = { key: string; anchor: HTMLElement | null };
 
-/** One sidebar entry with a menu shared by right-click and its action button. */
+/**
+ * One sidebar entry with a menu shared by right-click and its action button. Menu items
+ * whose callback is omitted are left out, so each app offers only what its platform can do.
+ */
 export function SidebarFileItem({
-  target,
+  name,
+  label,
+  title,
+  isExternal,
+  canExport,
   menu,
   onMenuChange,
   isActive,
   onOpen,
   onRename,
   onCopyPath,
+  onDownload,
   onExportPdf,
   onExportDocx,
   isExporting,
@@ -43,23 +48,26 @@ export function SidebarFileItem({
   onForceSync,
   onDelete,
 }: {
-  target: FileTarget;
+  name: string;
+  label: string;
+  title: string;
+  isExternal: boolean;
+  canExport: boolean;
   menu: FileMenuState | null;
   onMenuChange: (open: boolean, anchor: HTMLElement | null) => void;
   isActive: boolean;
   onOpen: () => void;
   onRename: () => void;
-  onCopyPath: () => void;
+  onCopyPath?: () => void;
+  onDownload?: () => void;
   onExportPdf: () => void;
   onExportDocx: () => void;
   isExporting: boolean;
   canForceSync: boolean;
-  onForceSync: () => void;
+  onForceSync?: () => void;
   onDelete: () => void;
 }) {
   const isMenuOpen = menu !== null;
-  const isExternal = target.kind === "external";
-  const label = isExternal ? target.name : stemOf(target.name);
   const actionRef = useRef<HTMLButtonElement>(null);
 
   return (
@@ -76,7 +84,7 @@ export function SidebarFileItem({
         <SidebarMenuButton
           className="h-auto"
           isActive={isActive}
-          title={target.kind === "external" ? target.path : target.name}
+          title={title}
           onClick={onOpen}
         >
           <span>{label}</span>
@@ -85,7 +93,7 @@ export function SidebarFileItem({
           ref={actionRef}
           render={<Button variant="ghost" size="icon-xs" />}
           showOnHover
-          aria-label={`Actions for ${target.name}`}
+          aria-label={`Actions for ${name}`}
           aria-haspopup="menu"
           aria-expanded={isMenuOpen}
           onClick={(event) => {
@@ -103,11 +111,19 @@ export function SidebarFileItem({
           <Pencil />
           Rename
         </ContextMenuItem>
-        <ContextMenuItem onClick={onCopyPath}>
-          <Copy />
-          Copy path
-        </ContextMenuItem>
-        {isTextFile(target.name) && (
+        {onCopyPath && (
+          <ContextMenuItem onClick={onCopyPath}>
+            <Copy />
+            Copy path
+          </ContextMenuItem>
+        )}
+        {onDownload && (
+          <ContextMenuItem onClick={onDownload}>
+            <Download />
+            Download
+          </ContextMenuItem>
+        )}
+        {canExport && (
           <>
             <ContextMenuItem disabled={isExporting} onClick={onExportPdf}>
               <FileDown />
@@ -119,7 +135,7 @@ export function SidebarFileItem({
             </ContextMenuItem>
           </>
         )}
-        {!isExternal && (
+        {onForceSync && (
           <ContextMenuItem disabled={!canForceSync} onClick={onForceSync}>
             <CloudUpload />
             Force changes to remote

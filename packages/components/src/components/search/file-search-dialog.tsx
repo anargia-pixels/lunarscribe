@@ -20,11 +20,18 @@ import { Kbd, KbdGroup } from "@lunarscribe/components/ui/kbd";
 import { Toggle } from "@lunarscribe/components/ui/toggle";
 import { errorMessage } from "@lunarscribe/utils/error-message";
 import { FileText, PenTool, TextSearch } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
-import { SearchHighlight } from "@/components/search-highlight";
-import type { FileSearchMatch } from "@/lib/editor-files";
-import { kindOf, useBufferStore } from "@/stores/buffer-store";
+import { SearchHighlight } from "./search-highlight";
+import type { SearchMatchRange } from "./search-highlight";
+
+/** A saved file returned by file-name or content search. */
+export type FileSearchMatch = {
+  name: string;
+  lineNumber?: number;
+  lineContent?: string;
+  lineMatchRanges?: SearchMatchRange[];
+};
 
 type FileSearchState = {
   query: string;
@@ -34,13 +41,31 @@ type FileSearchState = {
   error: string | null;
 };
 
-/** Searches saved files through fff and opens matches with the existing buffer flow. */
+/**
+ * Searches saved files and opens the picked match. Each app supplies its search backend,
+ * a subscription to saved file changes, and the copy describing where files are searched.
+ */
 export function FileSearchDialog({
   open,
   onOpenChange,
+  searchFiles,
+  onFilesChanged,
+  onOpenFile,
+  isDrawing,
+  scopeDescription,
+  scopeLabel,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  searchFiles: (
+    query: string,
+    isContentSearch: boolean,
+  ) => Promise<FileSearchMatch[]>;
+  onFilesChanged: (listener: () => void) => () => void;
+  onOpenFile: (name: string) => Promise<void>;
+  isDrawing: (name: string) => boolean;
+  scopeDescription: string;
+  scopeLabel: string;
 }) {
   const [query, setQuery] = useState("");
   const [isContentSearch, setIsContentSearch] = useState(false);
@@ -67,14 +92,18 @@ export function FileSearchDialog({
   }
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const openFile = useBufferStore((state) => state.openFile);
 
   const { run, isPending, error } = useAsyncAction("Unable to open the file.");
 
+  // Effect events read the latest callbacks, so callers need not pass stable functions.
+  const subscribeToFiles = useEffectEvent(() =>
+    onFilesChanged(() => setRevision((current) => current + 1)),
+  );
+
+  const runSearch = useEffectEvent(searchFiles);
+
   useEffect(() => {
-    return window.lunarscribe.onFilesChanged(() =>
-      setRevision((current) => current + 1),
-    );
+    return subscribeToFiles();
   }, []);
 
   useEffect(() => {
@@ -89,7 +118,7 @@ export function FileSearchDialog({
       let error: string | null = null;
 
       try {
-        matches = await window.lunarscribe.searchFiles(query, isContentSearch);
+        matches = await runSearch(query, isContentSearch);
       } catch (cause) {
         error = errorMessage(cause, "Unable to search saved files.");
       }
@@ -115,8 +144,7 @@ export function FileSearchDialog({
       >
         <DialogTitle className="sr-only">Search files</DialogTitle>
         <DialogDescription className="sr-only">
-          Find up to 10 saved files in lunarscribe. Toggle Content to search
-          inside files.
+          {scopeDescription}
         </DialogDescription>
         <Command className="min-h-0" shouldFilter={false}>
           <div className="flex shrink-0 items-end gap-1 p-1">
@@ -185,16 +213,12 @@ export function FileSearchDialog({
                     }
 
                     void run(async () => {
-                      await openFile(match.name);
+                      await onOpenFile(match.name);
                       onOpenChange(false);
                     });
                   }}
                 >
-                  {kindOf(match.name) === "drawing" ? (
-                    <PenTool />
-                  ) : (
-                    <FileText />
-                  )}
+                  {isDrawing(match.name) ? <PenTool /> : <FileText />}
                   <div className="min-w-0 flex-1">
                     <div className="truncate">
                       <SearchHighlight
@@ -220,7 +244,7 @@ export function FileSearchDialog({
           </CommandList>
           <div className="text-muted-foreground flex shrink-0 items-center justify-between gap-2 px-3 py-2 text-xs">
             <span aria-live="polite">
-              {isSearching ? "Searching…" : "Up to 10 files in lunarscribe"}
+              {isSearching ? "Searching…" : scopeLabel}
             </span>
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1">

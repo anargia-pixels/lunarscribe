@@ -4,19 +4,19 @@ import { Input } from "@lunarscribe/components/ui/input";
 import { Label } from "@lunarscribe/components/ui/label";
 import { useId, useState } from "react";
 
-import { stemOf } from "@/stores/buffer-store";
-
 /** Edits the name while keeping the extension, and reports failures without closing. */
 export function RenameFileDialog({
   name,
+  initialTitle,
   onClose,
   onRename,
 }: {
   name: string;
+  initialTitle: string;
   onClose: () => void;
   onRename: (title: string) => Promise<void>;
 }) {
-  const [title, setTitle] = useState(stemOf(name));
+  const [title, setTitle] = useState(initialTitle);
 
   const { run, isPending, error } = useAsyncAction(
     "Unable to rename the file.",

@@ -7,13 +7,19 @@ import { SidebarProvider } from "@lunarscribe/components/ui/sidebar";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
-import { SettingsSidebar } from "@/components/settings-dialog/settings-sidebar";
-import type { SettingsSection } from "@/components/settings-dialog/settings-sidebar";
-import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
+import { SettingsSidebar } from "./settings-sidebar";
+import type { SettingsSection } from "./settings-sidebar";
 
 /** Settings window filling 80% of the Lunarscribe window: the settings sidebar beside the open section. */
-export function SettingsDialog({ children }: { children: ReactNode }) {
+export function SettingsDialog({
+  appearancePane,
+  syncingPane,
+  children,
+}: {
+  appearancePane: ReactNode;
+  syncingPane: ReactNode;
+  children: ReactNode;
+}) {
   const [section, setSection] = useState<SettingsSection>("appearances");
 
   return (
@@ -27,7 +33,7 @@ export function SettingsDialog({ children }: { children: ReactNode }) {
         <SidebarProvider className="h-full min-h-0">
           <SettingsSidebar section={section} onSectionChange={setSection} />
           <div className="bg-background min-w-0 flex-1">
-            {section === "appearances" ? <AppearancePane /> : <SyncingPane />}
+            {section === "appearances" ? appearancePane : syncingPane}
           </div>
         </SidebarProvider>
       </DialogContent>

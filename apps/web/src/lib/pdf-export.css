@@ -1,0 +1,100 @@
+@page {
+  size: A4;
+  margin: 0;
+}
+
+html {
+  --pdf-page-height: calc(297mm - 32mm);
+  background: var(--background);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+  height: auto;
+  min-height: 0;
+}
+
+body {
+  width: 210mm;
+  margin: 0;
+  padding: 0;
+  background: var(--background);
+}
+
+/* Paint the whole sheet, including unused space on the final page. */
+.pdf-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--background);
+}
+
+/* Repeat the writing margins inside the painted page when content spans pages. */
+.pdf-page {
+  padding: 16mm 18mm;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+#pdf-markdown {
+  display: block;
+  position: relative;
+  z-index: 0;
+  overflow-wrap: anywhere;
+}
+
+#pdf-markdown * {
+  outline: none;
+}
+
+#pdf-markdown :is(td, th).bg-accent {
+  background-color: transparent;
+}
+
+#pdf-markdown .bg-popover.bg-accent {
+  background-color: var(--popover);
+}
+
+#pdf-markdown > *,
+#pdf-markdown
+  :is(p, li, tr, blockquote, ul, ol, table, code.block, .editor-math-block) {
+  break-inside: avoid-page;
+}
+
+#pdf-markdown [data-pdf-splittable] {
+  break-inside: auto;
+}
+
+#pdf-markdown :is(h1, h2, h3, h4, h5, h6) {
+  break-after: avoid-page;
+}
+
+#pdf-markdown :is(p, li, blockquote, pre) {
+  orphans: 3;
+  widows: 3;
+}
+
+/* Scroll containers otherwise clip wide content and prevent page fragmentation. */
+#pdf-markdown :is(.editor-scrollbar, [data-math-render], [data-math-preview]) {
+  overflow: visible;
+}
+
+#pdf-markdown :is([data-lexical-code], code.block) {
+  overflow: visible;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+#pdf-markdown :is(td, th) {
+  min-width: 0;
+}
+
+@media print {
+  body {
+    width: auto;
+  }
+}

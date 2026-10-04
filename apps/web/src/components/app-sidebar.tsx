@@ -17,11 +17,16 @@ import { useEffect, useState } from "react";
 import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
 import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
 import { useTheme } from "@/components/theme-provider";
+import { downloadBlob } from "@/lib/download";
 import type { FileTarget } from "@/lib/editor-files";
 import { fileKey, isTextFile } from "@/lib/editor-files";
 import { exportDocx } from "@/lib/export-docx";
 import { exportPdf } from "@/lib/export-pdf";
+import { pickTextFiles } from "@/lib/external-files";
 import { runFileAction } from "@/lib/file-feedback";
+import { searchFiles } from "@/lib/file-search";
+import { MOD_KEY_LABEL } from "@/lib/platform";
+import { listFiles, onFilesChanged, readFile } from "@/lib/saved-files";
 import { FILE_SECTIONS } from "@/lib/sidebar-sections";
 import {
   kindOf,
@@ -66,14 +71,18 @@ export function AppSidebar() {
   const activeBuffer = useActiveBuffer();
   const externalFiles = useBufferStore((state) => state.externalFiles);
 
-  const openExternalFiles = useBufferStore((state) => state.openExternalFiles);
+  const openExternalFile = useBufferStore((state) => state.openExternalFile);
+
+  const openExternalHandles = useBufferStore(
+    (state) => state.openExternalHandles,
+  );
 
   const fileGroups = FILE_SECTIONS.map((section) => {
     const targets: FileTarget[] =
       section.kind === "external"
         ? externalFiles.map((file) => ({
             kind: "external",
-            path: file.path,
+            id: file.id,
             name: file.name,
           }))
         : [];
@@ -117,13 +126,13 @@ export function AppSidebar() {
   useEffect(() => {
     void runFileAction(
       async () => {
-        setFiles(await window.lunarscribe.listFiles());
+        setFiles(await listFiles());
       },
       "Unable to list files",
       "The saved file list could not be loaded.",
     );
 
-    return window.lunarscribe.onFilesChanged(setFiles);
+    return onFilesChanged(setFiles);
   }, []);
 
   function openTarget(target: FileTarget) {
@@ -131,29 +140,48 @@ export function AppSidebar() {
       () =>
         target.kind === "saved"
           ? openFile(target.name)
-          : openExternalFiles([target.path]),
+          : openExternalFile(target.id),
       "Unable to open file",
       "The file could not be opened.",
     );
   }
 
-  function copyPath(target: FileTarget) {
+  function openPickedFiles() {
     return runFileAction(
       async () => {
-        const path =
-          target.kind === "external"
-            ? target.path
-            : await window.lunarscribe.getFilePath(target.name);
+        const { handles, files } = await pickTextFiles();
 
-        await navigator.clipboard.writeText(path);
-        toast.add({
-          type: "success",
-          title: "Path copied",
-          description: <code>{path}</code>,
-        });
+        if (handles.length || files.length) {
+          await openExternalHandles(handles, files);
+        }
+
+        if (files.length) {
+          toast.add({
+            type: "info",
+            title: "Imported as saved notes",
+            description:
+              "This browser cannot save back to files on your device, so edits stay in Lunarscribe.",
+          });
+        }
       },
-      "Unable to copy path",
-      "The path could not be copied.",
+      "Unable to open file",
+      "The file could not be opened.",
+    );
+  }
+
+  /** Saved files live in browser storage, so this stands in for Copy path. */
+  function downloadTarget(target: FileTarget) {
+    return runFileAction(
+      async () => {
+        const content = await readFile(target.name);
+
+        downloadBlob(
+          new Blob([content], { type: "text/plain;charset=utf-8" }),
+          target.name,
+        );
+      },
+      "Unable to download file",
+      "The file could not be downloaded.",
     );
   }
 
@@ -226,8 +254,9 @@ export function AppSidebar() {
     <>
       <Sidebar>
         <AppSidebarHeader
-          modKeyLabel={window.lunarscribe.platform === "darwin" ? "⌘" : "Ctrl"}
+          modKeyLabel={MOD_KEY_LABEL}
           onNewNote={() => createBuffer("markdown", files)}
+          onOpenFile={() => void openPickedFiles()}
           onNewDrawing={() => createBuffer("drawing", files)}
           renderSettings={(trigger) => (
             <SettingsDialog
@@ -256,7 +285,7 @@ export function AppSidebar() {
                   const isActive =
                     target.kind === "saved"
                       ? target.name === activeBuffer?.fileName
-                      : target.path === activeBuffer?.externalPath;
+                      : target.id === activeBuffer?.externalId;
 
                   return (
                     <SidebarFileItem
@@ -267,9 +296,7 @@ export function AppSidebar() {
                           ? target.name
                           : stemOf(target.name)
                       }
-                      title={
-                        target.kind === "external" ? target.path : target.name
-                      }
+                      title={target.name}
                       isExternal={target.kind === "external"}
                       canExport={isTextFile(target.name)}
                       isActive={isActive}
@@ -285,7 +312,11 @@ export function AppSidebar() {
                       }
                       onOpen={() => void openTarget(target)}
                       onRename={() => setDialog({ kind: "rename", target })}
-                      onCopyPath={() => void copyPath(target)}
+                      onDownload={
+                        target.kind === "saved"
+                          ? () => void downloadTarget(target)
+                          : undefined
+                      }
                       onExportPdf={() => void exportTarget(target, "PDF")}
                       onExportDocx={() => void exportTarget(target, "DOCX")}
                       isExporting={isExporting}
@@ -324,12 +355,12 @@ export function AppSidebar() {
       <FileSearchDialog
         open={isSearchOpen}
         onOpenChange={setIsSearchOpen}
-        searchFiles={window.lunarscribe.searchFiles}
-        onFilesChanged={window.lunarscribe.onFilesChanged}
+        searchFiles={searchFiles}
+        onFilesChanged={onFilesChanged}
         onOpenFile={openFile}
         isDrawing={(name) => kindOf(name) === "drawing"}
-        scopeDescription="Find up to 10 saved files in lunarscribe. Toggle Content to search inside files."
-        scopeLabel="Up to 10 files in lunarscribe"
+        scopeDescription="Find up to 10 saved files in this browser. Toggle Content to search inside files."
+        scopeLabel="Up to 10 saved files"
       />
     </>
   );

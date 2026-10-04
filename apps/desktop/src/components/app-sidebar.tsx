@@ -30,6 +30,8 @@ import { FILE_SECTIONS } from "@/lib/sidebar-sections";
 import { kindOf, useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";
 
+import "./app-sidebar.css";
+
 type FileDialogState =
   | { kind: "rename"; target: FileTarget }
   | { kind: "delete"; target: Extract<FileTarget, { kind: "saved" }> };
@@ -221,16 +223,9 @@ export function AppSidebar() {
       <Sidebar>
         {/* Hover waits 800ms; moving to a neighbour within 300ms opens it instantly. */}
         <TooltipProvider delay={800} timeout={300}>
-          <SidebarHeader>
+          <SidebarHeader data-app-sidebar-header>
             <div>
               <div className="flex h-8 shrink-0 items-center justify-center gap-2 px-3">
-                <img
-                  src="./icons/32x32.png"
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="size-8 shrink-0"
-                />
                 <h1 className="font-logo text-primary text-3xl">Lunarscribe</h1>
               </div>
               <div className="relative flex items-center justify-center gap-1 px-3 py-1.5">

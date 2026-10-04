@@ -9,6 +9,7 @@ MOUNT_PATH=""
 STAGE_DIR=""
 APPLICATION_FOLDER=""
 INSTALL_COMPLETE="false"
+INSTALL_RESULT="Installed"
 
 fail() {
   echo "error: $*" >&2
@@ -47,7 +48,8 @@ case "$(uname -s)" in
     ASSET="lunarscribe-linux-x64.zip"
     INSTALL_DIR="${LUNARSCRIBE_INSTALL_DIR:-$HOME/.local/lunarscribe.app}"
     DESKTOP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-    for command in sha256sum unzip; do
+    APPLICATION_FOLDER="${INSTALL_DIR%/}"
+    for command in sha256sum unzip dd od; do
       command -v "$command" >/dev/null || fail "Install $command before running this installer."
     done
     ;;
@@ -55,6 +57,7 @@ case "$(uname -s)" in
     [[ "$(uname -m)" == "arm64" ]] || fail "The macOS release requires Apple Silicon (arm64)."
     ASSET="lunarscribe-macos-arm64.dmg"
     INSTALL_DIR="${LUNARSCRIBE_INSTALL_DIR:-$HOME/Applications}"
+    APPLICATION_FOLDER="$INSTALL_DIR/Lunarscribe.app"
     for command in hdiutil ditto shasum; do
       command -v "$command" >/dev/null || fail "Required command not found: $command"
     done
@@ -80,17 +83,60 @@ curl -fsSL --retry 3 "${HEADERS[@]}" -H "Accept: application/vnd.github+json" \
 
 VERSION=$(jq -er '.tag_name' "$TMP_DIR/release.json")
 
+installed_version() {
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
+      "$APPLICATION_FOLDER/Contents/Info.plist" 2>/dev/null
+    return
+  fi
+
+  local archive="$APPLICATION_FOLDER/resources/app.asar"
+  local header_size json_size offset size
+  [[ -f "$archive" ]] || return 1
+
+  # ASAR stores its JSON header after four 32-bit integers, then the packed files.
+  header_size=$(od -An -tu4 -j4 -N4 "$archive") || return 1
+  json_size=$(od -An -tu4 -j12 -N4 "$archive") || return 1
+  [[ "$header_size" =~ ^[[:space:]]*[0-9]+[[:space:]]*$ &&
+     "$json_size" =~ ^[[:space:]]*[0-9]+[[:space:]]*$ ]] || return 1
+  dd if="$archive" bs=1 skip=16 count="$((json_size))" 2>/dev/null \
+    > "$TMP_DIR/installed-header.json" || return 1
+  read -r offset size < <(jq -er '.files["package.json"] | "\(.offset) \(.size)"' \
+    "$TMP_DIR/installed-header.json") || return 1
+  [[ "$offset" =~ ^[0-9]+$ && "$size" =~ ^[0-9]+$ ]] || return 1
+  dd if="$archive" bs=1 skip="$((8 + header_size + offset))" count="$size" 2>/dev/null |
+    jq -er '.version | select(type == "string" and length > 0)'
+}
+
+if [[ -e "$APPLICATION_FOLDER" || -L "$APPLICATION_FOLDER" ]]; then
+  CURRENT_VERSION=$(installed_version) || CURRENT_VERSION=""
+  if [[ -n "$CURRENT_VERSION" ]]; then
+    CURRENT_VERSION="v${CURRENT_VERSION#v}"
+  else
+    CURRENT_VERSION="unknown version"
+  fi
+  echo "Updating Lunarscribe: $CURRENT_VERSION -> $VERSION"
+  INSTALL_RESULT="Updated"
+else
+  echo "Fresh install: Lunarscribe $VERSION"
+fi
+
 download_asset() {
   local name="$1"
   local url
+  local progress=(--silent)
+  if [[ "$name" == "$ASSET" ]]; then
+    progress=(--progress-bar)
+  fi
   url=$(jq -er --arg name "$name" '.assets[] | select(.name == $name) | .browser_download_url' \
     "$TMP_DIR/release.json") || fail "Release $VERSION does not contain $name."
-  curl -fsSL --retry 3 "$url" -o "$TMP_DIR/$name"
+  curl -fL --show-error "${progress[@]}" --retry 3 "$url" -o "$TMP_DIR/$name"
 }
 
 echo "Downloading Lunarscribe $VERSION ($ASSET)..."
 download_asset "$ASSET"
 download_asset "sha256sums.txt"
+echo "Verifying download..."
 EXPECTED=$(awk -v asset="$ASSET" '$2 == asset { print $1 }' "$TMP_DIR/sha256sums.txt")
 [[ "$EXPECTED" =~ ^[0-9a-f]{64}$ ]] || fail "The release checksum is missing or invalid."
 
@@ -101,6 +147,7 @@ else
 fi
 [[ "${ACTUAL%% *}" == "$EXPECTED" ]] || fail "The download checksum does not match."
 
+echo "Preparing Lunarscribe $VERSION..."
 if [[ "$(uname -s)" == "Linux" ]]; then
   INSTALL_DIR="${INSTALL_DIR%/}"
   [[ -n "$INSTALL_DIR" && "$INSTALL_DIR" != *$'\n'* && "$INSTALL_DIR" != *$'\r'* ]] ||
@@ -148,7 +195,7 @@ EOF
   if command -v update-desktop-database >/dev/null; then
     update-desktop-database "$DESKTOP_DIR" || true
   fi
-  echo "Installed Lunarscribe $VERSION at $APPLICATION_FOLDER"
+  echo "$INSTALL_RESULT Lunarscribe $VERSION at $APPLICATION_FOLDER"
   echo "Installed desktop entry at $DESKTOP_DIR/lunarscribe.desktop"
   echo "Select Lunarscribe in your application menu to start the app."
 else
@@ -167,6 +214,6 @@ else
   fi
   mv "$STAGE_DIR/new.app" "$APPLICATION_FOLDER"
   INSTALL_COMPLETE="true"
-  echo "Installed Lunarscribe $VERSION at $APPLICATION_FOLDER"
+  echo "$INSTALL_RESULT Lunarscribe $VERSION at $APPLICATION_FOLDER"
   echo "Open Lunarscribe.app to start the app."
 fi

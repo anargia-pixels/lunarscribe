@@ -8,11 +8,11 @@
   },
   "include": [
     "electron.vite.config.ts",
+    "package.json",
     "src/electron/**/*.ts",
     "src/electron/**/*.tsx",
     "src/electron/sync/public-creds.json",
     "src/lib/editor-files.ts",
-    "src/lib/operation-queue.ts",
     "src/lib/sync.ts"
   ]
 }

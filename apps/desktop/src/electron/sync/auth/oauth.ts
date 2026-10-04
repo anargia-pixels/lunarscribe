@@ -2,12 +2,16 @@ import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
+import {
+  jsonNumber,
+  jsonString,
+  parseJson,
+} from "@lunarscribe/utils/sync/json";
+import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
 import { shell } from "electron";
 
 import type { SyncProvider } from "../../../lib/sync";
-import { jsonNumber, jsonString, parseJson } from "../json";
-import { SyncSignInRequired } from "../providers/types";
-import { createGoogleSignInPage } from "./google-sign-in-page";
+import { createGoogleSignInPage, createSignInResultPage } from "./sign-in-page";
 
 // Authorization contracts
 export type OAuthProvider = Exclude<SyncProvider, "github">;
@@ -313,12 +317,20 @@ export async function signIn(
       }
 
       const authorizationCode = callback.searchParams.get("code");
-      response.setHeader("Content-Type", "text/plain; charset=utf-8");
-      response.end(
-        "Return to Lunarscribe to finish signing in. You can close this browser tab.",
-      );
 
-      if (authorizationCode && !callback.searchParams.has("error")) {
+      const isApproved =
+        authorizationCode !== null && !callback.searchParams.has("error");
+
+      response.setHeader("Content-Type", "text/html; charset=utf-8");
+      response.setHeader("Cache-Control", "no-store");
+      response.setHeader("Referrer-Policy", "no-referrer");
+      response.setHeader(
+        "Content-Security-Policy",
+        "default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:; base-uri 'none'; frame-ancestors 'none'",
+      );
+      response.end(createSignInResultPage(provider, isApproved));
+
+      if (authorizationCode && isApproved) {
         resolve(authorizationCode);
       } else {
         reject(

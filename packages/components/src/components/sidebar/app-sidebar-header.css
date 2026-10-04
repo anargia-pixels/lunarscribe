@@ -1,7 +1,8 @@
+/* The header image lives in the root assets folder that both apps share. */
 .dark [data-app-sidebar-header] {
   position: relative;
   isolation: isolate;
-  background-image: url("../assets/sidebar-header.webp");
+  background-image: url("../../../../../assets/sidebar-header.webp");
   background-position: center;
   background-size: cover;
 }

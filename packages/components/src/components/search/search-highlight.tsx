@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 
-import type { SearchMatchRange } from "@/lib/editor-files";
+/** A `[start, end)` slice of matched text. */
+export type SearchMatchRange = [start: number, end: number];
 
 /** fff exposes content ranges; file-name ranges are inferred from each fuzzy query term. */
 function getFileNameMatchRanges(text: string, query: string) {

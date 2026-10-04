@@ -14,11 +14,11 @@ import {
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import { app, BrowserWindow, ipcMain } from "electron";
 
 import { INVALID_FILE_TITLE_CHARACTERS, isTextFile } from "../lib/editor-files";
 import type { ExternalFile, OpenedExternalFile } from "../lib/editor-files";
-import { createOperationQueue } from "../lib/operation-queue";
 
 const pendingPaths = new Set<string>();
 

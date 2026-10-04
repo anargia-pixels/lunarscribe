@@ -1,3 +1,9 @@
+import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@lunarscribe/components/ui/alert";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Label } from "@lunarscribe/components/ui/label";
 import {
@@ -8,14 +14,18 @@ import {
   SelectValue,
 } from "@lunarscribe/components/ui/select";
 import { Separator } from "@lunarscribe/components/ui/separator";
+import { Spinner } from "@lunarscribe/components/ui/spinner";
 import { toast } from "@lunarscribe/components/ui/toast";
+import { redactEmail } from "@lunarscribe/utils/redact-email";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 
-import { reportFileError } from "@/lib/file-feedback";
 import { SYNC_PROVIDERS } from "@/lib/sync";
 import type { SyncProvider, SyncStatus } from "@/lib/sync";
 import { useSyncStore } from "@/stores/sync-store";
+
+/** Connecting, or signing in again, signs in first and then syncs. */
+type ConnectStage = "signing-in" | "syncing";
 
 function getConnectionLabel(status: SyncStatus) {
   if (!status.provider) {
@@ -25,8 +35,33 @@ function getConnectionLabel(status: SyncStatus) {
   const providerLabel = `Connected to ${SYNC_PROVIDERS[status.provider]}`;
 
   return status.account
-    ? `${providerLabel} · ${status.account}`
+    ? `${providerLabel} · ${redactEmail(status.account)}`
     : providerLabel;
+}
+
+/** Tell the user what the slow first connection is waiting on. */
+function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
+  if (stage === "syncing") {
+    return {
+      title: "Syncing your files…",
+      description:
+        "Right after connecting, this can take a few seconds. You can keep writing while it finishes.",
+    };
+  }
+
+  if (provider === "github") {
+    return {
+      title: "Setting up GitHub…",
+      description:
+        "Checking your GitHub sign-in and getting your backup ready. This can take a few seconds.",
+    };
+  }
+
+  return {
+    title: `Waiting for you to sign in to ${SYNC_PROVIDERS[provider]}…`,
+    description:
+      "Finish signing in on the page that opened in your browser, then come back here.",
+  };
 }
 
 export function SyncingPane() {
@@ -38,17 +73,21 @@ export function SyncingPane() {
 
   const selected = status.provider ?? selection;
 
-  const [isConnecting, setConnecting] = useState(false);
+  const [connectStage, setConnectStage] = useState<ConnectStage | null>(null);
   const [isPending, setPending] = useState(false);
 
   const isDisabled = status.busy || isPending;
 
+  const connectMessage =
+    connectStage && getConnectMessage(connectStage, selected);
+
   async function connect() {
-    setConnecting(true);
+    setConnectStage("signing-in");
     setPending(true);
 
     try {
       useSyncStore.setState(await window.lunarscribe.connectSync(selected));
+      setConnectStage("syncing");
       await window.lunarscribe.syncFiles(null);
     } catch (cause) {
       if (!useSyncStore.getState().error) {
@@ -59,7 +98,7 @@ export function SyncingPane() {
         );
       }
     } finally {
-      setConnecting(false);
+      setConnectStage(null);
       setPending(false);
     }
   }
@@ -74,7 +113,7 @@ export function SyncingPane() {
         toast.add({
           type: "success",
           title: "Sync complete",
-          description: `${result.pushed} pushed, ${result.pulled} pulled.`,
+          description: `${result.pushed} sent, ${result.pulled} received.`,
         });
       }
     } catch (cause) {
@@ -113,8 +152,8 @@ export function SyncingPane() {
       <header className="flex flex-col gap-1">
         <h2 className="text-base font-medium">Syncing</h2>
         <p className="text-muted-foreground text-sm text-pretty">
-          Sync saved markdown and drawings across devices. One provider runs
-          every five minutes while Lunarscribe is open.
+          Back up your saved notes and drawings and keep them the same on all
+          your devices. Lunarscribe syncs every five minutes while it is open.
         </p>
       </header>
       <div className="flex max-w-lg flex-col gap-4">
@@ -144,8 +183,8 @@ export function SyncingPane() {
         </div>
         <p className="text-muted-foreground text-sm text-pretty">
           {selected === "github"
-            ? "Requires Git 2.38 or newer and gh, with gh auth login completed. Connect finds lunarscribe-bak-files or creates it as a private repository. Git history is stored in Documents/lunarscribe; disconnect removes that history and keeps saved files."
-            : `Sign in to ${SYNC_PROVIDERS[selected]} in your browser. Lunarscribe finds or creates the lunarscribe-bak-files folder. Credentials are saved in the user data folder.`}
+            ? "You need Git 2.38 or newer and the GitHub app for the terminal (gh), signed in with gh auth login. Lunarscribe saves your files in a private repository called lunarscribe-bak-files and creates it if needed. Disconnecting keeps your files."
+            : `You will sign in to ${SYNC_PROVIDERS[selected]} in your browser. Lunarscribe saves your files in a folder called lunarscribe-bak-files. Your sign-in stays on this computer.`}
         </p>
         <div className="flex flex-wrap gap-2">
           {status.provider ? (
@@ -167,7 +206,7 @@ export function SyncingPane() {
                 }}
               >
                 <RefreshCw />
-                {status.busy && !isConnecting ? "Syncing…" : "Sync now"}
+                {status.busy && !connectStage ? "Syncing…" : "Sync now"}
               </Button>
               <Button
                 variant="outline"
@@ -186,12 +225,12 @@ export function SyncingPane() {
                 void connect();
               }}
             >
-              {isConnecting
+              {connectStage
                 ? "Connecting…"
                 : `Connect ${SYNC_PROVIDERS[selected]}`}
             </Button>
           )}
-          {isConnecting && selected !== "github" && (
+          {connectStage === "signing-in" && selected !== "github" && (
             <Button
               variant="outline"
               onClick={() => window.lunarscribe.cancelSyncSignIn()}
@@ -200,6 +239,13 @@ export function SyncingPane() {
             </Button>
           )}
         </div>
+        {connectMessage && (
+          <Alert>
+            <Spinner aria-hidden="true" />
+            <AlertTitle>{connectMessage.title}</AlertTitle>
+            <AlertDescription>{connectMessage.description}</AlertDescription>
+          </Alert>
+        )}
         <div aria-live="polite" className="flex flex-col gap-1 text-sm">
           <p>{getConnectionLabel(status)}</p>
           {status.lastSyncedAt && (
@@ -212,15 +258,16 @@ export function SyncingPane() {
         <Separator />
         <p className="text-muted-foreground text-sm text-pretty">
           Press {window.lunarscribe.platform === "darwin" ? "Cmd+S" : "Ctrl+S"}{" "}
-          to save and push the active saved file. External files stay local.{" "}
+          to save the open file and sync it right away. Files opened from
+          outside Lunarscribe are not synced.{" "}
           {selected === "github"
-            ? "GitHub checks incoming merges before pulling. Compatible markdown edits merge automatically; conflicts preserve both versions and show a toast."
-            : "Changes on one side sync normally. Divergent edits preserve both copies and show an error toast. On the first sync, the newer modification time selects the copy to keep."}
+            ? "If a note changed on two devices, Lunarscribe combines the changes when it can. When it can't, it keeps both copies and lets you know."
+            : "If a note changed on two devices, Lunarscribe keeps both copies and lets you know. On the first sync, the most recently edited copy is kept."}
         </p>
         {selected === "google-drive" && (
           <p className="text-muted-foreground text-sm text-pretty">
-            Google Drive asks for browser sign-in when its access token expires.
-            Background sync resumes after you sign in again.
+            Google Drive asks you to sign in again about once an hour. Syncing
+            picks up again after you sign in.
           </p>
         )}
       </div>

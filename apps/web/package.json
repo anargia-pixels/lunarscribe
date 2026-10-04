@@ -14,14 +14,19 @@
   },
   "dependencies": {
     "@lunarscribe/components": "workspace:*",
+    "@lunarscribe/utils": "workspace:*",
     "@tailwindcss/vite": "catalog:",
+    "@tanstack/pacer": "catalog:",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "latest",
     "@tanstack/react-router-devtools": "latest",
     "@tanstack/react-start": "latest",
+    "docx": "catalog:",
+    "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "tailwindcss": "catalog:"
+    "tailwindcss": "catalog:",
+    "zustand": "catalog:"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "latest",

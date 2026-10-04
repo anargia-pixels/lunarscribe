@@ -17,9 +17,13 @@ export type RemoteChange =
 /** Pause background sync until the user signs in again. */
 export class SyncSignInRequired extends Error {}
 
+/** Remote requests each provider runs at once during a sync. */
+export const SYNC_CONCURRENCY = 6;
+
 /** Normal writes check revisions; explicit overwrites use the local copy. */
 export type FileSyncProvider = {
-  read: () => Promise<RemoteFiles>;
+  /** Download every saved file, or only `name` when one file is synced. */
+  read: (name: string | null) => Promise<RemoteFiles>;
   write: (changes: RemoteChange[], snapshot: RemoteFiles) => Promise<void>;
   forceWrite: (
     name: string,

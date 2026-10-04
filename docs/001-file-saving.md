@@ -249,6 +249,105 @@ form one atomic transaction. A failed write can leave a partial file. If removal
 path fails after a successful write, both names can remain on disk. External Rename uses
 an exclusive-copy fallback when the filesystem does not support hard links.
 
+## Web app
+
+The web app uses the same buffer store, write queues, save timers, and file-operation
+policies as the desktop app. Only the save destinations are different. The browser does
+not give file paths to the page, and there is no Electron main process. Thus the app keeps
+saved files in IndexedDB and opens external files through file handles.
+
+| Buffer                                 | Store fields                                             | Save destination                                          |
+| -------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------- |
+| New buffer                             | `fileName: null`, `externalId: null`                     | The first save creates a record in browser storage.       |
+| Buffer for a file in Notes or Drawings | `fileName` holds the saved name; `externalId: null`      | The record with that name in the IndexedDB `files` store. |
+| External buffer                        | `fileName: null`; `externalId` holds a generated file ID | The original file, through its stored file handle.        |
+
+### Saved files in browser storage
+
+The IndexedDB database `lunarscribe` has a `files` object store. Each record is
+`{ name, content, modifiedAt }`, and `name` is the key. The name is `<title><extension>`,
+as in the documents folder. Saved files stay in this browser profile only. If the user
+clears site data for Lunarscribe, the saved files are deleted. Use sync to keep a copy in
+another location. Refer to [Syncing in the web app](features/004-web-syncing.md).
+
+`saveFile()` in `saved-files.ts` uses the desktop naming rules: the trimmed title, an
+underscore for each slash, `untitled` for an empty title, and a numeric suffix for a name
+that another file uses. It does all the steps in one IndexedDB transaction. Thus the new
+record and the removal of the previous name commit together or fail together.
+
+The desktop app does not do this check: a save with an expected content first reads the
+stored record. If the record is gone or its content changed, the save fails. The buffer
+keeps its edits. This prevents a tab from overwriting a save from a different tab.
+
+One operation queue orders all saved-file reads, saves, deletions, and sync downloads in a
+tab. After a change, the tab sends a message on the `lunarscribe-saved-files`
+BroadcastChannel. Each tab then reads the file list again and updates its sidebar. This
+replaces the folder watcher.
+
+Saved files have **Download** in place of Copy path. It downloads the file with its saved
+name.
+
+### External files
+
+The File System Access API is available in Chromium browsers. In these browsers, external
+files are file handles in the IndexedDB `external-files` store. Each handle has a
+generated ID, because the browser gives no path. The header and sidebar show the file name
+only. A user can add a file in these ways:
+
+- Select **Open file** in the sidebar header.
+- Drop a file on the editor.
+- Open a `.md`, `.markdown`, or `.txt` file from the operating system in the installed
+  app. The web app manifest declares these file handlers, and `launchQueue` receives the
+  files.
+
+If a handle points to the same file as a tracked handle, the app uses the tracked ID.
+
+Before each read, write, or rename, the app asks for read and write access. The browser
+shows a permission prompt only during a click or key press. After a reload, the app tries
+to reopen the last external file without a click. This attempt usually fails, and the app
+then clears the selection. Select the file in the sidebar to give access again.
+
+`saveExternalFile()` writes through a writable stream and orders writes for each file ID.
+If a write fails, the app stops the stream, and the file keeps its previous content. The
+desktop path and symbolic-link checks do not apply.
+
+External Rename uses `FileSystemFileHandle.move()`, which only Chromium has. It keeps the
+extension and refuses an empty name. Remove deletes the handle record only. The file stays
+on the device.
+
+Firefox and Safari do not have the File System Access API. In these browsers, Open file
+and drops copy each text file into browser storage as a new saved note. The app shows a
+toast that edits stay in Lunarscribe. Later edits do not change the original file.
+
+### Persistence and page close
+
+Zustand persists `lastOpenedFileName` and `lastOpenedExternalId` under
+`lunarscribe-buffers` in localStorage. The tracked external files come from IndexedDB, not
+from this key.
+
+IndexedDB writes are asynchronous, and a browser can stop a page at any time. Thus the app
+starts all pending saves at these times:
+
+- The tab becomes hidden.
+- The page receives `pagehide`.
+- The page receives `beforeunload`.
+
+As on desktop, the app does not show a leave-page prompt and does not await these saves. A
+page close can interrupt a write that is still in progress.
+
+### Web code references
+
+- [Browser database](../apps/web/src/lib/browser-database.ts): IndexedDB stores and
+  transactions.
+- [Saved files](../apps/web/src/lib/saved-files.ts): save names, conflict checks, and tab
+  messages.
+- [External files](../apps/web/src/lib/external-files.ts): file handles, permissions,
+  writes, renames, and the file picker.
+- [Buffer store](../apps/web/src/stores/buffer-store.ts): external opens, imports, and
+  restore after reload.
+- [Buffer writer](../apps/web/src/stores/file-writes.ts): save timers and page-close
+  flushes.
+
 ## Code references and checks
 
 - [Buffer store](../apps/desktop/src/stores/buffer-store.ts): file-operation policies,

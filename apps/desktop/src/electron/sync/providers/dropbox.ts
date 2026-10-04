@@ -1,13 +1,22 @@
-import { isSavedFileName } from "../files";
+import { mapConcurrent } from "@lunarscribe/utils/map-concurrent";
 import {
   jsonArray,
   jsonBoolean,
   jsonString,
   jsonTimestamp,
   parseJson,
-} from "../json";
-import type { FileSyncProvider, RemoteFiles } from "./types";
-import { SyncSignInRequired } from "./types";
+} from "@lunarscribe/utils/sync/json";
+import type {
+  FileSyncProvider,
+  RemoteFile,
+  RemoteFiles,
+} from "@lunarscribe/utils/sync/types";
+import {
+  SYNC_CONCURRENCY,
+  SyncSignInRequired,
+} from "@lunarscribe/utils/sync/types";
+
+import { isSavedFileName } from "../files";
 
 // Dropbox destination
 const BACKUP_FOLDER_PATH = "/lunarscribe-bak-files";
@@ -141,8 +150,9 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
 
     return {
       /** Read each file at the revision returned by the folder listing. */
-      async read() {
+      async read(name) {
         const files: RemoteFiles = new Map();
+        const downloads: RemoteFile[] = [];
 
         let response = await rpc(
           "files/list_folder",
@@ -154,14 +164,17 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
           const page = parseJson(await response.text());
 
           for (const file of jsonArray(page, "entries")) {
-            const name = jsonString(file, "name");
+            const entryName = jsonString(file, "name");
 
-            if (!isSavedFileName(name)) {
+            if (
+              !isSavedFileName(entryName) ||
+              (name !== null && entryName !== name)
+            ) {
               continue;
             }
 
             if (jsonString(file, ".tag") !== "file") {
-              files.set(name, {
+              files.set(entryName, {
                 content: "",
                 revision: "",
                 modifiedAt: 0,
@@ -172,26 +185,15 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
               continue;
             }
 
-            const download = await request(
-              "files/download",
-              {
-                method: "POST",
-                headers: {
-                  "Dropbox-API-Arg": JSON.stringify({
-                    path: `rev:${jsonString(file, "rev")}`,
-                  }),
-                },
-              },
-              true,
-            );
-
-            checkResponse(download);
-            files.set(name, {
-              content: await download.text(),
+            const remoteFile = {
+              content: "",
               revision: jsonString(file, "rev"),
               modifiedAt: jsonTimestamp(file, "client_modified"),
               modifiedAtPrecisionMs: 1000,
-            });
+            };
+
+            files.set(entryName, remoteFile);
+            downloads.push(remoteFile);
           }
 
           if (!jsonBoolean(page, "has_more")) {
@@ -204,9 +206,28 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
           );
         }
 
+        // Fill in contents once the listing is complete.
+        await mapConcurrent(downloads, SYNC_CONCURRENCY, async (remoteFile) => {
+          const download = await request(
+            "files/download",
+            {
+              method: "POST",
+              headers: {
+                "Dropbox-API-Arg": JSON.stringify({
+                  path: `rev:${remoteFile.revision}`,
+                }),
+              },
+            },
+            true,
+          );
+
+          checkResponse(download);
+          remoteFile.content = await download.text();
+        });
+
         return files;
       },
-      /** Reject replacements and deletions when the saved revision changed. */
+      /** Reject changed revisions; sequential because Dropbox rejects concurrent folder writes. */
       async write(changes, snapshot) {
         for (const change of changes) {
           const revision = snapshot.get(change.name)?.revision;

@@ -267,7 +267,8 @@ export function TableCellMenuPlugin({ children }: { children: ReactNode }) {
     <ContextMenu>
       <ContextMenuTrigger
         ref={containerRef}
-        className="relative flex flex-1 flex-col"
+        // A grid stretches the content editable to full height. Do not use flex: in Chrome, a click outside a flex parent can focus the editor.
+        className="relative grid flex-1 grid-cols-1"
         onContextMenu={(event) => {
           contextCellKey.current = getCellKey(editor, event.target);
 

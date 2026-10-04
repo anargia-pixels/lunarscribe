@@ -11,30 +11,26 @@ import {
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { SidebarSection } from "@/lib/sidebar-sections";
-import { useSidebarStore } from "@/stores/sidebar-store";
-
 import "./sidebar-file-section.css";
 
 /** Each expanded section shares the available height and scrolls below its fixed label. */
 export function SidebarFileSection({
-  section,
   label,
   count,
+  open,
+  onOpenChange,
   children,
 }: {
-  section: SidebarSection;
   label: string;
   count: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   children: ReactNode;
 }) {
-  const open = useSidebarStore((state) => state.sectionsOpen[section]);
-  const setSectionOpen = useSidebarStore((state) => state.setSectionOpen);
-
   return (
     <Collapsible
       open={open}
-      onOpenChange={(nextOpen) => setSectionOpen(section, nextOpen)}
+      onOpenChange={onOpenChange}
       data-sidebar-file-section
       className="group/section flex min-h-14 shrink-0 grow-0 basis-14 flex-col data-open:grow"
     >

@@ -2,16 +2,17 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { SyncBaseline, SyncProvider } from "../../lib/sync";
-import type { OAuthTokens } from "./auth/oauth";
 import {
   jsonField,
   jsonNumber,
   jsonString,
   jsonStrings,
   parseJson,
-} from "./json";
-import type { JsonValue } from "./json";
+} from "@lunarscribe/utils/sync/json";
+import type { JsonValue } from "@lunarscribe/utils/sync/json";
+
+import type { SyncBaseline, SyncProvider } from "../../lib/sync";
+import type { OAuthTokens } from "./auth/oauth";
 
 // Stored state
 export type SyncSettings = {

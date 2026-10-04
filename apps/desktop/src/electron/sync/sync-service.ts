@@ -2,9 +2,11 @@ import { lstat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import type { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+import type { FileSyncProvider } from "@lunarscribe/utils/sync/types";
+import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
 import { app, BrowserWindow, ipcMain } from "electron";
 
-import type { createOperationQueue } from "../../lib/operation-queue";
 import type { SyncProvider, SyncResult, SyncStatus } from "../../lib/sync";
 import { SYNC_PROVIDERS } from "../../lib/sync";
 import { refreshTokens, signIn } from "./auth/oauth";
@@ -24,8 +26,6 @@ import {
   syncGithub,
 } from "./providers/github";
 import { createGoogleDriveApi } from "./providers/google-drive";
-import type { FileSyncProvider } from "./providers/types";
-import { SyncSignInRequired } from "./providers/types";
 import publicCredentials from "./public-creds.json";
 import { createEmptySettings, createSyncSettings } from "./settings";
 
@@ -162,7 +162,7 @@ export function registerSync(
   /** Compare with the shared base and reject concurrent remote writes. */
   async function syncCloud(name: string | null): Promise<SyncResult> {
     const remoteProvider = createCloudProvider();
-    const remote = await remoteProvider.read();
+    const remote = await remoteProvider.read(name);
     const local = await queue(folder, () => readLocalSyncFiles(folder));
 
     const plan = planSync(
@@ -363,7 +363,7 @@ export function registerSync(
   });
 
   // Run background sync only while an app window is open.
-  const timer = setInterval(() => {
+  function syncInBackground() {
     void loaded
       .then(async () => {
         if (
@@ -376,7 +376,11 @@ export function registerSync(
         }
       })
       .catch(() => undefined);
-  }, SYNC_INTERVAL_MS);
+  }
+
+  // The first window asks for this sync after it listens for downloaded files.
+  ipcMain.once("sync:startup", syncInBackground);
+  const timer = setInterval(syncInBackground, SYNC_INTERVAL_MS);
 
   app.once("before-quit", () => {
     clearInterval(timer);

@@ -27,7 +27,8 @@ gh auth login
 ```
 
 Lunarscribe finds your `lunarscribe-bak-files` repository. If it does not exist, the app
-creates a private repository. An existing repository must be private.
+creates it as a private repository. Lunarscribe does not check visibility afterwards, so
+you can make the repository public to share it.
 
 The app creates `.git` inside the Lunarscribe documents folder. New repositories use the
 `main` branch. Existing backups keep their default branch.
@@ -46,8 +47,9 @@ to sign in again.
 
 ## Sync your files
 
-Sync starts after you connect. It then runs every five minutes while Lunarscribe has an
-open window. It skips a scheduled run if sync is busy or sign-in is required.
+Sync starts after you connect and when Lunarscribe opens. It then runs every five minutes
+while Lunarscribe has an open window. It skips a scheduled run if sync is busy or sign-in
+is required.
 
 | Action                                                            | Result                                                                               |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -62,6 +64,9 @@ Successful background sync and save-shortcut uploads do not show a success toast
 **- Sync successful** message appears beside the active saved file's path for three
 seconds. Pending edits, a new sync, or a sync problem clear the message. Conflicts and
 errors still show toasts.
+
+While a sync runs, a **- Sync in progress** message appears beside the active saved file's
+path.
 
 GitHub fetches remote history and commits saved local changes. It then checks for merge
 conflicts before it updates your files. It can combine compatible markdown edits. It does

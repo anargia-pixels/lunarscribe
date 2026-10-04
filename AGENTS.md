@@ -8,12 +8,15 @@ conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
 
 - `apps/desktop`: Electron + React via electron-vite. Next.js-style `src/`:
   `app/layout.tsx` and `app/page.tsx` are the shell, `electron/` holds main and preload,
-  `stores/` holds zustand stores, `themes/` holds the color theme catalog.
+  `stores/` holds zustand stores.
 - `apps/web`: TanStack Start, kept as generator boilerplate until asked otherwise.
 - `packages/components`: shared UI. `src/components/ui/` is shadcn (Base UI),
   `src/components/<feature>/` holds shared non-shadcn components (the Lexical markdown
-  editor), `src/styles/globals.css` is the theme both apps import.
-- `packages/utils`: shared libs (`cn`, `tryCatch`, self-hosted fonts).
+  editor), `src/lib/` holds shared DOM and React helpers (DOCX and PDF export, file
+  feedback), `src/themes/` holds the color theme catalog, `src/styles/globals.css` is the
+  theme both apps import.
+- `packages/utils`: shared libs without DOM or React (`cn`, `tryCatch`, operation queue,
+  sync JSON and provider types, self-hosted fonts).
 - `tools/oxlint`: custom lint rules, including `anti-slop/*`.
 
 ## Conventions

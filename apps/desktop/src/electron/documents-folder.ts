@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, watch } from "node:fs";
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 
+import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import { Debouncer } from "@tanstack/pacer/debouncer";
 import { app, BrowserWindow, ipcMain } from "electron";
 
@@ -9,7 +10,6 @@ import {
   getFileExtension,
   INVALID_FILE_TITLE_CHARACTERS,
 } from "../lib/editor-files";
-import { createOperationQueue } from "../lib/operation-queue";
 import { registerFileSearch } from "./file-search";
 import { registerSync } from "./sync/sync-service";
 

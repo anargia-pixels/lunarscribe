@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
 
-export const Route = createFileRoute("/")({ component: Home });
+// The editor reads browser storage while its modules load, so it never renders on the server.
+// React.lazy replaces the router's lazyRouteComponent, which calls use() conditionally.
+const App = lazy(() => import("@/app/app"));
 
-function Home() {
-  return (
-    <div className="p-8">
-      <h1 className="text-4xl font-bold">Welcome to TanStack Start</h1>
-      <p className="mt-4 text-lg">
-        Edit <code>src/routes/index.tsx</code> to get started.
-      </p>
-    </div>
-  );
-}
+export const Route = createFileRoute("/")({
+  ssr: false,
+  component: () => (
+    <Suspense>
+      <App />
+    </Suspense>
+  ),
+});

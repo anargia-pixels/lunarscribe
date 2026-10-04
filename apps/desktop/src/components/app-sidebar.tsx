@@ -1,36 +1,37 @@
-import { FluidHighlight } from "@lunarscribe/components/fluid-motion/fluid-motion";
-import { Hint } from "@lunarscribe/components/hint/hint";
-import { Button } from "@lunarscribe/components/ui/button";
-import { DialogTrigger } from "@lunarscribe/components/ui/dialog";
+import { DeleteFileDialog } from "@lunarscribe/components/file-dialog/delete-file-dialog";
+import { RenameFileDialog } from "@lunarscribe/components/file-dialog/rename-file-dialog";
+import { useSearchShortcut } from "@lunarscribe/components/hooks/use-search-shortcut";
+import { runFileAction } from "@lunarscribe/components/lib/file-feedback";
+import { FileSearchDialog } from "@lunarscribe/components/search/file-search-dialog";
+import { SettingsDialog } from "@lunarscribe/components/settings-dialog/settings-dialog";
+import { AppSidebarHeader } from "@lunarscribe/components/sidebar/app-sidebar-header";
+import { SidebarFileItem } from "@lunarscribe/components/sidebar/sidebar-file-item";
+import type { FileMenuState } from "@lunarscribe/components/sidebar/sidebar-file-item";
+import { SidebarFileSection } from "@lunarscribe/components/sidebar/sidebar-file-section";
 import {
   Sidebar,
   SidebarContent,
-  SidebarHeader,
   SidebarMenu,
 } from "@lunarscribe/components/ui/sidebar";
 import { toast } from "@lunarscribe/components/ui/toast";
-import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
-import { FilePlus, PenTool, Search, Settings } from "lucide-react";
+import { FILE_SECTIONS } from "@lunarscribe/utils/sidebar-sections";
 import { useEffect, useState } from "react";
 
-import { DarkModeToggle } from "@/components/darkmode-toggle";
-import { DeleteFileDialog } from "@/components/delete-file-dialog";
-import { FileSearchDialog } from "@/components/file-search-dialog";
-import { RenameFileDialog } from "@/components/rename-file-dialog";
-import { SettingsDialog } from "@/components/settings-dialog/settings-dialog";
-import { SidebarFileItem } from "@/components/sidebar-file-item";
-import type { FileMenuState } from "@/components/sidebar-file-item";
-import { SidebarFileSection } from "@/components/sidebar-file-section";
+import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
+import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
+import { useTheme } from "@/components/theme-provider";
 import type { FileTarget } from "@/lib/editor-files";
-import { fileKey } from "@/lib/editor-files";
+import { fileKey, isTextFile } from "@/lib/editor-files";
 import { exportDocx } from "@/lib/export-docx";
 import { exportPdf } from "@/lib/export-pdf";
-import { runFileAction } from "@/lib/file-feedback";
-import { FILE_SECTIONS } from "@/lib/sidebar-sections";
-import { kindOf, useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+import {
+  kindOf,
+  stemOf,
+  useActiveBuffer,
+  useBufferStore,
+} from "@/stores/buffer-store";
+import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSyncStore } from "@/stores/sync-store";
-
-import "./app-sidebar.css";
 
 type FileDialogState =
   | { kind: "rename"; target: FileTarget }
@@ -59,6 +60,10 @@ export function AppSidebar() {
     (state) => state.removeExternalFile,
   );
 
+  const sectionsOpen = useSidebarStore((state) => state.sectionsOpen);
+  const setSectionOpen = useSidebarStore((state) => state.setSectionOpen);
+  const { toggleTheme } = useTheme();
+
   const activeBuffer = useActiveBuffer();
   const externalFiles = useBufferStore((state) => state.externalFiles);
 
@@ -83,32 +88,7 @@ export function AppSidebar() {
     group?.files.push({ kind: "saved", name });
   }
 
-  useEffect(() => {
-    const handleSearchShortcut = (event: KeyboardEvent) => {
-      if (
-        event.key.toLowerCase() !== "e" ||
-        !event.ctrlKey ||
-        event.metaKey ||
-        event.altKey ||
-        event.shiftKey ||
-        event.isComposing
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (!event.repeat) {
-        setIsSearchOpen(true);
-      }
-    };
-
-    window.addEventListener("keydown", handleSearchShortcut, true);
-
-    return () =>
-      window.removeEventListener("keydown", handleSearchShortcut, true);
-  }, []);
+  useSearchShortcut(() => setIsSearchOpen(true));
 
   useEffect(() => {
     void runFileAction(
@@ -221,78 +201,30 @@ export function AppSidebar() {
   return (
     <>
       <Sidebar>
-        {/* Hover waits 800ms; moving to a neighbour within 300ms opens it instantly. */}
-        <TooltipProvider delay={800} timeout={300}>
-          <SidebarHeader data-app-sidebar-header>
-            <div>
-              <div className="flex h-8 shrink-0 items-center justify-center gap-2 px-3">
-                <h1 className="font-logo text-primary text-3xl">Lunarscribe</h1>
-              </div>
-              <div className="relative flex items-center justify-center gap-1 px-3 py-1.5">
-                <FluidHighlight rows="button" className="bg-muted rounded-lg" />
-                <Hint label="New note" side="bottom">
-                  <Button
-                    variant="fluid"
-                    size="icon-sm"
-                    aria-label="New note"
-                    onClick={() => createBuffer("markdown", files)}
-                  >
-                    <FilePlus />
-                  </Button>
-                </Hint>
-                <Hint label="New drawing" side="bottom">
-                  <Button
-                    variant="fluid"
-                    size="icon-sm"
-                    aria-label="New drawing"
-                    onClick={() => createBuffer("drawing", files)}
-                  >
-                    <PenTool />
-                  </Button>
-                </Hint>
-                <SettingsDialog>
-                  <Hint label="Settings" side="bottom">
-                    <DialogTrigger
-                      render={
-                        <Button
-                          variant="fluid"
-                          size="icon-sm"
-                          aria-label="Settings"
-                        />
-                      }
-                    >
-                      <Settings />
-                    </DialogTrigger>
-                  </Hint>
-                </SettingsDialog>
-                <Hint
-                  label="Search files"
-                  side="bottom"
-                  shortcut={["Ctrl", "E"]}
-                >
-                  <Button
-                    variant="fluid"
-                    size="icon-sm"
-                    aria-label="Search files"
-                    aria-keyshortcuts="Control+E"
-                    aria-haspopup="dialog"
-                    onClick={() => setIsSearchOpen(true)}
-                  >
-                    <Search />
-                  </Button>
-                </Hint>
-                <DarkModeToggle />
-              </div>
-            </div>
-          </SidebarHeader>
-        </TooltipProvider>
+        <AppSidebarHeader
+          modKeyLabel={window.lunarscribe.platform === "darwin" ? "⌘" : "Ctrl"}
+          version={__APP_VERSION__}
+          onNewNote={() => createBuffer("markdown", files)}
+          onNewDrawing={() => createBuffer("drawing", files)}
+          renderSettings={(trigger) => (
+            <SettingsDialog
+              appearancePane={<AppearancePane />}
+              syncingPane={<SyncingPane />}
+            >
+              {trigger}
+            </SettingsDialog>
+          )}
+          onSearch={() => setIsSearchOpen(true)}
+          onToggleTheme={toggleTheme}
+        />
         <SidebarContent className="overflow-hidden">
           {fileGroups.map((section) => (
             <SidebarFileSection
               key={section.section}
-              section={section.section}
               label={section.label}
               count={section.files.length}
+              open={sectionsOpen[section.section]}
+              onOpenChange={(open) => setSectionOpen(section.section, open)}
             >
               <SidebarMenu>
                 {section.files.map((target) => {
@@ -306,7 +238,17 @@ export function AppSidebar() {
                   return (
                     <SidebarFileItem
                       key={key}
-                      target={target}
+                      name={target.name}
+                      label={
+                        target.kind === "external"
+                          ? target.name
+                          : stemOf(target.name)
+                      }
+                      title={
+                        target.kind === "external" ? target.path : target.name
+                      }
+                      isExternal={target.kind === "external"}
+                      canExport={isTextFile(target.name)}
                       isActive={isActive}
                       menu={menu?.key === key ? menu : null}
                       onMenuChange={(open, anchor) =>
@@ -325,7 +267,11 @@ export function AppSidebar() {
                       onExportDocx={() => void exportTarget(target, "DOCX")}
                       isExporting={isExporting}
                       canForceSync={canForceSync && !isForcingSync}
-                      onForceSync={() => void forceSyncTarget(target)}
+                      onForceSync={
+                        target.kind === "saved"
+                          ? () => void forceSyncTarget(target)
+                          : undefined
+                      }
                       onDelete={() => deleteTarget(target)}
                     />
                   );
@@ -338,6 +284,7 @@ export function AppSidebar() {
           <RenameFileDialog
             key={fileKey(dialog.target)}
             name={dialog.target.name}
+            initialTitle={stemOf(dialog.target.name)}
             onClose={() => setDialog(null)}
             onRename={(title) => renameFile(dialog.target, title)}
           />
@@ -351,7 +298,16 @@ export function AppSidebar() {
           />
         )}
       </Sidebar>
-      <FileSearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+      <FileSearchDialog
+        open={isSearchOpen}
+        onOpenChange={setIsSearchOpen}
+        searchFiles={window.lunarscribe.searchFiles}
+        onFilesChanged={window.lunarscribe.onFilesChanged}
+        onOpenFile={openFile}
+        isDrawing={(name) => kindOf(name) === "drawing"}
+        scopeDescription="Find up to 10 saved files in lunarscribe. Toggle Content to search inside files."
+        scopeLabel="Up to 10 files in lunarscribe"
+      />
     </>
   );
 }

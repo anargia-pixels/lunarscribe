@@ -7,7 +7,13 @@
     "./error-message": "./src/error-message.ts",
     "./cn": "./src/cn.ts",
     "./try-catch": "./src/try-catch.ts",
-    "./fonts.css": "./src/fonts.css"
+    "./fonts.css": "./src/fonts.css",
+    "./map-concurrent": "./src/map-concurrent.ts",
+    "./operation-queue": "./src/operation-queue.ts",
+    "./redact-email": "./src/redact-email.ts",
+    "./sidebar-sections": "./src/sidebar-sections.ts",
+    "./sync/json": "./src/sync/json.ts",
+    "./sync/types": "./src/sync/types.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"

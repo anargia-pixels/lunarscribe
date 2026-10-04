@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+/** The desktop package version, set by electron-vite at build time. */
+declare const __APP_VERSION__: string;
+
 interface Window {
   /** Chromium's Local Font Access API; only the family names are needed. */
   queryLocalFonts?: () => Promise<{ family: string }[]>;
@@ -18,6 +21,8 @@ interface Window {
     forceSyncFile: (name: string) => Promise<import("./lib/sync").SyncResult>;
     cancelSyncSignIn: () => void;
     protectSyncFiles: (names: string[]) => void;
+    /** Starts the one sync that runs when the app opens; later calls do nothing. */
+    startupSync: () => void;
     onSyncStatus: (
       listener: (status: import("./lib/sync").SyncStatus) => void,
     ) => () => void;

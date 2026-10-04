@@ -14,10 +14,11 @@ import "./app-sidebar-header.css";
 /**
  * The Lunarscribe logo above the sidebar's action buttons. The settings button is a dialog
  * trigger, so `renderSettings` wraps it in the app's settings window. Open file shows only
- * when `onOpenFile` is given.
+ * when `onOpenFile` is given. Hovering the logo shows `version` when it is given.
  */
 export function AppSidebarHeader({
   modKeyLabel,
+  version,
   onNewNote,
   onOpenFile,
   onNewDrawing,
@@ -26,6 +27,7 @@ export function AppSidebarHeader({
   onToggleTheme,
 }: {
   modKeyLabel: string;
+  version?: string;
   onNewNote: () => void;
   onOpenFile?: () => void;
   onNewDrawing: () => void;
@@ -33,13 +35,21 @@ export function AppSidebarHeader({
   onSearch: () => void;
   onToggleTheme: (origin: ThemeRevealOrigin) => void;
 }) {
+  const logo = <h1 className="font-logo text-primary text-3xl">Lunarscribe</h1>;
+
   return (
     // Hover waits 800ms; moving to a neighbour within 300ms opens it instantly.
     <TooltipProvider delay={800} timeout={300}>
       <SidebarHeader data-app-sidebar-header>
         <div>
           <div className="flex h-8 shrink-0 items-center justify-center gap-2 px-3">
-            <h1 className="font-logo text-primary text-3xl">Lunarscribe</h1>
+            {version ? (
+              <Hint label={`Version ${version}`} side="bottom">
+                {logo}
+              </Hint>
+            ) : (
+              logo
+            )}
           </div>
           <div className="relative flex items-center justify-center gap-1 px-3 py-1.5">
             <FluidHighlight rows="button" className="bg-muted rounded-lg" />

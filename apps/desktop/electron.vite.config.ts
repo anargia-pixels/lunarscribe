@@ -6,6 +6,8 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 import type { Plugin } from "vite";
 
+import { version } from "./package.json";
+
 const rendererPublicDir = resolve(__dirname, "node_modules/.excalidraw-assets");
 
 /**
@@ -55,6 +57,7 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, "src"),
+    define: { __APP_VERSION__: JSON.stringify(version) },
     publicDir: rendererPublicDir,
     build: {
       // electron-vite skips minification; smaller code means less for V8 to parse and keep.

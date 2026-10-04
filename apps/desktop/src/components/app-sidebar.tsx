@@ -203,6 +203,7 @@ export function AppSidebar() {
       <Sidebar>
         <AppSidebarHeader
           modKeyLabel={window.lunarscribe.platform === "darwin" ? "⌘" : "Ctrl"}
+          version={__APP_VERSION__}
           onNewNote={() => createBuffer("markdown", files)}
           onNewDrawing={() => createBuffer("drawing", files)}
           renderSettings={(trigger) => (

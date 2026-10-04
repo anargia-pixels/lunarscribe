@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+/** The desktop package version, set by electron-vite at build time. */
+declare const __APP_VERSION__: string;
+
 interface Window {
   /** Chromium's Local Font Access API; only the family names are needed. */
   queryLocalFonts?: () => Promise<{ family: string }[]>;

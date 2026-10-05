@@ -38,7 +38,22 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => ({
     ...googleScheme(publicCredentials.googleIosClientId),
     ...googleScheme(publicCredentials.googleAndroidClientId),
   ],
-  plugins: ["expo-router", "expo-secure-store", "expo-web-browser"],
+  plugins: [
+    "expo-router",
+    "expo-secure-store",
+    "expo-web-browser",
+    [
+      "expo-splash-screen",
+      {
+        // The theme backgrounds from globals.css. At 128dp the square icon fits
+        // inside the circle that Android 12 and later crop the splash icon to.
+        image: `${projectRoot}/../../assets/icons/512x512.png`,
+        imageWidth: 128,
+        backgroundColor: "#f5f1e6",
+        dark: { backgroundColor: "#1e1e2e" },
+      },
+    ],
+  ],
   experiments: {
     typedRoutes: true,
   },

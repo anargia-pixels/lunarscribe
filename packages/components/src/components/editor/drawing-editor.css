@@ -110,3 +110,13 @@
 :root .ErrorSplash.excalidraw .ErrorSplash-details textarea {
   font-family: var(--font-code);
 }
+
+/* Hide the library trigger and the phone layout's tool lock and hand row. */
+@media (width < 48rem) {
+  :root .excalidraw .mobile-misc-tools-container,
+  :root
+    .excalidraw
+    .sidebar-trigger__label-element:has(.default-sidebar-trigger) {
+    display: none;
+  }
+}

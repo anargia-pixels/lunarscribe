@@ -117,6 +117,14 @@ The row of formatting controls below the header: history, inline formats, and
 block types.
 _Avoid_: titlebar, header buttons, menu bar
 
+**Mobile view**:
+The layout for narrow screens, below the mobile breakpoint of 768px (Tailwind's
+`md`, or `@3xl` in container queries). Below the compact breakpoint of 672px
+(`@2xl`) it folds further. These are the only two breakpoints, all Tailwind
+defaults. Below 768px the sidebar becomes a sheet and the toolbar folds its
+insertions into a menu; below 672px it folds its inline formats too.
+_Avoid_: phone layout, small screen, responsive mode
+
 **Sidebar**:
 The collapsible panel on the left of the window, currently empty.
 _Avoid_: drawer, nav, side panel

@@ -14,7 +14,7 @@ function getSnapshot() {
   return window.matchMedia(MOBILE_QUERY).matches;
 }
 
-/** Tracks whether the window is narrower than the sidebar's mobile breakpoint. */
+/** Tracks whether the window is in the mobile view. */
 export function useIsMobile() {
   return useSyncExternalStore(subscribe, getSnapshot);
 }

@@ -357,7 +357,7 @@ export function ToolbarPlugin() {
           </Button>
         </Hint>
         <ToolbarSeparator />
-        <div className="hidden @md:contents">
+        <div className="hidden @2xl:contents">
           {TEXT_FORMATS.map(({ format, label, icon: Icon, shortcut }) => (
             <Hint
               key={format}
@@ -381,7 +381,7 @@ export function ToolbarPlugin() {
         <TextFormatMenu
           activeFormats={activeFormats}
           hasHint
-          button={<Button variant="fluid" size="sm" className="@md:hidden" />}
+          button={<Button variant="fluid" size="sm" className="@2xl:hidden" />}
         />
         <ToolbarSeparator />
         <div className="hidden @3xl:contents">

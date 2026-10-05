@@ -100,7 +100,7 @@ function MobileToolbarPlugin() {
             <Redo2 />
           </Button>
           <ToolbarSeparator />
-          <div className="hidden @lg:contents">
+          <div className="hidden @2xl:contents">
             {TEXT_FORMATS.map(({ format, label, icon: Icon }) => (
               <Toggle
                 key={format}
@@ -122,13 +122,13 @@ function MobileToolbarPlugin() {
               <Button
                 variant="ghost"
                 size="lg"
-                className="@lg:hidden"
+                className="@2xl:hidden"
                 onMouseDown={keepEditorFocus}
               />
             }
           />
           <ToolbarSeparator />
-          <div className="hidden @4xl:contents">
+          <div className="hidden @3xl:contents">
             {INSERTIONS.map(({ label, icon: Icon, apply }) => (
               <Button
                 key={label}
@@ -147,7 +147,7 @@ function MobileToolbarPlugin() {
               <Button
                 variant="ghost"
                 size="lg"
-                className="@4xl:hidden"
+                className="@3xl:hidden"
                 onMouseDown={keepEditorFocus}
               />
             }

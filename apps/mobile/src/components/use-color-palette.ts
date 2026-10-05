@@ -4,11 +4,9 @@ import { useAppearanceStore } from "@/stores/appearance-store";
 
 /** The palette of the current theme's color theme, or null for the colors in global.css. */
 export function useColorPalette() {
-  const theme = useAppearanceStore((state) => state.theme);
+  return useAppearanceStore(({ theme, lightColorTheme, darkColorTheme }) => {
+    const colorTheme = theme === "dark" ? darkColorTheme : lightColorTheme;
 
-  const colorTheme = useAppearanceStore((state) =>
-    state.theme === "dark" ? state.darkColorTheme : state.lightColorTheme,
-  );
-
-  return findColorTheme(colorTheme)?.[theme] ?? null;
+    return findColorTheme(colorTheme)?.[theme] ?? null;
+  });
 }

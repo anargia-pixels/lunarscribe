@@ -41,12 +41,10 @@ export function useEditorDomPage(theme: Theme, palette: ColorPalette | null) {
 
     // Writes a complete palette onto <html>; clearing it restores globals.css.
     for (const token of COLOR_TOKENS) {
-      const value = palette?.[token];
-
-      if (value === undefined) {
-        root.style.removeProperty(`--${token}`);
+      if (palette) {
+        root.style.setProperty(`--${token}`, palette[token]);
       } else {
-        root.style.setProperty(`--${token}`, value);
+        root.style.removeProperty(`--${token}`);
       }
     }
   }, [theme, palette]);

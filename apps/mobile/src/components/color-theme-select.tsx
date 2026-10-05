@@ -4,7 +4,7 @@ import {
   findColorTheme,
   type ColorPalette,
 } from "@lunarscribe/components/themes/color-themes";
-import { Select, Typography } from "heroui-native";
+import { ListGroup, Select } from "heroui-native";
 import { View } from "react-native";
 import { ScopedVariables } from "uniwind";
 
@@ -40,7 +40,10 @@ function ColorThemeSwatches({ palette }: { palette: ColorPalette }) {
   );
 }
 
-/** Picks the color theme for one theme; the sheet lists every color theme with its five colors. */
+/**
+ * A settings row that picks the color theme for one theme. Tapping the row opens a
+ * sheet that lists every color theme with its five colors.
+ */
 export function ColorThemeSelect({
   theme,
   colorTheme,
@@ -57,53 +60,56 @@ export function ColorThemeSelect({
     : DEFAULT_COLOR_THEME;
 
   return (
-    <View className="flex-row items-center justify-between gap-4">
-      <Typography type="body-sm">{LABELS[theme]}</Typography>
-      <Select
-        presentation="bottom-sheet"
-        value={value}
-        onValueChange={(next) => {
-          if (next) {
-            onColorThemeChange(
-              next.value === DEFAULT_COLOR_THEME.value ? null : next.value,
-            );
-          }
-        }}
-      >
-        <Select.Trigger className="w-56" accessibilityLabel={LABELS[theme]}>
-          <Select.Value placeholder={DEFAULT_COLOR_THEME.label} />
-          <Select.TriggerIndicator />
-        </Select.Trigger>
-        <Select.Portal>
-          <Select.Overlay />
-          {/* A fixed height, so the long list scrolls inside the sheet */}
-          <Select.Content
-            presentation="bottom-sheet"
-            snapPoints={["60%"]}
-            enableOverDrag={false}
-            enableDynamicSizing={false}
-            contentContainerClassName="h-full"
-          >
-            <Select.ListLabel>{LABELS[theme]}</Select.ListLabel>
-            <BottomSheetScrollView>
-              <Select.Item {...DEFAULT_COLOR_THEME} />
-              {COLOR_THEMES.map((colorTheme) => (
-                <Select.Item
-                  key={colorTheme.id}
-                  value={colorTheme.id}
-                  label={colorTheme.label}
-                >
-                  <View className="flex-1 flex-row items-center gap-3">
-                    <ColorThemeSwatches palette={colorTheme[theme]} />
-                    <Select.ItemLabel />
-                  </View>
-                  <Select.ItemIndicator />
-                </Select.Item>
-              ))}
-            </BottomSheetScrollView>
-          </Select.Content>
-        </Select.Portal>
-      </Select>
-    </View>
+    <Select
+      presentation="bottom-sheet"
+      value={value}
+      onValueChange={(next) => {
+        if (next) {
+          onColorThemeChange(
+            next.value === DEFAULT_COLOR_THEME.value ? null : next.value,
+          );
+        }
+      }}
+    >
+      <Select.Trigger variant="unstyled" asChild>
+        <ListGroup.Item accessibilityLabel={LABELS[theme]}>
+          <ListGroup.ItemContent>
+            <ListGroup.ItemTitle>{LABELS[theme]}</ListGroup.ItemTitle>
+            <ListGroup.ItemDescription>{value.label}</ListGroup.ItemDescription>
+          </ListGroup.ItemContent>
+          {selected && <ColorThemeSwatches palette={selected[theme]} />}
+          <ListGroup.ItemSuffix />
+        </ListGroup.Item>
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Overlay />
+        {/* A fixed height, so the long list scrolls inside the sheet */}
+        <Select.Content
+          presentation="bottom-sheet"
+          snapPoints={["60%"]}
+          enableOverDrag={false}
+          enableDynamicSizing={false}
+          contentContainerClassName="h-full"
+        >
+          <Select.ListLabel>{LABELS[theme]}</Select.ListLabel>
+          <BottomSheetScrollView>
+            <Select.Item {...DEFAULT_COLOR_THEME} />
+            {COLOR_THEMES.map((colorTheme) => (
+              <Select.Item
+                key={colorTheme.id}
+                value={colorTheme.id}
+                label={colorTheme.label}
+              >
+                <View className="flex-1 flex-row items-center gap-3">
+                  <ColorThemeSwatches palette={colorTheme[theme]} />
+                  <Select.ItemLabel />
+                </View>
+                <Select.ItemIndicator />
+              </Select.Item>
+            ))}
+          </BottomSheetScrollView>
+        </Select.Content>
+      </Select.Portal>
+    </Select>
   );
 }

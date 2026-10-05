@@ -82,6 +82,9 @@
   --radius: 0.25rem;
   /* Fields round like HeroUI's surfaces and tabs, so the search matches the lists. */
   --field-radius: calc(var(--radius) * 3);
+  /* The tab indicator sits inside the tab list's 3px padding, so it rounds 3px
+     tighter than the list to keep the corners concentric. */
+  --radius-tab-indicator: calc(var(--radius-3xl) - 3px);
   --font-normal: "Poppins_400Regular";
   --font-medium: "Poppins_500Medium";
   --font-semibold: "Poppins_600SemiBold";

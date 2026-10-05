@@ -186,7 +186,7 @@ export default function FilesScreen() {
       >
         {/* Tabs, in the desktop tabs' colors */}
         <Tabs.List className="bg-surface-secondary mx-4">
-          <Tabs.Indicator className="bg-background dark:border-surface-tertiary dark:bg-surface-tertiary/30 dark:border" />
+          <Tabs.Indicator className="bg-background dark:border-surface-tertiary dark:bg-surface-tertiary/30 rounded-tab-indicator dark:border" />
           {SECTIONS.map((section) => (
             <Tabs.Trigger
               key={section.section}

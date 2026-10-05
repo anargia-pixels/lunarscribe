@@ -4,14 +4,15 @@ import { useRouter } from "expo-router";
 import {
   Alert,
   Button,
+  ListGroup,
   RadioGroup,
   Separator,
   Spinner,
   Typography,
   useThemeColor,
 } from "heroui-native";
-import { ChevronLeft, RefreshCw, RotateCcw } from "lucide-react-native";
-import { useState } from "react";
+import { ChevronLeft, RefreshCw } from "lucide-react-native";
+import { type ReactNode, useState } from "react";
 import { ScrollView, View } from "react-native";
 
 import { ColorThemeSelect } from "@/components/color-theme-select";
@@ -29,16 +30,33 @@ import { useSyncStore } from "@/stores/sync-store";
 /** Connecting, or signing in again, signs in first and then syncs. */
 type ConnectStage = "signing-in" | "syncing";
 
-function getConnectionLabel(status: SyncStatus) {
-  if (!status.provider) {
-    return "Sync is off";
-  }
+/** The connected account and the time of the last sync, under the provider name. */
+function getConnectionDetails(status: SyncStatus) {
+  const lastSync =
+    status.lastSyncedAt &&
+    `Last sync ${new Date(status.lastSyncedAt).toLocaleString()}`;
 
-  const providerLabel = `Connected to ${SYNC_PROVIDERS[status.provider]}`;
+  return [status.account && redactEmail(status.account), lastSync]
+    .filter(Boolean)
+    .join(" · ");
+}
 
-  return status.account
-    ? `${providerLabel} · ${redactEmail(status.account)}`
-    : providerLabel;
+/** A small heading above a group of settings, with an optional action at its end. */
+function SectionHeader({
+  title,
+  action,
+}: {
+  title: string;
+  action?: ReactNode;
+}) {
+  return (
+    <View className="min-h-8 flex-row items-center justify-between px-1">
+      <Typography type="body-sm" color="muted" className="uppercase">
+        {title}
+      </Typography>
+      {action}
+    </View>
+  );
 }
 
 /** Tell the user what the slow first connection is waiting on. */
@@ -57,7 +75,7 @@ function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
   };
 }
 
-/** Settings screen: the Appearances and Syncing sections. */
+/** Settings screen: the Appearances and Syncing sections, each a grouped list. */
 export default function SettingsScreen() {
   const router = useRouter();
   const foreground = useThemeColor("foreground");
@@ -89,6 +107,7 @@ export default function SettingsScreen() {
   const [failure, setFailure] = useState<string | null>(null);
 
   const isDisabled = status.isBusy || isPending;
+  const error = status.error ?? failure;
 
   const connectMessage =
     connectStage && getConnectMessage(connectStage, selected);
@@ -151,131 +170,128 @@ export default function SettingsScreen() {
           Settings
         </Typography.Heading>
       </View>
-      <ScrollView contentContainerClassName="gap-4 p-4">
-        <View className="gap-1">
-          <Typography.Heading type="h6">Appearances</Typography.Heading>
-          <Typography type="body-sm" color="muted">
-            A color theme restyles every color in the app. Each theme picks its
-            own.
-          </Typography>
-        </View>
-        <ColorThemeSelect
-          theme="light"
-          colorTheme={lightColorTheme}
-          onColorThemeChange={setLightColorTheme}
-        />
-        <ColorThemeSelect
-          theme="dark"
-          colorTheme={darkColorTheme}
-          onColorThemeChange={setDarkColorTheme}
-        />
-        <Button
-          variant="outline"
-          className="self-start"
-          isDisabled={lightColorTheme === null && darkColorTheme === null}
-          onPress={resetColorThemes}
-        >
-          <RotateCcw size={16} color={foreground} />
-          <Button.Label>Reset to defaults</Button.Label>
-        </Button>
-        <Separator />
-        <View className="gap-1">
-          <Typography.Heading type="h6">Syncing</Typography.Heading>
-          <Typography type="body-sm" color="muted">
-            Back up your saved notes and drawings and keep them the same on all
-            your devices. Lunarscribe syncs when it opens, every five minutes
-            while it is open, and when you return to it.
-          </Typography>
-        </View>
-        <RadioGroup
-          value={selected}
-          isDisabled={isDisabled || status.provider !== null}
-          onValueChange={(value) => {
-            if (isSyncProvider(value)) {
-              setSelection(value);
-            }
-          }}
-        >
-          <RadioGroup.Item value="google-drive">
-            {SYNC_PROVIDERS["google-drive"]}
-          </RadioGroup.Item>
-          <RadioGroup.Item value="dropbox">
-            {SYNC_PROVIDERS.dropbox}
-          </RadioGroup.Item>
-        </RadioGroup>
-        <Typography type="body-sm" color="muted">
-          {`You will sign in to ${SYNC_PROVIDERS[selected]} in the browser. Lunarscribe saves your files in a folder called lunarscribe-bak-files. Your sign-in stays on this device.`}
-        </Typography>
-        <View className="flex-row flex-wrap gap-2">
-          {status.provider ? (
-            <>
-              {status.isSignInRequired && (
-                <Button isDisabled={isDisabled} onPress={connect}>
-                  Sign in again
+      <ScrollView contentContainerClassName="gap-6 p-4">
+        <View className="gap-2">
+          <SectionHeader
+            title="Appearances"
+            action={
+              (lightColorTheme !== null || darkColorTheme !== null) && (
+                <Button variant="ghost" size="sm" onPress={resetColorThemes}>
+                  Reset to defaults
                 </Button>
-              )}
-              <Button isDisabled={isDisabled} onPress={sync}>
-                <RefreshCw size={16} color={foreground} />
-                <Button.Label>
-                  {status.isBusy && !connectStage ? "Syncing…" : "Sync now"}
-                </Button.Label>
-              </Button>
-              <Button
-                variant="outline"
-                isDisabled={isDisabled}
-                onPress={disconnect}
-              >
-                Disconnect
-              </Button>
-            </>
-          ) : (
-            <Button isDisabled={isDisabled} onPress={connect}>
-              {connectStage
-                ? "Connecting…"
-                : `Connect ${SYNC_PROVIDERS[selected]}`}
-            </Button>
-          )}
-          {connectStage === "signing-in" && (
-            <Button variant="outline" onPress={cancelSyncSignIn}>
-              Cancel sign-in
-            </Button>
-          )}
+              )
+            }
+          />
+          <ListGroup>
+            <ColorThemeSelect
+              theme="light"
+              colorTheme={lightColorTheme}
+              onColorThemeChange={setLightColorTheme}
+            />
+            <Separator className="mx-4" />
+            <ColorThemeSelect
+              theme="dark"
+              colorTheme={darkColorTheme}
+              onColorThemeChange={setDarkColorTheme}
+            />
+          </ListGroup>
         </View>
-        {connectMessage && (
-          <Alert>
-            <Spinner size="sm" />
-            <Alert.Content>
-              <Alert.Title>{connectMessage.title}</Alert.Title>
-              <Alert.Description>
-                {connectMessage.description}
-              </Alert.Description>
-            </Alert.Content>
-          </Alert>
-        )}
-        <View className="gap-1">
-          <Typography type="body-sm">{getConnectionLabel(status)}</Typography>
-          {status.lastSyncedAt && (
-            <Typography type="body-sm" color="muted">
-              {`Last sync: ${new Date(status.lastSyncedAt).toLocaleString()}`}
-            </Typography>
+        <View className="gap-2">
+          <SectionHeader title="Syncing" />
+          <ListGroup>
+            {status.provider ? (
+              <ListGroup.Item>
+                <ListGroup.ItemContent>
+                  <ListGroup.ItemTitle>
+                    {SYNC_PROVIDERS[status.provider]}
+                  </ListGroup.ItemTitle>
+                  <ListGroup.ItemDescription>
+                    {getConnectionDetails(status) || "Connected"}
+                  </ListGroup.ItemDescription>
+                </ListGroup.ItemContent>
+              </ListGroup.Item>
+            ) : (
+              <RadioGroup
+                value={selected}
+                isDisabled={isDisabled}
+                className="gap-0"
+                onValueChange={(value) => {
+                  if (isSyncProvider(value)) {
+                    setSelection(value);
+                  }
+                }}
+              >
+                <RadioGroup.Item value="google-drive" className="p-4">
+                  {SYNC_PROVIDERS["google-drive"]}
+                </RadioGroup.Item>
+                <Separator className="mx-4" />
+                <RadioGroup.Item value="dropbox" className="p-4">
+                  {SYNC_PROVIDERS.dropbox}
+                </RadioGroup.Item>
+              </RadioGroup>
+            )}
+          </ListGroup>
+          <View className="flex-row flex-wrap gap-2">
+            {status.provider ? (
+              <>
+                {status.isSignInRequired && (
+                  <Button isDisabled={isDisabled} onPress={connect}>
+                    Sign in again
+                  </Button>
+                )}
+                <Button isDisabled={isDisabled} onPress={sync}>
+                  <RefreshCw size={16} color={foreground} />
+                  <Button.Label>
+                    {status.isBusy && !connectStage ? "Syncing…" : "Sync now"}
+                  </Button.Label>
+                </Button>
+                <Button
+                  variant="outline"
+                  isDisabled={isDisabled}
+                  onPress={disconnect}
+                >
+                  Disconnect
+                </Button>
+              </>
+            ) : (
+              <Button isDisabled={isDisabled} onPress={connect}>
+                {connectStage
+                  ? "Connecting…"
+                  : `Connect ${SYNC_PROVIDERS[selected]}`}
+              </Button>
+            )}
+            {connectStage === "signing-in" && (
+              <Button variant="outline" onPress={cancelSyncSignIn}>
+                Cancel sign-in
+              </Button>
+            )}
+          </View>
+          {connectMessage && (
+            <Alert>
+              <Spinner size="sm" />
+              <Alert.Content>
+                <Alert.Title>{connectMessage.title}</Alert.Title>
+                <Alert.Description>
+                  {connectMessage.description}
+                </Alert.Description>
+              </Alert.Content>
+            </Alert>
           )}
           {message && (
-            <Typography type="body-sm" color="muted">
+            <Typography type="body-sm" color="muted" className="px-1">
               {message}
             </Typography>
           )}
-          {(status.error ?? failure) && (
-            <Typography type="body-sm" className="text-danger">
-              {status.error ?? failure}
+          {error && (
+            <Typography type="body-sm" className="text-danger px-1">
+              {error}
             </Typography>
           )}
+          <Typography type="body-sm" color="muted" className="px-1">
+            Notes and drawings are backed up to a lunarscribe-bak-files folder
+            every five minutes.
+          </Typography>
         </View>
-        <Separator />
-        <Typography type="body-sm" color="muted">
-          Leaving the editor saves the open file and syncs it right away. If a
-          note changed on two devices, Lunarscribe keeps both copies and lets
-          you know. On the first sync, the most recently edited copy is kept.
-        </Typography>
       </ScrollView>
     </View>
   );

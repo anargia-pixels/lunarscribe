@@ -17,7 +17,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaListener } from "react-native-safe-area-context";
 import { Uniwind, withUniwind } from "uniwind";
 
+import { useColorPalette } from "@/components/use-color-palette";
 import { useSync } from "@/components/use-sync";
+import { applyNativeColorTheme } from "@/lib/native-color-theme";
 import { useAppearanceStore } from "@/stores/appearance-store";
 
 const StyledGestureHandlerRootView = withUniwind(GestureHandlerRootView);
@@ -26,9 +28,10 @@ const StyledSafeAreaListener = withUniwind(SafeAreaListener);
 
 const SCREEN_OPTIONS = { headerShown: false };
 
-/** App shell shared by every screen: fonts, theme, and HeroUI's providers. */
+/** App shell shared by every screen: fonts, theme, color theme, and HeroUI's providers. */
 export default function RootLayout() {
   const theme = useAppearanceStore((state) => state.theme);
+  const palette = useColorPalette();
   const background = useThemeColor("background");
 
   useSync();
@@ -44,8 +47,9 @@ export default function RootLayout() {
 
   useLayoutEffect(() => {
     Uniwind.setTheme(theme);
+    applyNativeColorTheme(theme, palette);
     setStatusBarStyle(theme === "dark" ? "light" : "dark");
-  }, [theme]);
+  }, [theme, palette]);
 
   // Screens, and the root view behind them during transitions, use the app's
   // background instead of the navigation and system defaults, so nothing flashes.

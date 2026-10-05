@@ -1,15 +1,17 @@
+import type { ColorPalette } from "@lunarscribe/components/themes/color-themes";
 import { useCallback, useMemo, useState } from "react";
 
 import DrawingDom from "@/components/drawing-dom";
 import MarkdownDom from "@/components/markdown-dom";
+import { useColorPalette } from "@/components/use-color-palette";
 import type { Theme } from "@/lib/editor-types";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import { type TextBuffer, useBufferStore } from "@/stores/buffer-store";
 
 /**
- * Runs before the DOM component page loads. It applies the theme class, so the
- * page's CSS never paints the other theme before React mounts, and sets the globals
- * Expo's page reads its host OS and initial props from: Expo Go has no
+ * Runs before the DOM component page loads. It applies the theme class and the
+ * color theme, so the page never paints other colors before React mounts, and sets
+ * the globals Expo's page reads its host OS and initial props from: Expo Go has no
  * `@expo/dom-webview` view, so the component renders in `react-native-webview`,
  * whose Android bridge attaches after the page script has looked for them. Later
  * props still arrive through Expo as `$$props`.
@@ -18,11 +20,15 @@ function createPageStartScript(props: {
   content: string;
   contentKey: string;
   theme: Theme;
+  palette: ColorPalette | null;
 }) {
   const initialProps = { names: ["onChange"], props };
 
   return [
     `document.documentElement.classList.add(${JSON.stringify(props.theme)});`,
+    `for (const [token, value] of Object.entries(${JSON.stringify(props.palette ?? {})})) {`,
+    "  document.documentElement.style.setProperty(`--${token}`, value);",
+    "}",
     `window.$$EXPO_DOM_HOST_OS = ${JSON.stringify(process.env.EXPO_OS)};`,
     `window.$$EXPO_INITIAL_PROPS = ${JSON.stringify(initialProps)};`,
     "true;",
@@ -36,6 +42,7 @@ function createPageStartScript(props: {
  */
 export function EditorWebView({ buffer }: { buffer: TextBuffer }) {
   const theme = useAppearanceStore((state) => state.theme);
+  const palette = useColorPalette();
   const setContent = useBufferStore((state) => state.setContent);
   const { id, syncRevision, kind } = buffer;
 
@@ -50,7 +57,7 @@ export function EditorWebView({ buffer }: { buffer: TextBuffer }) {
 
   // Only the first page load reads it, so it stays fixed like Expo's initial props.
   const [pageStartScript] = useState(() =>
-    createPageStartScript({ ...opened, theme }),
+    createPageStartScript({ ...opened, theme, palette }),
   );
 
   const handleChange = useCallback(
@@ -66,6 +73,7 @@ export function EditorWebView({ buffer }: { buffer: TextBuffer }) {
         content={opened.content}
         contentKey={opened.contentKey}
         theme={theme}
+        palette={palette}
         onChange={handleChange}
         dom={{
           useExpoDOMWebView: false,
@@ -79,6 +87,6 @@ export function EditorWebView({ buffer }: { buffer: TextBuffer }) {
         }}
       />
     ),
-    [EditorDom, opened, theme, handleChange, pageStartScript],
+    [EditorDom, opened, theme, palette, handleChange, pageStartScript],
   );
 }

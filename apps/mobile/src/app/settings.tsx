@@ -10,10 +10,11 @@ import {
   Typography,
   useThemeColor,
 } from "heroui-native";
-import { ChevronLeft, RefreshCw } from "lucide-react-native";
+import { ChevronLeft, RefreshCw, RotateCcw } from "lucide-react-native";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 
+import { ColorThemeSelect } from "@/components/color-theme-select";
 import {
   cancelSyncSignIn,
   connectSync,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/sync/sync-service";
 import { isSyncProvider, SYNC_PROVIDERS } from "@/lib/sync/sync-types";
 import type { SyncProvider, SyncStatus } from "@/lib/sync/sync-types";
+import { useAppearanceStore } from "@/stores/appearance-store";
 import { useSyncStore } from "@/stores/sync-store";
 
 /** Connecting, or signing in again, signs in first and then syncs. */
@@ -55,11 +57,25 @@ function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
   };
 }
 
-/** Settings screen; for now it holds the Syncing section. */
+/** Settings screen: the Appearances and Syncing sections. */
 export default function SettingsScreen() {
   const router = useRouter();
   const foreground = useThemeColor("foreground");
   const status = useSyncStore();
+  const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
+  const darkColorTheme = useAppearanceStore((state) => state.darkColorTheme);
+
+  const setLightColorTheme = useAppearanceStore(
+    (state) => state.setLightColorTheme,
+  );
+
+  const setDarkColorTheme = useAppearanceStore(
+    (state) => state.setDarkColorTheme,
+  );
+
+  const resetColorThemes = useAppearanceStore(
+    (state) => state.resetColorThemes,
+  );
 
   const [selection, setSelection] = useState<SyncProvider>(
     status.provider ?? "google-drive",
@@ -136,6 +152,33 @@ export default function SettingsScreen() {
         </Typography.Heading>
       </View>
       <ScrollView contentContainerClassName="gap-4 p-4">
+        <View className="gap-1">
+          <Typography.Heading type="h6">Appearances</Typography.Heading>
+          <Typography type="body-sm" color="muted">
+            A color theme restyles every color in the app. Each theme picks its
+            own.
+          </Typography>
+        </View>
+        <ColorThemeSelect
+          theme="light"
+          colorTheme={lightColorTheme}
+          onColorThemeChange={setLightColorTheme}
+        />
+        <ColorThemeSelect
+          theme="dark"
+          colorTheme={darkColorTheme}
+          onColorThemeChange={setDarkColorTheme}
+        />
+        <Button
+          variant="outline"
+          className="self-start"
+          isDisabled={lightColorTheme === null && darkColorTheme === null}
+          onPress={resetColorThemes}
+        >
+          <RotateCcw size={16} color={foreground} />
+          <Button.Label>Reset to defaults</Button.Label>
+        </Button>
+        <Separator />
         <View className="gap-1">
           <Typography.Heading type="h6">Syncing</Typography.Heading>
           <Typography type="body-sm" color="muted">

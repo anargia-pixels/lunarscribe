@@ -11,9 +11,10 @@ export default function MarkdownDom({
   content,
   contentKey,
   theme,
+  palette,
   onChange,
 }: EditorDomProps) {
-  useEditorDomPage(theme);
+  useEditorDomPage(theme, palette);
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">

@@ -9,9 +9,14 @@ import {
   type SerializedLexicalNode,
   type Spread,
 } from "lexical";
-import type { JSX } from "react";
+import { type JSX, lazy, Suspense } from "react";
 
-import { MathComponent } from "./math-component";
+// Lazy, as in Lexical's playground: the component imports this node back.
+const MathComponent = lazy(() =>
+  import("./math-component").then((module) => ({
+    default: module.MathComponent,
+  })),
+);
 
 type SerializedMathNode = Spread<
   { equation: string; inline: boolean },
@@ -125,11 +130,13 @@ export class MathNode extends DecoratorNode<JSX.Element> {
 
   decorate(): JSX.Element {
     return (
-      <MathComponent
-        equation={this.getEquation()}
-        inline={this.isInline()}
-        nodeKey={this.getKey()}
-      />
+      <Suspense fallback={null}>
+        <MathComponent
+          equation={this.getEquation()}
+          inline={this.isInline()}
+          nodeKey={this.getKey()}
+        />
+      </Suspense>
     );
   }
 }

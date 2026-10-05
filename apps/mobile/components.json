@@ -1,0 +1,8 @@
+{
+  "tailwind": {
+    "css": "src/global.css"
+  },
+  "aliases": {
+    "ui": "@lunarscribe/components/ui"
+  }
+}

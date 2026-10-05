@@ -1,0 +1,23 @@
+@import "@lunarscribe/components/globals.css";
+
+/* Shared components live outside this folder; scan them for classes too. */
+@source "../../../../packages/components/src";
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  /* Set by the editor from the visual viewport, so iOS fits it above the keyboard. */
+  #root {
+    height: var(--editor-height, 100%);
+  }
+
+  body {
+    /* The app draws the header; the page only scrolls inside the editor. */
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}

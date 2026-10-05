@@ -107,9 +107,11 @@ export function FluidHighlight({
       indicator.setAttribute("data-active", "");
     };
 
+    // Rows hidden with `display: none` have no boxes, and would read as sitting at 0,0.
     const enabledRows = () =>
       Array.from(container.querySelectorAll<HTMLElement>(rows)).filter(
-        (row) => !row.matches(DISABLED_SELECTOR),
+        (row) =>
+          !row.matches(DISABLED_SELECTOR) && row.getClientRects().length > 0,
       );
 
     let frame = 0;

@@ -1,0 +1,91 @@
+@import "tailwindcss";
+@import "uniwind";
+@import "heroui-native/styles";
+
+@source "../node_modules/heroui-native/lib";
+
+/* HeroUI's tokens, filled with Lunarscribe's palettes: the warm paper light theme
+   and Catppuccin Mocha (https://catppuccin.com/palette) for dark. */
+@layer theme {
+  :root {
+    @variant light {
+      --background: #f5f1e6;
+      --foreground: #4a3f35;
+      --surface: #fffcf5;
+      --surface-foreground: #4a3f35;
+      --surface-secondary: #ece5d8;
+      --surface-secondary-foreground: #4a3f35;
+      --surface-tertiary: #e2d8c3;
+      --surface-tertiary-foreground: #5c4d3f;
+      --overlay: #fffcf5;
+      --overlay-foreground: #4a3f35;
+      --muted: #7d6b56;
+      --default: #e2d8c3;
+      --default-foreground: #5c4d3f;
+      --accent: #a67c52;
+      --accent-foreground: #ffffff;
+      --field-background: #fffcf5;
+      --field-foreground: #4a3f35;
+      --field-placeholder: #7d6b56;
+      --success: #40a02b;
+      --success-foreground: #ffffff;
+      --warning: #df8e1d;
+      --warning-foreground: #4a3f35;
+      --danger: #b54a35;
+      --danger-foreground: #ffffff;
+      --segment: #fffcf5;
+      --segment-foreground: #4a3f35;
+      --border: #dbd0ba;
+      --separator: #dbd0ba;
+      --focus: #a67c52;
+      --link: #a67c52;
+    }
+
+    @variant dark {
+      --background: #1e1e2e; /* base */
+      --foreground: #cdd6f4; /* text */
+      --surface: #181825; /* mantle */
+      --surface-foreground: #cdd6f4;
+      --surface-secondary: #313244; /* surface0 */
+      --surface-secondary-foreground: #cdd6f4;
+      --surface-tertiary: #45475a; /* surface1 */
+      --surface-tertiary-foreground: #cdd6f4;
+      --overlay: #181825;
+      --overlay-foreground: #cdd6f4;
+      --muted: #a6adc8; /* subtext0 */
+      --default: #313244;
+      --default-foreground: #cdd6f4;
+      --accent: #cba6f7; /* mauve */
+      --accent-foreground: #11111b; /* crust */
+      --field-background: #181825;
+      --field-foreground: #cdd6f4;
+      --field-placeholder: #a6adc8;
+      --success: #a6e3a1; /* green */
+      --success-foreground: #11111b;
+      --warning: #f9e2af; /* yellow */
+      --warning-foreground: #11111b;
+      --danger: #f38ba8; /* red */
+      --danger-foreground: #11111b;
+      --segment: #313244;
+      --segment-foreground: #cdd6f4;
+      --border: #313244;
+      --separator: #45475a;
+      --focus: #cba6f7;
+      --link: #cba6f7;
+    }
+  }
+}
+
+/* Poppins, Roboto Mono and the logo's Pixelify Sans, bundled by @expo-google-fonts so
+   they render offline. */
+@theme {
+  --radius: 0.25rem;
+  /* Fields round like HeroUI's surfaces and tabs, so the search matches the lists. */
+  --field-radius: calc(var(--radius) * 3);
+  --font-normal: "Poppins_400Regular";
+  --font-medium: "Poppins_500Medium";
+  --font-semibold: "Poppins_600SemiBold";
+  --font-bold: "Poppins_700Bold";
+  --font-mono: "RobotoMono_400Regular";
+  --font-logo: "PixelifySans_400Regular";
+}

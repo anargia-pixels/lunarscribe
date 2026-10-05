@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { View } from "react-native";
 
 import { DarkmodeToggle } from "@/components/darkmode-toggle";
-import { EditorWebView } from "@/components/editor-webview";
+import { EditorSlot } from "@/components/editor-host";
 import { FileErrorAlert } from "@/components/file-error-alert";
 import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
 import { syncFiles } from "@/lib/sync/sync-service";
@@ -77,7 +77,7 @@ export default function EditorScreen() {
         <DarkmodeToggle />
       </View>
       <FileErrorAlert />
-      <EditorWebView buffer={buffer} />
+      <EditorSlot kind={buffer.kind} />
     </View>
   );
 }

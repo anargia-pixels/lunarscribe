@@ -9,9 +9,20 @@ import type { Theme } from "@/lib/editor-types";
 /**
  * Page setup shared by the editor DOM components: applies the theme and its color
  * theme, and sizes the page to the visual viewport, since iOS keeps the WebView
- * full height under the keyboard.
+ * full height under the keyboard. A hidden page drops its focus, so it does not
+ * keep the keyboard open or push Android's focus onto another screen's input.
  */
-export function useEditorDomPage(theme: Theme, palette: ColorPalette | null) {
+export function useEditorDomPage(
+  theme: Theme,
+  palette: ColorPalette | null,
+  isShown: boolean,
+) {
+  useEffect(() => {
+    if (!isShown && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }, [isShown]);
+
   useEffect(() => {
     const viewport = window.visualViewport;
 

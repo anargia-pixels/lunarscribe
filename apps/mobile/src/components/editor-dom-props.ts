@@ -13,6 +13,7 @@ export type EditorDomProps = {
   contentKey: string;
   theme: Theme;
   palette: ColorPalette | null;
+  isShown: boolean; // false while the editor host hides the page
   onChange: (content: string) => Promise<void>;
   dom?: DOMProps;
 };

@@ -1,12 +1,35 @@
-import type { ColorPalette } from "@lunarscribe/components/themes/color-themes";
 import { useCallback, useMemo, useState } from "react";
 
 import DrawingDom from "@/components/drawing-dom";
+import type { EditorDomProps } from "@/components/editor-dom-props";
 import MarkdownDom from "@/components/markdown-dom";
 import { useColorPalette } from "@/components/use-color-palette";
-import type { Theme } from "@/lib/editor-types";
+import type { EditorKind } from "@/lib/editor-types";
 import { useAppearanceStore } from "@/stores/appearance-store";
-import { type TextBuffer, useBufferStore } from "@/stores/buffer-store";
+import {
+  type TextBuffer,
+  useActiveBuffer,
+  useBufferStore,
+} from "@/stores/buffer-store";
+import { useEditorHostStore } from "@/stores/editor-host-store";
+
+/** The buffer the editor shows; `id` is null on the empty warm-up page. */
+type OpenedBuffer = { id: string | null; contentKey: string; content: string };
+
+const EMPTY_PAGE: OpenedBuffer = { id: null, contentKey: "", content: "" };
+
+// Reload the editor only for a new buffer or a sync revision.
+function getContentKey(buffer: TextBuffer) {
+  return `${buffer.id}:${buffer.syncRevision}`;
+}
+
+function openBuffer(buffer: TextBuffer): OpenedBuffer {
+  return {
+    id: buffer.id,
+    contentKey: getContentKey(buffer),
+    content: buffer.content,
+  };
+}
 
 /**
  * Runs before the DOM component page loads. It applies the theme class and the
@@ -16,12 +39,9 @@ import { type TextBuffer, useBufferStore } from "@/stores/buffer-store";
  * whose Android bridge attaches after the page script has looked for them. Later
  * props still arrive through Expo as `$$props`.
  */
-function createPageStartScript(props: {
-  content: string;
-  contentKey: string;
-  theme: Theme;
-  palette: ColorPalette | null;
-}) {
+function createPageStartScript(
+  props: Omit<EditorDomProps, "onChange" | "dom">,
+) {
   const initialProps = { names: ["onChange"], props };
 
   return [
@@ -36,33 +56,50 @@ function createPageStartScript(props: {
 }
 
 /**
- * Hosts the editor DOM component for the buffer's kind. Its props are memoized
- * because Expo sends them into the WebView on every render, and the content must
- * not travel on each edit.
+ * Hosts the editor DOM component of one kind and shows the active buffer of that
+ * kind. Props are memoized because Expo sends them to the WebView on each render.
  */
-export function EditorWebView({ buffer }: { buffer: TextBuffer }) {
+export function EditorWebView({
+  kind,
+  isShown,
+}: {
+  kind: EditorKind;
+  isShown: boolean;
+}) {
   const theme = useAppearanceStore((state) => state.theme);
   const palette = useColorPalette();
   const setContent = useBufferStore((state) => state.setContent);
-  const { id, syncRevision, kind } = buffer;
+  const buffer = useActiveBuffer();
+  const activeBuffer = buffer?.kind === kind ? buffer : undefined;
 
-  // The editor owns the content after it opens; only a new buffer or revision reloads it.
-  const contentKey = `${id}:${syncRevision}`;
+  const [opened, setOpened] = useState(() =>
+    activeBuffer ? openBuffer(activeBuffer) : EMPTY_PAGE,
+  );
 
-  const [opened, setOpened] = useState({ contentKey, content: buffer.content });
-
-  if (opened.contentKey !== contentKey) {
-    setOpened({ contentKey, content: buffer.content });
+  if (activeBuffer && opened.contentKey !== getContentKey(activeBuffer)) {
+    setOpened(openBuffer(activeBuffer));
   }
 
   // Only the first page load reads it, so it stays fixed like Expo's initial props.
   const [pageStartScript] = useState(() =>
-    createPageStartScript({ ...opened, theme, palette }),
+    createPageStartScript({
+      content: opened.content,
+      contentKey: opened.contentKey,
+      theme,
+      palette,
+      isShown,
+    }),
   );
 
+  const openedId = opened.id;
+
   const handleChange = useCallback(
-    async (content: string) => setContent(id, content),
-    [id, setContent],
+    async (content: string) => {
+      if (openedId) {
+        setContent(openedId, content);
+      }
+    },
+    [openedId, setContent],
   );
 
   const EditorDom = kind === "drawing" ? DrawingDom : MarkdownDom;
@@ -74,6 +111,7 @@ export function EditorWebView({ buffer }: { buffer: TextBuffer }) {
         contentKey={opened.contentKey}
         theme={theme}
         palette={palette}
+        isShown={isShown}
         onChange={handleChange}
         dom={{
           useExpoDOMWebView: false,
@@ -84,9 +122,22 @@ export function EditorWebView({ buffer }: { buffer: TextBuffer }) {
           overScrollMode: "never",
           contentInsetAdjustmentBehavior: "never",
           hideKeyboardAccessoryView: true,
+          onLoadEnd: () =>
+            useEditorHostStore.setState((state) => ({
+              isLoaded: { ...state.isLoaded, [kind]: true },
+            })),
         }}
       />
     ),
-    [EditorDom, opened, theme, palette, handleChange, pageStartScript],
+    [
+      EditorDom,
+      kind,
+      opened,
+      theme,
+      palette,
+      isShown,
+      handleChange,
+      pageStartScript,
+    ],
   );
 }

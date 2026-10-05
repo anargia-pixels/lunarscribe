@@ -17,6 +17,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaListener } from "react-native-safe-area-context";
 import { Uniwind, withUniwind } from "uniwind";
 
+import { EditorHost } from "@/components/editor-host";
 import { useColorPalette } from "@/components/use-color-palette";
 import { useSync } from "@/components/use-sync";
 import { applyNativeColorTheme } from "@/lib/native-color-theme";
@@ -80,6 +81,7 @@ export default function RootLayout() {
         <HeroUINativeProvider>
           <ThemeProvider value={navigationTheme}>
             <Stack screenOptions={SCREEN_OPTIONS} />
+            <EditorHost />
           </ThemeProvider>
         </HeroUINativeProvider>
       </StyledSafeAreaListener>

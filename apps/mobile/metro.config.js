@@ -2,11 +2,8 @@ const { getDefaultConfig } = require("expo/metro-config");
 
 const { withUniwindConfig } = require("uniwind/metro");
 
-// Remove unused exports, such as lucide icons, from production bundles.
-process.env.EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH ??= "1";
-
-process.env.EXPO_UNSTABLE_TREE_SHAKING ??= "1";
-
+// Leave Expo's experimental tree shaking off: it emits Uniwind's style module outside
+// a module wrapper, so release builds crash on startup with "Property 'require' doesn't exist".
 const config = getDefaultConfig(__dirname);
 
 // Skip native sources: they hold no JS and slow the watcher without Watchman.

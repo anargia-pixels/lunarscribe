@@ -1,4 +1,3 @@
-import { Button } from "@lunarscribe/components/ui/button";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -8,29 +7,6 @@ import type { OAuthProvider } from "./oauth";
 import styles from "./sign-in-page.css?inline";
 
 // Provider marks
-function GoogleLogo() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-      <path
-        fill="var(--google-blue)"
-        d="M43.61 24.46c0-1.36-.12-2.66-.35-3.92H24v7.42h11a9.4 9.4 0 0 1-4.08 6.16v5.13h6.62c3.87-3.56 6.07-8.8 6.07-14.79Z"
-      />
-      <path
-        fill="var(--google-green)"
-        d="M24 44c5.5 0 10.1-1.82 13.54-4.75l-6.62-5.13C29.09 35.35 26.75 36.1 24 36.1c-5.32 0-9.83-3.59-11.45-8.42H5.72v5.3A20 20 0 0 0 24 44Z"
-      />
-      <path
-        fill="var(--google-yellow)"
-        d="M12.55 27.68a12 12 0 0 1 0-7.36v-5.3H5.72a20 20 0 0 0 0 17.96l6.83-5.3Z"
-      />
-      <path
-        fill="var(--google-red)"
-        d="M24 11.9c3 0 5.69 1.03 7.81 3.05l5.86-5.86A19.6 19.6 0 0 0 24 4 20 20 0 0 0 5.72 15.02l6.83 5.3C14.17 15.49 18.68 11.9 24 11.9Z"
-      />
-    </svg>
-  );
-}
-
 function DriveLogo() {
   return (
     <svg width="44" height="40" viewBox="0 0 48 42" aria-hidden="true">
@@ -60,8 +36,7 @@ const PROVIDERS = {
 // Page layout
 type SignInCardProps = {
   provider: OAuthProvider;
-  // The Google page script moves "loading" on through its own states.
-  state: "loading" | "success" | "failed";
+  state: "success" | "failed";
   heading: string;
   description: ReactNode;
   children?: ReactNode;
@@ -88,7 +63,6 @@ function SignInCard({
       </header>
       {/* A finished sign-in swaps the provider mark for its outcome. */}
       <main
-        id="sign-in"
         data-state={state}
         className="group border-border bg-card flex w-full flex-col items-center rounded-2xl border px-5 pt-8 pb-6 text-center @2xl:px-8 @2xl:pt-10 @2xl:pb-8"
       >
@@ -117,16 +91,10 @@ function SignInCard({
             />
           </svg>
         </div>
-        <h1
-          id="sign-in-heading"
-          className="mt-5 text-2xl/snug font-semibold tracking-tight text-balance"
-        >
+        <h1 className="mt-5 text-2xl/snug font-semibold tracking-tight text-balance">
           {heading}
         </h1>
-        <p
-          id="description"
-          className="text-muted-foreground mt-2.5 text-pretty"
-        >
+        <p className="text-muted-foreground mt-2.5 text-pretty">
           {description}
         </p>
         {children}
@@ -139,7 +107,7 @@ function SignInCard({
 }
 
 /** Wrap rendered markup in a page that needs only inline styles and images. */
-function createPage(title: string, body: string, script = "") {
+function createPage(title: string, body: string) {
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -150,186 +118,8 @@ function createPage(title: string, body: string, script = "") {
   </head>
   <body class="bg-background text-foreground @container grid min-h-svh place-items-center px-5 py-10 text-sm/relaxed antialiased">
     ${body}
-${script}
   </body>
 </html>`;
-}
-
-// Browser sign-in
-/** The browser token model runs on the loopback page, with no app secret. */
-export function createGoogleSignInPage(
-  clientId: string,
-  state: string,
-  nonce: string,
-) {
-  const layout = renderToStaticMarkup(
-    <SignInCard
-      provider="google-drive"
-      state="loading"
-      heading="Connect Google Drive"
-      description={
-        <>
-          Lunarscribe keeps a copy of your notes and drawings in a folder called{" "}
-          <strong className="text-foreground font-semibold wrap-anywhere">
-            lunarscribe-bak-files
-          </strong>{" "}
-          in your Google Drive.
-        </>
-      }
-    >
-      <Button
-        id="signin"
-        type="button"
-        variant="outline"
-        size="lg"
-        disabled
-        className="mt-7 w-full group-data-[state=success]:hidden"
-      >
-        <GoogleLogo />
-        <span id="button-label">Loading Google sign-in…</span>
-      </Button>
-      <output
-        id="message"
-        aria-live="polite"
-        className="text-muted-foreground group-data-[state=error]:text-destructive mt-3.5 block min-h-5 text-xs text-pretty"
-      >
-        Getting sign-in ready…
-      </output>
-      <p className={NOTE_CLASS}>
-        Lunarscribe can only see the files it makes in your Drive.
-      </p>
-      <noscript className="text-destructive mt-3 block">
-        Turn on JavaScript in your browser, then select Connect again in
-        Lunarscribe.
-      </noscript>
-    </SignInCard>,
-  );
-
-  return createPage(
-    "Connect Google Drive",
-    layout,
-    `    <script nonce="${nonce}">
-      const panel = document.getElementById("sign-in");
-      const heading = document.getElementById("sign-in-heading");
-      const description = document.getElementById("description");
-      const button = document.getElementById("signin");
-      const label = document.getElementById("button-label");
-      const message = document.getElementById("message");
-      let client;
-      let library;
-      let loadTimeout;
-
-      // Keep the server-rendered button flags in sync with its browser state.
-      function setDisabled(isDisabled) {
-        button.disabled = isDisabled;
-        button.setAttribute("aria-disabled", String(isDisabled));
-        button.toggleAttribute("data-disabled", isDisabled);
-        button.tabIndex = isDisabled ? -1 : 0;
-      }
-
-      function showError(text, canRetry = true) {
-        panel.dataset.state = "error";
-        message.textContent = text;
-        setDisabled(!canRetry);
-        label.textContent = client ? "Sign in with Google" : "Try again";
-      }
-
-      // Send the token to Lunarscribe through the local callback.
-      async function completeSignIn(tokenResponse) {
-        if (tokenResponse.error || !tokenResponse.access_token) {
-          showError("Sign-in did not finish. Try again and choose Allow when Google asks.");
-          return;
-        }
-
-        panel.dataset.state = "sending";
-        message.textContent = "Almost done…";
-        label.textContent = "Almost done…";
-        setDisabled(true);
-
-        try {
-          const response = await fetch("/oauth/google-drive/token", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({...tokenResponse, state: ${JSON.stringify(state)}}),
-            signal: AbortSignal.timeout(15000)
-          });
-
-          if (!response.ok) {
-            showError("This sign-in page has expired. Go back to Lunarscribe and select Connect again.", false);
-            return;
-          }
-
-          panel.dataset.state = "success";
-          heading.textContent = "You are signed in";
-          description.textContent = "Go back to Lunarscribe. Your files will start syncing in a moment.";
-          message.textContent = "You can close this browser tab.";
-        } catch {
-          showError("Lunarscribe did not answer. Go back to the app and select Connect again.", false);
-        }
-      }
-
-      function requestSignIn() {
-        panel.dataset.state = "authorizing";
-        message.textContent = "Finish in the Google window. If nothing opens, allow pop-ups for this page.";
-        label.textContent = "Waiting for Google…";
-        setDisabled(true);
-
-        try {
-          client.requestAccessToken({prompt: "select_account"});
-        } catch {
-          showError("The Google window could not open. Allow pop-ups for this page and try again.");
-        }
-      }
-
-      function initializeGoogleClient() {
-        clearTimeout(loadTimeout);
-
-        try {
-          client = google.accounts.oauth2.initTokenClient({
-            client_id: ${JSON.stringify(clientId.trim())},
-            scope: "https://www.googleapis.com/auth/drive.file",
-            callback: completeSignIn,
-            error_callback: (error) => showError(error.type === "popup_failed_to_open"
-              ? "The Google window could not open. Allow pop-ups for this page and try again."
-              : "The Google window was closed. You can try signing in again.")
-          });
-          panel.dataset.state = "ready";
-          setDisabled(false);
-          label.textContent = "Sign in with Google";
-          message.textContent = "";
-          button.onclick = requestSignIn;
-        } catch {
-          showError("Google sign-in could not start. Try again, or select Connect again in Lunarscribe.");
-        }
-      }
-
-      function loadGoogleLibrary() {
-        clearTimeout(loadTimeout);
-        if (library) library.remove();
-        panel.dataset.state = "loading";
-        setDisabled(true);
-        label.textContent = "Loading Google sign-in…";
-        message.textContent = "Getting sign-in ready…";
-        library = document.createElement("script");
-        library.src = "https://accounts.google.com/gsi/client";
-        library.onload = initializeGoogleClient;
-        library.onerror = () => {
-          clearTimeout(loadTimeout);
-          showError("Google sign-in could not load. Check your internet connection and try again.");
-        };
-        button.onclick = loadGoogleLibrary;
-        loadTimeout = setTimeout(() => {
-          library.onload = null;
-          library.onerror = null;
-          library.remove();
-          showError("Google sign-in is taking too long. Check your internet connection and try again.");
-        }, 12000);
-        document.head.appendChild(library);
-      }
-
-      loadGoogleLibrary();
-    </script>`,
-  );
 }
 
 /** Shown after the provider sends the browser back to Lunarscribe. */

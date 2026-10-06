@@ -11,7 +11,8 @@ import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
 import { shell } from "electron";
 
 import type { SyncProvider } from "../../../lib/sync";
-import { createGoogleSignInPage, createSignInResultPage } from "./sign-in-page";
+import publicCredentials from "../public-creds.json";
+import { createSignInResultPage } from "./sign-in-page";
 
 // Authorization contracts
 export type OAuthProvider = Exclude<SyncProvider, "github">;
@@ -41,6 +42,36 @@ const TOKEN_URLS = {
   dropbox: "https://api.dropbox.com/oauth2/token",
 } as const;
 
+const AUTHORIZE_URLS = {
+  "google-drive": "https://accounts.google.com/o/oauth2/v2/auth",
+  dropbox: "https://www.dropbox.com/oauth2/authorize",
+} as const;
+
+const REVOKE_URLS = {
+  "google-drive": "https://oauth2.googleapis.com/revoke",
+  dropbox: "https://api.dropboxapi.com/2/auth/token/revoke",
+} as const;
+
+const SCOPES = {
+  "google-drive": "https://www.googleapis.com/auth/drive.file",
+  dropbox:
+    "files.metadata.read files.metadata.write files.content.read files.content.write account_info.read",
+} as const;
+
+/** Authorize parameters that ask each provider for a refresh token. */
+const OFFLINE_PARAMETERS = {
+  "google-drive": { access_type: "offline", prompt: "consent" },
+  dropbox: { token_access_type: "offline" },
+} as const;
+
+/**
+ * Google's Desktop app clients send their secret with every token request. Google
+ * treats it as public for installed apps, so it ships in `public-creds.json`.
+ */
+const CLIENT_SECRETS: Partial<Record<OAuthProvider, string>> = {
+  "google-drive": publicCredentials.googleClientSecret,
+};
+
 // Browser authorization
 /** Stop the local server after success, failure, timeout, or cancel. */
 async function authorizeInBrowser<T>(
@@ -66,14 +97,7 @@ async function authorizeInBrowser<T>(
 
     return await new Promise<T>((resolve, reject) => {
       const timeout = setTimeout(
-        () =>
-          reject(
-            new Error(
-              provider === "google-drive"
-                ? "Google sign-in timed out. Try connecting again."
-                : "Sign-in timed out. Try connecting again.",
-            ),
-          ),
+        () => reject(new Error("Sign-in timed out. Try connecting again.")),
         180_000,
       );
 
@@ -106,108 +130,6 @@ async function authorizeInBrowser<T>(
   }
 }
 
-/** Google grants a browser access token; expiry requires another sign-in. */
-async function signInGoogle(
-  clientId: string,
-  signal: AbortSignal,
-): Promise<OAuthTokens> {
-  if (
-    !/^[a-zA-Z0-9._-]+\.apps\.googleusercontent\.com$/u.test(clientId.trim())
-  ) {
-    throw new Error(
-      "Enter the app's public Google Web application client ID before signing in.",
-    );
-  }
-
-  const state = randomBytes(32).toString("base64url");
-  const nonce = randomBytes(24).toString("base64url");
-  const pageUrl = SIGN_IN_URLS["google-drive"] + "?session=" + state;
-
-  return authorizeInBrowser<OAuthTokens>(
-    "google-drive",
-    pageUrl,
-    signal,
-    (request, response, resolve, reject) => {
-      if (
-        request.method === "GET" &&
-        request.url === `/oauth/google-drive?session=${state}`
-      ) {
-        response.setHeader("Content-Type", "text/html; charset=utf-8");
-        response.setHeader("Cache-Control", "no-store");
-        response.setHeader("Referrer-Policy", "no-referrer");
-        response.setHeader(
-          "Content-Security-Policy",
-          `default-src 'none'; script-src 'nonce-${nonce}' https://accounts.google.com; connect-src 'self' https://accounts.google.com; frame-src https://accounts.google.com; style-src 'unsafe-inline'; font-src data:; img-src data: https://accounts.google.com; base-uri 'none'; frame-ancestors 'none'`,
-        );
-        response.end(createGoogleSignInPage(clientId, state, nonce));
-
-        return;
-      }
-
-      if (
-        request.method !== "POST" ||
-        request.url !== "/oauth/google-drive/token" ||
-        request.headers.origin !== "http://127.0.0.1:53682"
-      ) {
-        response.writeHead(400).end("Invalid sign-in callback.");
-
-        return;
-      }
-
-      let serialized = "";
-      request.setEncoding("utf8");
-      request.on("data", (chunk: string) => {
-        serialized += chunk;
-
-        if (serialized.length > 16_384) {
-          request.destroy();
-          reject(new Error("Invalid sign-in callback."));
-        }
-      });
-      request.on("end", () => {
-        try {
-          const data = parseJson(serialized);
-
-          if (jsonString(data, "state") !== state) {
-            response.writeHead(400).end("Invalid sign-in state.");
-
-            return;
-          }
-
-          if (jsonString(data, "error", true)) {
-            throw new Error("Google sign-in was declined.");
-          }
-
-          const accessToken = jsonString(data, "access_token");
-          const duration = jsonNumber(data, "expires_in");
-
-          if (!accessToken || duration <= 0) {
-            throw new Error(
-              "Google sign-in did not return a usable access token.",
-            );
-          }
-
-          response.setHeader("Cache-Control", "no-store");
-          response.end("Signed in.");
-          resolve({
-            accessToken,
-            refreshToken: "",
-            expiresAt: Date.now() + duration * 1000,
-            clientId: clientId.trim(),
-          });
-        } catch {
-          response.writeHead(400).end("Sign-in failed.");
-          reject(
-            new Error(
-              "Google sign-in failed. Check the Web application client ID and authorized JavaScript origin, then retry.",
-            ),
-          );
-        }
-      });
-    },
-  );
-}
-
 // Token exchange
 /** Keep token response bodies out of renderer error messages. */
 async function requestTokens(
@@ -215,6 +137,12 @@ async function requestTokens(
   parameters: URLSearchParams,
   signal?: AbortSignal,
 ): Promise<OAuthTokens> {
+  const clientSecret = CLIENT_SECRETS[provider];
+
+  if (clientSecret) {
+    parameters.set("client_secret", clientSecret);
+  }
+
   const response = await fetch(TOKEN_URLS[provider], {
     method: "POST",
     body: parameters,
@@ -229,7 +157,7 @@ async function requestTokens(
       (response.status === 400 || response.status === 401)
     ) {
       throw new SyncSignInRequired(
-        "Dropbox needs sign-in again. Open Settings → Syncing and select Sign in again.",
+        `${provider === "google-drive" ? "Google Drive" : "Dropbox"} needs sign-in again. Open Settings → Syncing and select Sign in again.`,
       );
     }
 
@@ -265,28 +193,61 @@ export async function refreshTokens(
   return { ...next, refreshToken: next.refreshToken || tokens.refreshToken };
 }
 
+/**
+ * End the provider grant so a copied settings file stops working. Google revokes every
+ * client in the Cloud project, so all of the account's devices must sign in again.
+ * Dropbox revokes only the grant behind this device's access token.
+ */
+export async function revokeTokens(
+  provider: OAuthProvider,
+  tokens: OAuthTokens,
+) {
+  let request: RequestInit;
+
+  if (provider === "google-drive") {
+    request = {
+      body: new URLSearchParams({
+        token: tokens.refreshToken || tokens.accessToken,
+      }),
+    };
+  } else {
+    const { accessToken } =
+      tokens.expiresAt <= Date.now() + 60_000
+        ? await refreshTokens(provider, tokens)
+        : tokens;
+
+    request = { headers: { Authorization: `Bearer ${accessToken}` } };
+  }
+
+  const response = await fetch(REVOKE_URLS[provider], {
+    ...request,
+    method: "POST",
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Revocation failed (${response.status}).`);
+  }
+}
+
 // Provider sign-in
-/** Open provider sign-in and return tokens without an app secret. */
+/** Open provider sign-in in the browser and exchange its code for tokens. */
 export async function signIn(
   provider: OAuthProvider,
   clientId: string,
   signal: AbortSignal,
 ) {
-  if (provider === "google-drive") {
-    return signInGoogle(clientId, signal);
-  }
-
   if (!clientId.trim()) {
     throw new Error(
       "Enter the app's public OAuth client ID before signing in.",
     );
   }
 
-  // Dropbox checks callback state and PKCE before exchanging the code.
+  // Sign-in checks callback state and PKCE before exchanging the code.
   const verifier = randomBytes(48).toString("base64url");
   const state = randomBytes(32).toString("base64url");
-  const redirectUri = SIGN_IN_URLS.dropbox;
-  const authorization = new URL("https://www.dropbox.com/oauth2/authorize");
+  const redirectUri = SIGN_IN_URLS[provider];
+  const authorization = new URL(AUTHORIZE_URLS[provider]);
 
   authorization.search = new URLSearchParams({
     client_id: clientId.trim(),
@@ -295,9 +256,8 @@ export async function signIn(
     code_challenge: createHash("sha256").update(verifier).digest("base64url"),
     code_challenge_method: "S256",
     state,
-    token_access_type: "offline",
-    scope:
-      "files.metadata.read files.metadata.write files.content.read files.content.write account_info.read",
+    scope: SCOPES[provider],
+    ...OFFLINE_PARAMETERS[provider],
   }).toString();
 
   const code = await authorizeInBrowser<string>(

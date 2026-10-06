@@ -1,7 +1,6 @@
 /* The page is inlined into a loopback response, so Tailwind scans only its markup. */
 @import "tailwindcss" source(none);
 @source "./sign-in-page.tsx";
-@source "../../../../../../packages/components/src/components/ui/button.tsx";
 
 /* Fonts */
 @font-face {
@@ -51,9 +50,6 @@
 :root {
   color-scheme: light;
   --google-blue: #4285f4;
-  --google-green: #34a853;
-  --google-yellow: #fbbc05;
-  --google-red: #ea4335;
   --drive-green: #0f9d58;
   --drive-yellow: #f4b400;
   --dropbox-blue: #0061ff;

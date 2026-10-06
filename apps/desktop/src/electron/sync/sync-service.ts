@@ -9,7 +9,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 
 import type { SyncProvider, SyncResult, SyncStatus } from "../../lib/sync";
 import { SYNC_PROVIDERS } from "../../lib/sync";
-import { refreshTokens, signIn } from "./auth/oauth";
+import { refreshTokens, revokeTokens, signIn } from "./auth/oauth";
 import type { OAuthProvider } from "./auth/oauth";
 import {
   applySyncPulls,
@@ -95,7 +95,7 @@ export function registerSync(
     if (tokens.expiresAt <= Date.now() + 60_000) {
       if (!tokens.refreshToken) {
         throw new SyncSignInRequired(
-          "Google Drive needs browser sign-in again. Open Settings → Syncing and select Sign in again. Your writing is safe.",
+          "Your sync account needs sign-in again. Open Settings → Syncing and select Sign in again. Your writing is safe.",
         );
       }
 
@@ -341,6 +341,11 @@ export function registerSync(
     await runSyncOperation(async () => {
       if (settings.provider === "github") {
         await queue(folder, () => disconnectGithub(folder));
+      } else if (settings.provider && settings.tokens) {
+        // Best effort: disconnect still works offline or after the user revoked access.
+        await revokeTokens(settings.provider, settings.tokens).catch(
+          () => undefined,
+        );
       }
 
       const next = createEmptySettings();

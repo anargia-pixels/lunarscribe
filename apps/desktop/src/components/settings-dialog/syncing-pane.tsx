@@ -1,3 +1,4 @@
+import { ConfirmationDialog } from "@lunarscribe/components/confirmation-dialog/confirmation-dialog";
 import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
 import {
   Alert,
@@ -75,6 +76,7 @@ export function SyncingPane() {
 
   const [connectStage, setConnectStage] = useState<ConnectStage | null>(null);
   const [isPending, setPending] = useState(false);
+  const [isDisconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
 
   const isDisabled = status.busy || isPending;
 
@@ -212,7 +214,12 @@ export function SyncingPane() {
                 variant="outline"
                 disabled={isDisabled}
                 onClick={() => {
-                  void disconnect();
+                  // Google revokes access on every device, so ask first.
+                  if (status.provider === "google-drive") {
+                    setDisconnectConfirmOpen(true);
+                  } else {
+                    void disconnect();
+                  }
                 }}
               >
                 Disconnect
@@ -239,6 +246,17 @@ export function SyncingPane() {
             </Button>
           )}
         </div>
+        <ConfirmationDialog
+          open={isDisconnectConfirmOpen}
+          onOpenChange={setDisconnectConfirmOpen}
+          title="Disconnect Google Drive?"
+          description="Google removes Lunarscribe's access on every device signed in to this Google account. Each one has to sign in again to keep syncing. Your files stay on your devices and in Google Drive."
+          confirmLabel="Disconnect everywhere"
+          onConfirm={() => {
+            setDisconnectConfirmOpen(false);
+            void disconnect();
+          }}
+        />
         {connectMessage && (
           <Alert>
             <Spinner aria-hidden="true" />
@@ -266,8 +284,8 @@ export function SyncingPane() {
         </p>
         {selected === "google-drive" && (
           <p className="text-muted-foreground text-sm text-pretty">
-            Google Drive asks you to sign in again about once an hour. Syncing
-            picks up again after you sign in.
+            Google Drive renews your sign-in automatically. Disconnecting signs
+            out every device that uses this Google account.
           </p>
         )}
       </div>

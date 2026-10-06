@@ -1,255 +1,246 @@
 # Syncing saved writing
 
-Sync copies saved markdown and drawings between devices. You can use GitHub, Google Drive,
-or Dropbox. Google Drive and Dropbox are marked **WIP**. You can connect one provider at a
-time.
+Sync copies saved markdown and drawings between devices. Every app compares files the same
+way. The apps differ in which providers they offer, where they keep files, and how sign-in
+works.
 
-Sync includes `.md`, `.markdown`, `.txt`, and `.draw` files in the Lunarscribe documents
-folder. This folder is usually `~/Documents/lunarscribe/`. Sync does not include external
-files, unsaved buffers, or files in subfolders.
+| App     | Providers                     | Google Drive sign-in              |
+| ------- | ----------------------------- | --------------------------------- |
+| Desktop | GitHub, Google Drive, Dropbox | Renews automatically.             |
+| Web     | Google Drive, Dropbox         | Sign in again about once an hour. |
+| Mobile  | Google Drive, Dropbox         | Renews automatically.             |
+
+Google Drive and Dropbox are marked **WIP**. You can connect one provider at a time. Use
+the same account on each device.
+
+Sync includes saved files with the `.md`, `.markdown`, `.txt`, or `.draw` extension. It
+does not include unsaved buffers, external files, or files in subfolders.
 
 ## Connect a provider
 
 1. Open **Settings → General → Syncing**.
 2. Select a provider.
-3. Select **Connect**.
-4. For Google Drive or Dropbox, complete sign-in in your browser.
+3. Select **Connect**, then finish sign-in in the browser.
 
-Use the same account on each device. Each device must use the same OAuth application for
-Google Drive or Dropbox. The app includes the public application credentials.
+Google Drive and Dropbox use a folder named `lunarscribe-bak-files`. The app finds it or
+creates it. Google Drive keeps it in your Drive. Dropbox keeps it in the Dropbox App
+folder. If Google Drive has more than one folder with this name, Connect fails. Keep one
+folder, then connect again.
+
+Sync starts right after you connect.
+
+## Sync your files
+
+Sync runs when the app opens and every five minutes while it is open. A scheduled run is
+skipped when sync is busy or sign-in is required.
+
+| Action                                              | Result                                               |
+| --------------------------------------------------- | ---------------------------------------------------- |
+| Select **Sync now**                                 | Download and upload changes to saved files.          |
+| Press `Ctrl+S` (Linux) or `Cmd+S` (macOS)           | Save the active buffer, then upload its file.        |
+| Select **Force changes to remote** in a file's menu | Replace that file's remote copy with the local copy. |
+
+Automatic local saves still run after two seconds without edits. A failed sync never
+undoes a local save.
+
+Successful syncs show no toast. A **- Sync in progress** message, then a **- Sync
+successful** message, appears beside the active file's path. Conflicts and errors show
+toasts.
+
+## How sync decides which copy to keep
+
+### Google Drive and Dropbox
+
+Each file has a **shared base**: the version from its last successful sync. Sync compares
+the local copy and the remote copy with that base.
+
+| Local copy | Remote copy | Result                                                     |
+| ---------- | ----------- | ---------------------------------------------------------- |
+| `A`        | `A`         | Nothing to do.                                             |
+| `B`        | `A`         | Upload the local edit.                                     |
+| `A`        | `B`         | Download the remote edit, unless it is older.              |
+| `B`        | `B`         | Accept the matching version.                               |
+| `B`        | `C`         | Keep both copies and show a **Sync conflict** error toast. |
+
+Before a file has a shared base, the newer modification time wins. If the times are equal
+and the contents differ, sync reports a conflict. Uploads and downloads keep the original
+modification time.
+
+Sync compares whole files. It does not merge edits. A deletion on one side and an edit on
+the other is a conflict. Otherwise, a deletion removes the file on other devices. Google
+Drive moves deleted files to the trash.
+
+### GitHub (desktop only)
+
+GitHub fetches remote history and commits saved local changes. It combines compatible
+markdown edits but never drawing edits. It never adds conflict markers to your files. A
+conflict stops sync until you resolve it.
+
+## Force changes to remote
+
+Right-click a saved file in the sidebar, or open its ellipsis menu. Select **Force changes
+to remote**. The app saves any pending edits, then replaces the remote copy with the local
+copy. It creates the remote file if it is missing. Other remote files do not change.
+
+The action is unavailable for external files, while sync is busy, or when sign-in is
+required.
+
+## Resolve a sync problem
+
+A **Sync conflict** toast shows the file name and the reason. The app keeps both copies.
+Google Drive and Dropbox keep syncing the other files. GitHub stops until you resolve the
+conflict.
+
+To keep the local copy, select **Force changes to remote** for the file.
+
+To keep both versions:
+
+1. Copy any unsaved edits to a safe place.
+2. Compare the local file with the provider's copy.
+3. Make the copies match, or rename one copy.
+4. Select **Sync now**.
+
+Unsaved edits in an open buffer block a download of that file. Open buffers without
+pending edits update automatically.
+
+## Disconnect
+
+Open Syncing and select **Disconnect**. The app removes its credentials and sync history.
+Your saved files and the remote backup stay. On desktop, Disconnect also revokes the app's
+access, so a copied credentials file stops working:
+
+- **Dropbox:** only this device loses access.
+- **Google Drive:** Google revokes access for the whole app, so every device signed in to
+  that Google account must select **Sign in again**. The app asks you to confirm first.
+
+## Desktop
+
+- **Files:** the Lunarscribe documents folder, usually `~/Documents/lunarscribe/`.
+- **Credentials:** `sync/sync-settings.json` in the user data folder, readable only by
+  your user account.
+- **Google Drive and Dropbox:** both renew their access automatically. If you remove the
+  app's access, the app shows a toast and pauses background sync. Open Syncing and select
+  **Sign in again**.
 
 ### GitHub
 
-GitHub requires Git 2.38 or newer and the GitHub CLI (`gh`). Before you connect, run:
+GitHub needs Git 2.38 or newer and the GitHub CLI. Before you connect, run:
 
 ```sh
 gh auth login
 ```
 
-Lunarscribe finds your `lunarscribe-bak-files` repository. If it does not exist, the app
-creates it as a private repository. Lunarscribe does not check visibility afterwards, so
-you can make the repository public to share it.
-
-The app creates `.git` inside the Lunarscribe documents folder. New repositories use the
-`main` branch. Existing backups keep their default branch.
-
-### Google Drive and Dropbox
-
-The app finds or creates a folder named `lunarscribe-bak-files`. Google Drive stores this
-folder in your Drive. Dropbox stores it inside the Dropbox App folder.
-
-Google Drive requires sign-in again when its access token expires. The app shows a toast
-and pauses background sync. Open Syncing. Select **Sign in again**. Local saves continue
-while sync is paused.
-
-Dropbox can renew its access token automatically. If access is removed, the app asks you
-to sign in again.
-
-## Sync your files
-
-Sync starts after you connect and when Lunarscribe opens. It then runs every five minutes
-while Lunarscribe has an open window. It skips a scheduled run if sync is busy or sign-in
-is required.
-
-| Action                                                            | Result                                                                               |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Select **Sync now**                                               | Download and upload changes to saved files.                                          |
-| Press `Ctrl+S` on Linux                                           | Save the active buffer, then upload its file.                                        |
-| Press `Cmd+S` on macOS                                            | Save the active buffer, then upload its file.                                        |
-| Select **Force changes to remote** in a saved file's sidebar menu | Save pending buffer edits, then replace that file's remote copy with the local copy. |
-
-Automatic local saves still run after two seconds without edits.
-
-Successful background sync and save-shortcut uploads do not show a success toast. A small
-**- Sync successful** message appears beside the active saved file's path for three
-seconds. Pending edits, a new sync, or a sync problem clear the message. Conflicts and
-errors still show toasts.
-
-While a sync runs, a **- Sync in progress** message appears beside the active saved file's
-path.
-
-GitHub fetches remote history and commits saved local changes. It then checks for merge
-conflicts before it updates your files. It can combine compatible markdown edits. It does
-not combine drawing edits. The app never adds conflict markers to your files. Normal sync
-does not overwrite conflicting remote changes.
-
-Google Drive and Dropbox compare each file with its last synced version. This version is
-the shared base, like a Git commit. A local-only change uploads. A remote-only change
-downloads if it is not older than the local file. If the remote copy is older, the local
-copy uploads instead. If both copies changed from the shared base and differ from each
-other, sync keeps both and reports a conflict. If both copies contain the same writing,
-sync accepts that version even if both changed independently.
-
-Before a file has sync history, the newer modification time selects the copy to keep. If
-the copies differ and their times are equal, sync reports a conflict. Modification times
-depend on the devices' clocks. Uploads and downloads keep the original file modification
-time, so copying an old version does not make it newer. Drive uses `modifiedDate`; Dropbox
-uses `client_modified`, which has one-second precision.
-
-Both providers check the remote revision before an ordinary replacement. If another device
-changes the remote copy during sync, retry to compare the latest versions.
+The app finds your `lunarscribe-bak-files` repository, or creates it as a private
+repository. It creates `.git` inside the documents folder. New repositories use the `main`
+branch. Disconnect deletes that `.git` folder.
 
 If GitHub needs to download changes or upload other files, select **Sync now** before you
 use the save shortcut.
 
-After a file has synced, a deletion can remove its copy on other devices. Google Drive
-moves deleted files to the trash. If another device edited the deleted file, sync reports
-a conflict.
+## Web
 
-### Divergent edits
+- **Files:** browser storage. Clearing site data deletes them, so sync is your backup.
+- **Credentials:** browser localStorage, shared by all tabs of the site.
+- **Sign-in:** opens in a pop-up. Allow pop-ups for the site if the browser blocks it. A
+  sign-in that does not finish in three minutes fails.
+- **Google Drive:** sign-in lasts about one hour. A browser cannot renew Google access
+  without a server, so the app then shows a toast and pauses background sync. Select
+  **Sign in again** in Syncing. For longer sessions on the web, use Dropbox.
+- **Dropbox:** renews its access automatically.
+- **Tabs:** only one tab syncs at a time. If you select **Sync now** while another tab is
+  syncing, the app asks you to try again. Tabs share downloaded files and protect each
+  other's unsaved edits.
+- **No GitHub:** a browser cannot run Git, and GitHub sign-in needs a server.
 
-For Drive and Dropbox, different local and remote copies do not by themselves mean a
-conflict. The app compares both copies with the last synced version, called the shared
-base. Edits are divergent only when both copies changed from that base and differ from
-each other.
+## Mobile
 
-For example, suppose the shared base is version `A`:
-
-| Local copy | Remote copy | Result                                                           |
-| ---------- | ----------- | ---------------------------------------------------------------- |
-| `A`        | `A`         | No transfer is needed.                                           |
-| `B`        | `A`         | Upload the local edit. The remote copy is still the base.        |
-| `A`        | `B`         | Download the remote edit if it is not older than the local copy. |
-| `B`        | `B`         | Accept the matching version as the new base.                     |
-| `B`        | `C`         | Preserve both copies and show a **Sync conflict** error toast.   |
-
-Drive and Dropbox compare whole files. They do not merge edits to separate lines. A
-deletion on one side and an edit on the other also count as divergent changes. Once a
-shared base exists, modification times do not resolve divergence. Use **Force changes to
-remote** to select the local copy explicitly.
-
-### Force changes to remote
-
-Right-click a saved markdown or drawing file in the sidebar, or open its ellipsis menu.
-Select **Force changes to remote** to replace its remote copy with the local copy. This
-action works with GitHub, Google Drive, and Dropbox. It ignores previous sync history and
-remote edits, and creates the remote file if it is missing. Remote edits to the selected
-file are overwritten. Other remote files stay unchanged.
-
-If the file has an open buffer, the app saves its pending edits before the upload. The
-action does not download remote changes. It is unavailable for external files, while sync
-is busy, or when no provider is connected or sign-in is required.
-
-GitHub adds a commit to the current remote branch without changing local Git history. If
-another device updates the branch during the upload, the app retries from the latest
-remote version. Google Drive keeps one local copy under the selected name and moves
-duplicate copies to the trash. A Google document under that name is replaced with a saved
-file. Dropbox uses an overwrite upload. A remote folder at the selected file path must be
-renamed before this action can replace the file.
-
-## Resolve a sync problem
-
-The app shows a toast for sync errors or required sign-in. The Syncing section also shows
-errors. A failed sync does not undo a successful local save.
-
-If a file has a conflict, a persistent **Sync conflict** error toast shows its name and
-the reason. Divergent edits mean both copies changed since their last synced version and
-differ from each other. The app keeps both copies. Google Drive and Dropbox continue to
-sync files without conflicts. GitHub stops until you resolve the conflict.
-
-On the first Google Drive or Dropbox sync, existing copies can differ. The app uses their
-modification times until it has a shared base. Equal times with different contents require
-you to choose a copy. This message does not mean that sign-in failed.
-
-Unsaved edits in an open buffer can also block a download. The app updates open buffers
-that have no pending edits.
-
-To keep the local copy of a conflicted file, select **Force changes to remote** in its
-sidebar menu. This overwrites the remote edits to that file.
-
-To compare and keep both versions:
-
-1. Copy pending buffer edits to a safe location.
-2. Compare the local file with the provider's copy.
-3. Make the copies match, or rename one copy to keep both versions.
-4. If the open buffer still shows an old version, restart Lunarscribe after you preserve
-   its pending edits.
-5. Select **Sync now**.
-
-If Google Drive reports duplicate filenames, keep the required copies under different
-names before you retry sync.
-
-## Disconnect
-
-Open Syncing. Select **Disconnect**. The app removes stored credentials and sync history.
-Your saved files and remote backup remain.
-
-For GitHub, disconnect also deletes `.git` from the Lunarscribe documents folder.
-
-Credentials are stored as readable JSON in `sync/sync-settings.json` inside the user data
-folder. Only your user account has file permissions to read or write this file. The app
-does not require a system keyring.
+- **Files:** `lunarscribe/` inside the app's Documents folder.
+- **Credentials:** sync settings are in `sync-settings.json` in the app's Documents
+  folder. The refresh token is in the iOS Keychain or Android Keystore.
+- **Google Drive and Dropbox:** both renew their access automatically.
+- **Schedule:** sync pauses while the app is in the background and resumes when you return
+  to it.
+- **No GitHub.**
 
 ## For developers
 
-Public application credentials are in `apps/desktop/src/electron/sync/public-creds.json`.
-The desktop build includes this file. Do not use `.env` for these credentials. Reserve
-environment variables for secrets. Google Drive and Dropbox do not require a client secret
-for these sign-in flows.
+### Public credentials
 
-### Configure Google Drive
+Lunarscribe has no server. Each app reads public client IDs from a `public-creds.json`
+file:
 
-1. Enable the Google Drive API in the app's Google Cloud project.
-2. Create a **Web application** OAuth client.
-3. Add `http://127.0.0.1:53682` as an authorized JavaScript origin.
-4. Set the Google client ID in `public-creds.json`.
+| App     | File                                               |
+| ------- | -------------------------------------------------- |
+| Desktop | `apps/desktop/src/electron/sync/public-creds.json` |
+| Web     | `apps/web/src/lib/sync/public-creds.json`          |
+| Mobile  | `apps/mobile/src/lib/sync/public-creds.json`       |
 
-The app uses the `drive.file` permission. This limits access to files the app creates or
-the user authorizes. Sign-in runs in the user's browser. It needs no hosted Lunarscribe
-service.
+Do not use `.env` for these values.
 
-Refer to
-[Google's token model guide](https://developers.google.com/identity/oauth2/web/guides/use-token-model)
-for details.
+The desktop file also has `googleClientSecret`. Google requires it for Desktop app clients
+and
+[does not treat it as secret](https://developers.google.com/identity/protocols/oauth2#installed)
+for installed apps, so it ships with the app. Anyone can read it. Users can revoke access
+at <https://myaccount.google.com/permissions>. If the client is abused, add a new secret
+in the console, delete the old one, and ship the new value.
 
-### Configure Dropbox
+### Google Cloud setup
 
-1. Create a scoped Dropbox application with **App folder** access.
-2. Enable the permissions listed below.
-3. Register `http://127.0.0.1:53683/oauth/dropbox` as a redirect URI.
-4. Set the Dropbox app key in `public-creds.json`.
+The OAuth clients are in the `lunarscribe` Google Cloud project. Enable the Google Drive
+API, add the `drive.file` scope, and publish the app to **In production**. In **Testing**,
+Google expires refresh tokens after seven days.
 
-Required permissions:
+| Client type     | Used by          | Settings                                                                                                         |
+| --------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Desktop app     | Desktop          | None. Google allows any `http://127.0.0.1` redirect.                                                             |
+| Web application | Web              | Authorized JavaScript origins: each web origin, such as `http://localhost:3000`.                                 |
+| iOS             | Mobile (iOS)     | Bundle ID `com.lunarscribe.app`.                                                                                 |
+| Android         | Mobile (Android) | Package `com.lunarscribe.app`, the signing SHA-1, and **Custom URI scheme** enabled under **Advanced settings**. |
 
-- `account_info.read`
-- `files.metadata.read`
-- `files.metadata.write`
-- `files.content.read`
-- `files.content.write`
+Desktop uses OAuth with PKCE and redirects to `http://127.0.0.1:53682/oauth/google-drive`.
+Web uses Google's
+[token model](https://developers.google.com/identity/oauth2/web/guides/use-token-model),
+which gives no refresh token. Mobile uses OAuth with PKCE and redirects to
+`com.googleusercontent.apps.<client id>:/oauth2redirect`. `app.config.ts` registers that
+scheme from the client IDs.
 
-Refer to [Dropbox's OAuth guide](https://developers.dropbox.com/oauth-guide) for details.
+### Dropbox setup
 
-### Code and checks
+Create a scoped Dropbox app with **App folder** access, and set its app key in each
+`public-creds.json`. Register these redirect URIs:
 
-Sync code is in `apps/desktop/src/electron/sync/`:
+- Desktop: `http://127.0.0.1:53683/oauth/dropbox`
+- Web: `<origin>/oauth/dropbox`, such as `http://localhost:3000/oauth/dropbox`
+- Mobile: `lunarscribe://oauth/dropbox`
 
-- `sync-service.ts`: connections, status, and the five-minute schedule.
-- `files.ts`: file comparisons and local file updates.
-- `providers/`: GitHub, Google Drive, and Dropbox operations.
-- `auth/`: browser sign-in and the Google sign-in page.
-- `settings.ts` and `json.ts`: settings storage and JSON checks.
+Required permissions: `account_info.read`, `files.metadata.read`, `files.metadata.write`,
+`files.content.read`, and `files.content.write`.
 
-GitHub uses `git merge-tree --write-tree HEAD origin/<branch>` to check a merge. This
-command does not change the working files. A conflict stops sync before the app applies
-the merge.
+### Code
 
-Drive and Dropbox use SHA-256 hashes of the saved local writing, the downloaded remote
-writing, and the shared base. The `baseline` object in `sync/sync-settings.json` stores
-the last acknowledged hash for each filename. It stores one comparison base per file, not
-a Git commit graph or earlier file versions. `planSync` in `files.ts` reports divergence
-when a base exists and all three conditions are true:
+| App     | Sync code                         |
+| ------- | --------------------------------- |
+| Desktop | `apps/desktop/src/electron/sync/` |
+| Web     | `apps/web/src/lib/sync/`          |
+| Mobile  | `apps/mobile/src/lib/sync/`       |
+
+Each folder has `sync-service.ts` (connections, status, schedule), `files.ts` (comparisons
+and local updates), the providers, and the OAuth code. Shared JSON checks and provider
+types are in `packages/utils/src/sync/`.
+
+`planSync` in `files.ts` compares SHA-256 hashes of the local copy, the remote copy, and
+the shared base. The `baseline` object in the sync settings stores one base hash per file.
+It reports a conflict when a base exists and:
 
 ```ts
 localHash !== baseHash && remoteHash !== baseHash && localHash !== remoteHash;
 ```
 
-An absent file has a `null` hash. Files with matching hashes become acknowledged versions.
-Successful uploads, downloads, and forced replacements update the base. A conflict leaves
-the previous base unchanged. First-sync comparisons use modification times because there
-is no base yet.
+GitHub checks a merge with `git merge-tree --write-tree HEAD origin/<branch>`, which does
+not change the working files.
 
-Get the user data folder with `app.getPath("userData")`.
+### Checks
 
-Run `bun run format`, `bun run lint`, `bun run check-types`, and `bun run build`. Before
-release, check each provider with real accounts on two devices. Check connection,
-reconnection, edits, deletion, conflicts, expired access, and network failures.
+Run `bun run format`, `bun run lint`, `bun run check-types`, and `bun run build`. Before a
+release, test each provider with real accounts on two devices: connect, reconnect, edit,
+delete, conflict, expired sign-in, and network failure.

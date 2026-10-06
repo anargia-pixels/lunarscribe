@@ -101,6 +101,9 @@ function createWindow() {
     return { action: "deny" };
   });
 
+  // Any page this window navigates to inherits the preload bridge, so keep the editor loaded.
+  window.webContents.on("will-navigate", (event) => event.preventDefault());
+
   const devServerUrl = process.env["ELECTRON_RENDERER_URL"];
 
   if (!app.isPackaged && devServerUrl) {

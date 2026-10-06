@@ -79,6 +79,8 @@ function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
 export default function SettingsScreen() {
   const router = useRouter();
   const foreground = useThemeColor("foreground");
+  // The primary Button.Label color, so the Sync now icon matches its text.
+  const accentForeground = useThemeColor("accent-foreground");
   const status = useSyncStore();
   const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
   const darkColorTheme = useAppearanceStore((state) => state.darkColorTheme);
@@ -240,7 +242,7 @@ export default function SettingsScreen() {
                   </Button>
                 )}
                 <Button isDisabled={isDisabled} onPress={sync}>
-                  <RefreshCw size={16} color={foreground} />
+                  <RefreshCw size={16} color={accentForeground} />
                   <Button.Label>
                     {status.isBusy && !connectStage ? "Syncing…" : "Sync now"}
                   </Button.Label>

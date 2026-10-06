@@ -30,8 +30,7 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
   Saved markdown and drawings sync every five minutes while the app is open. The save
   shortcut also pushes the active saved file. Successful sync shows a message beside the
   file path for three seconds. Conflicts and sync failures show toasts. Google Drive and
-  Dropbox use browser sign-in without bundled OAuth secrets. Drive requires browser
-  sign-in again when its access token expires. Refer to
+  Dropbox use browser sign-in and renew access automatically. Refer to
   [Syncing saved writing](docs/features/001-syncing.md) for setup and conflict behavior.
 - **External files:** The editor opens `.md`, `.markdown`, and `.txt` files. You can drag
   files into the markdown editor or give their paths to the desktop app. Packaged apps

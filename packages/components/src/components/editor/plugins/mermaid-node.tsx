@@ -8,9 +8,14 @@ import {
   type SerializedLexicalNode,
   type Spread,
 } from "lexical";
-import type { JSX } from "react";
+import { type JSX, lazy, Suspense } from "react";
 
-import { MermaidComponent } from "./mermaid-component";
+// Lazy, as in Lexical's playground: the component imports this node back.
+const MermaidComponent = lazy(() =>
+  import("./mermaid-component").then((module) => ({
+    default: module.MermaidComponent,
+  })),
+);
 
 type SerializedMermaidNode = Spread<{ code: string }, SerializedLexicalNode>;
 
@@ -106,7 +111,11 @@ export class MermaidNode extends DecoratorNode<JSX.Element> {
   }
 
   decorate(): JSX.Element {
-    return <MermaidComponent code={this.getCode()} nodeKey={this.getKey()} />;
+    return (
+      <Suspense fallback={null}>
+        <MermaidComponent code={this.getCode()} nodeKey={this.getKey()} />
+      </Suspense>
+    );
   }
 }
 

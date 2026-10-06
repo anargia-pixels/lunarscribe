@@ -67,6 +67,11 @@ type SignInCardProps = {
   children?: ReactNode;
 };
 
+const MARK_CLASS = "size-16 place-items-center rounded-full border";
+
+const NOTE_CLASS =
+  "border-border text-muted-foreground mt-5 w-full border-t pt-4 text-xs";
+
 /** One centered card: provider mark, outcome icon, heading, then controls. */
 function SignInCard({
   provider,
@@ -76,19 +81,34 @@ function SignInCard({
   children,
 }: SignInCardProps) {
   return (
-    <div data-part="page">
-      <header data-part="brand">
-        <img src={appIcon} alt="" width={28} height={28} />
+    <div className="flex w-full max-w-105 flex-col items-center">
+      <header className="font-logo text-primary mb-6 flex items-center gap-2 text-2xl/none">
+        <img src={appIcon} alt="" width={28} height={28} className="shrink-0" />
         <span>Lunarscribe</span>
       </header>
-      <main data-part="card" data-state={state} id="sign-in">
-        <div data-part="logo">{PROVIDERS[provider].logo}</div>
-        <div data-part="result-icon" data-result="success" aria-hidden="true">
+      {/* A finished sign-in swaps the provider mark for its outcome. */}
+      <main
+        id="sign-in"
+        data-state={state}
+        className="group border-border bg-card flex w-full flex-col items-center rounded-2xl border px-5 pt-8 pb-6 text-center @2xl:px-8 @2xl:pt-10 @2xl:pb-8"
+      >
+        <div
+          className={`${MARK_CLASS} border-border bg-background grid group-data-[state=failed]:hidden group-data-[state=success]:hidden`}
+        >
+          {PROVIDERS[provider].logo}
+        </div>
+        <div
+          aria-hidden="true"
+          className={`${MARK_CLASS} text-syntax-string hidden border-current group-data-[state=success]:grid`}
+        >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
             <path d="m5 12 4 4L19 6" stroke="currentColor" strokeWidth="2" />
           </svg>
         </div>
-        <div data-part="result-icon" data-result="error" aria-hidden="true">
+        <div
+          aria-hidden="true"
+          className={`${MARK_CLASS} text-destructive hidden border-current group-data-[state=failed]:grid`}
+        >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
             <path
               d="M6 6l12 12M18 6 6 18"
@@ -97,11 +117,23 @@ function SignInCard({
             />
           </svg>
         </div>
-        <h1 id="sign-in-heading">{heading}</h1>
-        <p id="description">{description}</p>
+        <h1
+          id="sign-in-heading"
+          className="mt-5 text-2xl/snug font-semibold tracking-tight text-balance"
+        >
+          {heading}
+        </h1>
+        <p
+          id="description"
+          className="text-muted-foreground mt-2.5 text-pretty"
+        >
+          {description}
+        </p>
         {children}
       </main>
-      <footer>You can stop syncing anytime in Lunarscribe settings.</footer>
+      <footer className="text-muted-foreground mt-5 text-center text-xs">
+        You can stop syncing anytime in Lunarscribe settings.
+      </footer>
     </div>
   );
 }
@@ -116,7 +148,7 @@ function createPage(title: string, body: string, script = "") {
     <title>${title} · Lunarscribe</title>
     <style>${styles}</style>
   </head>
-  <body>
+  <body class="bg-background text-foreground @container grid min-h-svh place-items-center px-5 py-10 text-sm/relaxed antialiased">
     ${body}
 ${script}
   </body>
@@ -138,21 +170,35 @@ export function createGoogleSignInPage(
       description={
         <>
           Lunarscribe keeps a copy of your notes and drawings in a folder called{" "}
-          <strong>lunarscribe-bak-files</strong> in your Google Drive.
+          <strong className="text-foreground font-semibold wrap-anywhere">
+            lunarscribe-bak-files
+          </strong>{" "}
+          in your Google Drive.
         </>
       }
     >
-      <Button id="signin" type="button" variant="outline" disabled>
+      <Button
+        id="signin"
+        type="button"
+        variant="outline"
+        size="lg"
+        disabled
+        className="mt-7 w-full group-data-[state=success]:hidden"
+      >
         <GoogleLogo />
         <span id="button-label">Loading Google sign-in…</span>
       </Button>
-      <output id="message" aria-live="polite">
+      <output
+        id="message"
+        aria-live="polite"
+        className="text-muted-foreground group-data-[state=error]:text-destructive mt-3.5 block min-h-5 text-xs text-pretty"
+      >
         Getting sign-in ready…
       </output>
-      <p data-part="note">
+      <p className={NOTE_CLASS}>
         Lunarscribe can only see the files it makes in your Drive.
       </p>
-      <noscript>
+      <noscript className="text-destructive mt-3 block">
         Turn on JavaScript in your browser, then select Connect again in
         Lunarscribe.
       </noscript>
@@ -304,7 +350,7 @@ export function createSignInResultPage(
           : `Nothing was changed. Go back to Lunarscribe and select Connect ${name} to try again.`
       }
     >
-      <p data-part="note">You can close this tab.</p>
+      <p className={NOTE_CLASS}>You can close this tab.</p>
     </SignInCard>,
   );
 

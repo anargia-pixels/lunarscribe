@@ -12,6 +12,13 @@ import { mergeRegister } from "@lexical/utils";
 import { FluidHighlight } from "@lunarscribe/components/fluid-motion/fluid-motion";
 import { Hint } from "@lunarscribe/components/hint/hint";
 import { Button } from "@lunarscribe/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@lunarscribe/components/ui/dropdown-menu";
 import { Separator } from "@lunarscribe/components/ui/separator";
 import { Toggle } from "@lunarscribe/components/ui/toggle";
 import {
@@ -31,6 +38,7 @@ import {
 } from "lexical";
 import {
   Bold,
+  ChevronDown,
   Code,
   GitFork,
   Heading1,
@@ -42,6 +50,7 @@ import {
   ListOrdered,
   type LucideIcon,
   Pilcrow,
+  Plus,
   Quote,
   Redo2,
   Sigma,
@@ -51,15 +60,22 @@ import {
   Subscript,
   Superscript,
   Table,
+  Type,
   Underline,
   Undo2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ReactElement, type ReactNode, useEffect, useState } from "react";
 
 import { INSERT_MATH_COMMAND } from "./plugins/math-plugin";
 import { INSERT_MERMAID_COMMAND } from "./plugins/mermaid-plugin";
 
-const TEXT_FORMATS: {
+type ToolbarAction = {
+  label: string;
+  icon: LucideIcon;
+  apply: (editor: LexicalEditor) => void;
+};
+
+export const TEXT_FORMATS: {
   format: TextFormatType;
   label: string;
   icon: LucideIcon;
@@ -74,17 +90,8 @@ const TEXT_FORMATS: {
   { format: "code", label: "Inline code", icon: Code },
 ];
 
-const MATH_INSERTIONS = [
-  { label: "Insert inline math", inline: true, icon: Sigma },
-  { label: "Insert math block", inline: false, icon: SquareSigma },
-] as const;
-
-/** Block-level conversions; lists go through commands so ListPlugin can merge siblings. */
-const BLOCKS: {
-  label: string;
-  icon: LucideIcon;
-  apply: (editor: LexicalEditor) => void;
-}[] = [
+/** Block types and inserted blocks; lists go through commands so ListPlugin can merge siblings. */
+export const INSERTIONS: ToolbarAction[] = [
   {
     label: "Paragraph",
     icon: Pilcrow,
@@ -143,6 +150,22 @@ const BLOCKS: {
         includeHeaders: { rows: true, columns: false },
       }),
   },
+  {
+    label: "Insert inline math",
+    icon: Sigma,
+    apply: (editor) => editor.dispatchCommand(INSERT_MATH_COMMAND, true),
+  },
+  {
+    label: "Insert math block",
+    icon: SquareSigma,
+    apply: (editor) => editor.dispatchCommand(INSERT_MATH_COMMAND, false),
+  },
+  {
+    label: "Insert Mermaid block",
+    icon: GitFork,
+    apply: (editor) =>
+      editor.dispatchCommand(INSERT_MERMAID_COMMAND, undefined),
+  },
 ];
 
 /** Converts every block touched by the selection to the node `createBlock` returns. */
@@ -156,19 +179,8 @@ function setBlock(editor: LexicalEditor, createBlock: () => ElementNode) {
   });
 }
 
-function ToolbarSeparator() {
-  return (
-    <Separator
-      orientation="vertical"
-      className="mx-1 h-5 data-vertical:self-center"
-    />
-  );
-}
-
-/** Formatting toolbar: history, inline marks and block types. */
-export function ToolbarPlugin() {
-  const modifier = IS_APPLE ? "⌘" : "Ctrl";
-  const [editor] = useLexicalComposerContext();
+/** Toolbar state from the editor: active inline formats and undo/redo availability. */
+export function useToolbarState(editor: LexicalEditor) {
   const [activeFormats, setActiveFormats] = useState<TextFormatType[]>([]);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -211,8 +223,112 @@ export function ToolbarPlugin() {
     [editor],
   );
 
+  return { activeFormats, canUndo, canRedo };
+}
+
+type ToolbarMenuProps = {
+  /** The toolbar's button for the trigger; it gets the menu's icon, label and a chevron. */
+  button: ReactElement;
+  /** Shows the label as a hover hint, for pointer toolbars. */
+  hasHint?: boolean;
+};
+
+/** A toolbar section folded into a menu, for toolbars too narrow to show its buttons. */
+function ToolbarMenu({
+  label,
+  icon: Icon,
+  button,
+  hasHint,
+  children,
+}: ToolbarMenuProps & {
+  label: string;
+  icon: LucideIcon;
+  children: ReactNode;
+}) {
+  const [editor] = useLexicalComposerContext();
+
+  const trigger = (
+    <DropdownMenuTrigger render={button}>
+      <Icon data-icon="inline-start" />
+      {label}
+      <ChevronDown data-icon="inline-end" />
+    </DropdownMenuTrigger>
+  );
+
   return (
-    <div className="editor-scrollbar min-w-0 shrink-0 overflow-x-auto border-b">
+    <DropdownMenu>
+      {hasHint ? <Hint label={label}>{trigger}</Hint> : trigger}
+      <DropdownMenuContent
+        className="w-auto"
+        finalFocus={() => editor.getRootElement() ?? false} // keeps selection and keyboard
+      >
+        {children}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** The inline formats as a menu of checkboxes, checked while the selection has them. */
+export function TextFormatMenu({
+  activeFormats,
+  ...props
+}: ToolbarMenuProps & { activeFormats: TextFormatType[] }) {
+  const [editor] = useLexicalComposerContext();
+
+  return (
+    <ToolbarMenu label="Format" icon={Type} {...props}>
+      {TEXT_FORMATS.map(({ format, label, icon: Icon }) => (
+        <DropdownMenuCheckboxItem
+          key={format}
+          checked={activeFormats.includes(format)}
+          onCheckedChange={() =>
+            editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
+          }
+        >
+          <Icon />
+          {label}
+        </DropdownMenuCheckboxItem>
+      ))}
+    </ToolbarMenu>
+  );
+}
+
+/** The block types and insertions as a menu. */
+export function InsertMenu(props: ToolbarMenuProps) {
+  const [editor] = useLexicalComposerContext();
+
+  return (
+    <ToolbarMenu label="Insert" icon={Plus} {...props}>
+      {INSERTIONS.map(({ label, icon: Icon, apply }) => (
+        <DropdownMenuItem key={label} onClick={() => apply(editor)}>
+          <Icon />
+          {label}
+        </DropdownMenuItem>
+      ))}
+    </ToolbarMenu>
+  );
+}
+
+function ToolbarSeparator() {
+  return (
+    <Separator
+      orientation="vertical"
+      className="mx-1 h-5 data-vertical:self-center"
+    />
+  );
+}
+
+/**
+ * Formatting toolbar: history, inline marks, and block types with insertions. As
+ * the toolbar narrows, the insertions and then the inline marks fold into menus.
+ */
+export function ToolbarPlugin() {
+  const modifier = IS_APPLE ? "⌘" : "Ctrl";
+  const [editor] = useLexicalComposerContext();
+  const { activeFormats, canUndo, canRedo } = useToolbarState(editor);
+
+  return (
+    <div className="editor-scrollbar @container min-w-0 shrink-0 overflow-x-auto border-b">
       <div className="relative flex w-max min-w-full items-center justify-center gap-1 px-3 py-1.5">
         <FluidHighlight rows="button" className="bg-muted rounded-lg" />
         <Hint label="Undo" shortcut={[modifier, "Z"]}>
@@ -241,65 +357,51 @@ export function ToolbarPlugin() {
           </Button>
         </Hint>
         <ToolbarSeparator />
-        {TEXT_FORMATS.map(({ format, label, icon: Icon, shortcut }) => (
-          <Hint
-            key={format}
-            label={label}
-            shortcut={shortcut ? [modifier, shortcut] : undefined}
-          >
-            <Toggle
-              variant="fluid"
-              size="icon-sm"
-              aria-label={label}
-              pressed={activeFormats.includes(format)}
-              onPressedChange={() =>
-                editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
-              }
+        <div className="hidden @2xl:contents">
+          {TEXT_FORMATS.map(({ format, label, icon: Icon, shortcut }) => (
+            <Hint
+              key={format}
+              label={label}
+              shortcut={shortcut ? [modifier, shortcut] : undefined}
             >
-              <Icon />
-            </Toggle>
-          </Hint>
-        ))}
+              <Toggle
+                variant="fluid"
+                size="icon-sm"
+                aria-label={label}
+                pressed={activeFormats.includes(format)}
+                onPressedChange={() =>
+                  editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
+                }
+              >
+                <Icon />
+              </Toggle>
+            </Hint>
+          ))}
+        </div>
+        <TextFormatMenu
+          activeFormats={activeFormats}
+          hasHint
+          button={<Button variant="fluid" size="sm" className="@2xl:hidden" />}
+        />
         <ToolbarSeparator />
-        {BLOCKS.map(({ label, icon: Icon, apply }) => (
-          <Hint key={label} label={label}>
-            <Button
-              variant="fluid"
-              size="icon-sm"
-              aria-label={label}
-              onClick={() => apply(editor)}
-            >
-              <Icon />
-            </Button>
-          </Hint>
-        ))}
-        <ToolbarSeparator />
-        {MATH_INSERTIONS.map(({ label, inline, icon: Icon }) => (
-          <Hint key={label} label={label}>
-            <Button
-              variant="fluid"
-              size="icon-sm"
-              aria-label={label}
-              onClick={() =>
-                editor.dispatchCommand(INSERT_MATH_COMMAND, inline)
-              }
-            >
-              <Icon />
-            </Button>
-          </Hint>
-        ))}
-        <Hint label="Insert Mermaid block">
-          <Button
-            variant="fluid"
-            size="icon-sm"
-            aria-label="Insert Mermaid block"
-            onClick={() =>
-              editor.dispatchCommand(INSERT_MERMAID_COMMAND, undefined)
-            }
-          >
-            <GitFork />
-          </Button>
-        </Hint>
+        <div className="hidden @3xl:contents">
+          {INSERTIONS.map(({ label, icon: Icon, apply }) => (
+            <Hint key={label} label={label}>
+              <Button
+                variant="fluid"
+                size="icon-sm"
+                aria-label={label}
+                onClick={() => apply(editor)}
+              >
+                <Icon />
+              </Button>
+            </Hint>
+          ))}
+        </div>
+        <InsertMenu
+          hasHint
+          button={<Button variant="fluid" size="sm" className="@3xl:hidden" />}
+        />
       </div>
     </div>
   );

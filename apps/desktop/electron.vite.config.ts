@@ -47,6 +47,8 @@ export default defineConfig({
       },
       lib: { entry: resolve(__dirname, "src/electron/main.ts") },
     },
+    // Compiles the sign-in page's Tailwind stylesheet.
+    plugins: [tailwindcss()],
   },
   preload: {
     build: {

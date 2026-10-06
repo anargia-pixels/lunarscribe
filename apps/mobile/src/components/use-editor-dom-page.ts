@@ -1,0 +1,62 @@
+import {
+  COLOR_TOKENS,
+  type ColorPalette,
+} from "@lunarscribe/components/themes/color-themes";
+import { useEffect, useLayoutEffect } from "react";
+
+import type { Theme } from "@/lib/editor-types";
+
+/**
+ * Page setup shared by the editor DOM components: applies the theme and its color
+ * theme, and sizes the page to the visual viewport, since iOS keeps the WebView
+ * full height under the keyboard. A hidden page drops its focus, so it does not
+ * keep the keyboard open or push Android's focus onto another screen's input.
+ */
+export function useEditorDomPage(
+  theme: Theme,
+  palette: ColorPalette | null,
+  isShown: boolean,
+) {
+  useEffect(() => {
+    if (!isShown && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }, [isShown]);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+
+    if (!viewport) {
+      return;
+    }
+
+    const fit = () => {
+      document.documentElement.style.setProperty(
+        "--editor-height",
+        `${viewport.height}px`,
+      );
+      window.scrollTo(0, 0);
+    };
+
+    fit();
+    viewport.addEventListener("resize", fit);
+
+    return () => viewport.removeEventListener("resize", fit);
+  }, []);
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+
+    root.classList.remove("light", "dark");
+    root.classList.add(theme);
+
+    // Writes a complete palette onto <html>; clearing it restores globals.css.
+    for (const token of COLOR_TOKENS) {
+      if (palette) {
+        root.style.setProperty(`--${token}`, palette[token]);
+      } else {
+        root.style.removeProperty(`--${token}`);
+      }
+    }
+  }, [theme, palette]);
+}

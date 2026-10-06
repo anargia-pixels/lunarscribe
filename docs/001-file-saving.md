@@ -268,7 +268,7 @@ The IndexedDB database `lunarscribe` has a `files` object store. Each record is
 `{ name, content, modifiedAt }`, and `name` is the key. The name is `<title><extension>`,
 as in the documents folder. Saved files stay in this browser profile only. If the user
 clears site data for Lunarscribe, the saved files are deleted. Use sync to keep a copy in
-another location. Refer to [Syncing in the web app](features/004-web-syncing.md).
+another location. Refer to [Syncing saved writing](features/001-syncing.md#web).
 
 `saveFile()` in `saved-files.ts` uses the desktop naming rules: the trimmed title, an
 underscore for each slash, `untitled` for an empty title, and a numeric suffix for a name

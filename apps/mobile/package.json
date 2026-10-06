@@ -1,6 +1,6 @@
 {
   "name": "mobile",
-  "version": "0.13.20",
+  "version": "0.13.21",
   "description": "Lunarscribe Markdown writing app for iOS and Android",
   "private": true,
   "main": "expo-router/entry",

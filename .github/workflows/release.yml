@@ -11,6 +11,8 @@ on:
         required: true
         type: string
 
+# A tag such as v0.13.22 releases the desktop app. A tag such as v0.13.22+mobile
+# also builds and publishes the Android APK.
 env:
   RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
@@ -61,7 +63,8 @@ jobs:
       - name: Check the release version
         run: |
           version=$(jq -r .version apps/desktop/package.json)
-          test "$RELEASE_TAG" = "v$version"
+          release_version=${RELEASE_TAG#v}
+          test "${release_version%+mobile}" = "$version"
       - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
@@ -76,6 +79,7 @@ jobs:
           if-no-files-found: error
 
   android:
+    if: endsWith(inputs.tag || github.ref_name, '+mobile')
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -88,7 +92,7 @@ jobs:
       - name: Check the release version
         run: |
           version=$(jq -r .version apps/mobile/package.json)
-          test "$RELEASE_TAG" = "v$version"
+          test "$RELEASE_TAG" = "v$version+mobile"
       - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
@@ -126,6 +130,11 @@ jobs:
 
   publish:
     needs: [check, build, android]
+    # Publish when the Android job passed, or when a desktop-only tag skipped it.
+    if: >
+      !cancelled() && needs.check.result == 'success' && needs.build.result ==
+      'success' && contains(fromJSON('["success", "skipped"]'),
+      needs.android.result)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

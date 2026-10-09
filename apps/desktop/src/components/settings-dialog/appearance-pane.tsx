@@ -16,6 +16,11 @@ import type { CSSProperties } from "react";
 
 import { FontSettings } from "@/components/settings-dialog/font-settings";
 import { type Theme, useAppearanceStore } from "@/stores/appearance-store";
+import {
+  type ZoomPercent,
+  useZoomStore,
+  ZOOM_PERCENTS,
+} from "@/stores/zoom-store";
 
 /** Stands for the colors written in globals.css rather than a color theme. */
 const DEFAULT_COLOR_THEME = "default";
@@ -86,6 +91,43 @@ function ColorThemeSelect({
   );
 }
 
+const ZOOM_ITEMS = ZOOM_PERCENTS.map((percent) => ({
+  value: percent,
+  label: `${percent}%`,
+}));
+
+/** Picks the window zoom from the same steps the zoom shortcuts move through. */
+function ZoomSelect() {
+  const percent = useZoomStore((state) => state.percent);
+  const setPercent = useZoomStore((state) => state.setPercent);
+
+  return (
+    <div className="flex items-center justify-between gap-6">
+      <span className="text-sm">Zoom</span>
+      <Select<ZoomPercent>
+        items={ZOOM_ITEMS}
+        value={percent}
+        onValueChange={(next) => {
+          if (next !== null) {
+            setPercent(next);
+          }
+        }}
+      >
+        <SelectTrigger className="w-64 justify-between" aria-label="Zoom">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent alignItemWithTrigger={false}>
+          {ZOOM_ITEMS.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 /** The five colors of a color theme, each painted through a custom property so the value stays dynamic. */
 function ColorThemeSwatches({ palette }: { palette: ColorPalette }) {
   return SWATCH_TOKENS.map((token) => {
@@ -101,7 +143,7 @@ function ColorThemeSwatches({ palette }: { palette: ColorPalette }) {
   });
 }
 
-/** Appearances pane: color themes and separate UI, buffer, and code fonts. */
+/** Appearances pane: color themes, zoom, and separate UI, buffer, and code fonts. */
 export function AppearancePane() {
   const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
   const darkColorTheme = useAppearanceStore((state) => state.darkColorTheme);
@@ -148,6 +190,9 @@ export function AppearancePane() {
         <RotateCcw />
         Reset to defaults
       </Button>
+      <div className="flex max-w-lg flex-col gap-4">
+        <ZoomSelect />
+      </div>
       <FontSettings />
     </div>
   );

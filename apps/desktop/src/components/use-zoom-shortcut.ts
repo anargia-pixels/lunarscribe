@@ -2,29 +2,29 @@ import { useEffect } from "react";
 
 import { useZoomStore } from "@/stores/zoom-store";
 
-/** Zoom level change for each key, with `null` resetting to 100%. */
+/** Zoom steps for each key, with `null` resetting to 100%. */
 const ZOOM_KEYS = new Map<string, number | null>([
-  ["+", 0.5],
-  ["=", 0.5],
-  ["-", -0.5],
-  ["_", -0.5],
+  ["+", 1],
+  ["=", 1],
+  ["-", -1],
+  ["_", -1],
   ["0", null],
 ]);
 
 /** Ctrl or Cmd with +, - and 0 zooms the window. = and _ cover keyboards where + needs Shift. */
 export function useZoomShortcut() {
-  const level = useZoomStore((state) => state.level);
+  const percent = useZoomStore((state) => state.percent);
 
   useEffect(() => {
-    window.lunarscribe.setZoomLevel(level);
-  }, [level]);
+    window.lunarscribe.setZoomFactor(percent / 100);
+  }, [percent]);
 
   useEffect(() => {
     const handleZoomShortcut = (event: KeyboardEvent) => {
-      const change = ZOOM_KEYS.get(event.key);
+      const steps = ZOOM_KEYS.get(event.key);
 
       if (
-        change === undefined ||
+        steps === undefined ||
         !(event.ctrlKey || event.metaKey) ||
         event.altKey ||
         event.isComposing
@@ -36,9 +36,13 @@ export function useZoomShortcut() {
       event.preventDefault();
       event.stopPropagation();
 
-      const { level: current, setLevel } = useZoomStore.getState();
+      const { setPercent, stepZoom } = useZoomStore.getState();
 
-      setLevel(change === null ? 0 : current + change);
+      if (steps === null) {
+        setPercent(100);
+      } else {
+        stepZoom(steps);
+      }
     };
 
     window.addEventListener("keydown", handleZoomShortcut, true);

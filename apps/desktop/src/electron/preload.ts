@@ -56,7 +56,7 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     return () => ipcRenderer.off("sync:files", handler);
   },
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
-  setZoomLevel: (level: number) => webFrame.setZoomLevel(level),
+  setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
   readExternalFile: (path: string): Promise<OpenedExternalFile> =>
     ipcRenderer.invoke("external-files:read", path),
   saveExternalFile: (path: string, markdown: string): Promise<void> =>

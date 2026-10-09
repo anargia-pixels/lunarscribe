@@ -33,8 +33,8 @@ interface Window {
       listener: (changes: import("./lib/sync").SyncedFileChange[]) => void,
     ) => () => void;
     getPathForFile: (file: File) => string;
-    /** Chromium zoom level, where 0 is 100% and each level scales by 20%. */
-    setZoomLevel: (level: number) => void;
+    /** Scales the window, where 1 is 100%. */
+    setZoomFactor: (factor: number) => void;
     readExternalFile: (
       path: string,
     ) => Promise<import("./lib/editor-files").OpenedExternalFile>;

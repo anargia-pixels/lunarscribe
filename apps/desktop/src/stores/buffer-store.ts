@@ -12,6 +12,7 @@ import {
 } from "@/lib/editor-files";
 import type { ExternalFile, FileTarget } from "@/lib/editor-files";
 import type { SyncedFileChange } from "@/lib/sync";
+import { useFileAccessStore } from "@/stores/file-access-store";
 import { createBufferFileWrites } from "@/stores/file-writes";
 
 export { stemOf } from "@/lib/editor-files";
@@ -100,6 +101,16 @@ function patchBuffer(
   return buffers.map((buffer) =>
     buffer.id === id ? { ...buffer, ...patch } : buffer,
   );
+}
+
+/** Keeps a renamed saved file's access time under its new name. */
+function moveSavedAccess(fromName: string, toName: string) {
+  useFileAccessStore
+    .getState()
+    .moveAccess(
+      fileKey({ kind: "saved", name: fromName }),
+      fileKey({ kind: "saved", name: toName }),
+    );
 }
 
 /** A welcome buffer that no file holds, reused when the shown file is deleted. */
@@ -421,7 +432,8 @@ export const useBufferStore = create<BufferStore>()(
 
             if (!buffer) {
               const content = await window.lunarscribe.readFile(target.name);
-              await window.lunarscribe.saveFile(
+
+              const name = await window.lunarscribe.saveFile(
                 target.name,
                 title,
                 getFileExtension(target.name) ??
@@ -429,6 +441,8 @@ export const useBufferStore = create<BufferStore>()(
                 content,
                 content,
               );
+
+              moveSavedAccess(target.name, name);
 
               return;
             }
@@ -449,6 +463,14 @@ export const useBufferStore = create<BufferStore>()(
                 ),
               }));
               throw cause;
+            }
+
+            const renamed = get().buffers.find(
+              (candidate) => candidate.id === buffer.id,
+            );
+
+            if (renamed?.fileName) {
+              moveSavedAccess(target.name, renamed.fileName);
             }
           },
         ),
@@ -519,6 +541,13 @@ async function renameExternalFile(path: string, title: string) {
     file.sourcePath ?? path,
     title,
   );
+
+  useFileAccessStore
+    .getState()
+    .moveAccess(
+      fileKey({ kind: "external", path, name: file.name }),
+      fileKey({ kind: "external", ...renamed }),
+    );
 
   useBufferStore.setState((state) => ({
     externalFiles: state.externalFiles.map((candidate) =>
@@ -598,7 +627,7 @@ const bufferFileWrites = createBufferFileWrites(useBufferStore);
 // Persisted selection
 
 // Tracks the shown buffer's file, so opening, saving under a new name and deleting all
-// keep the persisted name current.
+// keep the persisted name current. Showing a file, or typing in it, counts as accessing it.
 useBufferStore.subscribe((state) => {
   const buffer = state.buffers.find(
     (candidate) => candidate.id === state.activeId,
@@ -606,6 +635,19 @@ useBufferStore.subscribe((state) => {
 
   const fileName = buffer?.fileName ?? null;
   const externalPath = buffer?.externalPath ?? null;
+  const { recordAccess } = useFileAccessStore.getState();
+
+  if (fileName !== null) {
+    recordAccess(fileKey({ kind: "saved", name: fileName }));
+  } else if (externalPath !== null) {
+    recordAccess(
+      fileKey({
+        kind: "external",
+        path: externalPath,
+        name: buffer?.title ?? "",
+      }),
+    );
+  }
 
   if (
     fileName !== state.lastOpenedFileName ||

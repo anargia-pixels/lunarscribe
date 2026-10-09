@@ -7,6 +7,7 @@ import {
 } from "@lunarscribe/components/ui/context-menu";
 import {
   SidebarMenuAction,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@lunarscribe/components/ui/sidebar";
@@ -27,11 +28,14 @@ export type FileMenuState = { key: string; anchor: HTMLElement | null };
 /**
  * One sidebar entry with a menu shared by right-click and its action button. Menu items
  * whose callback is omitted are left out, so each app offers only what its platform can do.
+ * `accessedLabel` sits at the right edge and gives way to the action button on hover;
+ * sidebar-file-section.css styles it.
  */
 export function SidebarFileItem({
   name,
   label,
   title,
+  accessedLabel,
   isExternal,
   canExport,
   menu,
@@ -51,6 +55,7 @@ export function SidebarFileItem({
   name: string;
   label: string;
   title: string;
+  accessedLabel?: string;
   isExternal: boolean;
   canExport: boolean;
   menu: FileMenuState | null;
@@ -89,6 +94,7 @@ export function SidebarFileItem({
         >
           <span>{label}</span>
         </SidebarMenuButton>
+        {accessedLabel && <SidebarMenuBadge>{accessedLabel}</SidebarMenuBadge>}
         <SidebarMenuAction
           ref={actionRef}
           render={<Button variant="ghost" size="icon-xs" />}

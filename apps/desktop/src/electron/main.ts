@@ -7,6 +7,7 @@ import { registerDocumentsFolder } from "./documents-folder";
 import { registerDocxExport } from "./docx-export";
 import { queueExternalFiles, registerExternalFiles } from "./external-files";
 import { registerPdfExport } from "./pdf-export";
+import { registerUpdates } from "./updates";
 
 const hasInstanceLock = app.requestSingleInstanceLock();
 
@@ -128,6 +129,7 @@ void app.whenReady().then(() => {
   registerExternalFiles();
   registerPdfExport();
   registerDocxExport();
+  registerUpdates();
   queueExternalFiles(process.argv.slice(app.isPackaged ? 1 : 2), process.cwd());
 
   if (app.isPackaged) {

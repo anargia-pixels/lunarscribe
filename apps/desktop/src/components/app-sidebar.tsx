@@ -21,6 +21,7 @@ import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
 import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
 import { SidebarResizeRail } from "@/components/sidebar-resize-rail";
 import { useTheme } from "@/components/theme-provider";
+import { useUpdate } from "@/components/use-update";
 import type { FileTarget } from "@/lib/editor-files";
 import { fileKey, isTextFile } from "@/lib/editor-files";
 import { exportDocx } from "@/lib/export-docx";
@@ -64,6 +65,7 @@ export function AppSidebar() {
   const sectionsOpen = useSidebarStore((state) => state.sectionsOpen);
   const setSectionOpen = useSidebarStore((state) => state.setSectionOpen);
   const { toggleTheme } = useTheme();
+  const update = useUpdate();
 
   const activeBuffer = useActiveBuffer();
   const externalFiles = useBufferStore((state) => state.externalFiles);
@@ -217,6 +219,7 @@ export function AppSidebar() {
           )}
           onSearch={() => setIsSearchOpen(true)}
           onToggleTheme={toggleTheme}
+          update={update}
         />
         <SidebarContent className="overflow-hidden">
           {fileGroups.map((section) => (

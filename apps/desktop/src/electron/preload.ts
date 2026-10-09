@@ -57,6 +57,11 @@ contextBridge.exposeInMainWorld("lunarscribe", {
   },
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
+  checkForUpdate: (): Promise<string | null> =>
+    ipcRenderer.invoke("updates:check"),
+  installUpdate: (): Promise<{ error: string | null }> =>
+    ipcRenderer.invoke("updates:install"),
+  restartApp: () => ipcRenderer.send("updates:restart"),
   readExternalFile: (path: string): Promise<OpenedExternalFile> =>
     ipcRenderer.invoke("external-files:read", path),
   saveExternalFile: (path: string, markdown: string): Promise<void> =>

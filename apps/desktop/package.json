@@ -55,6 +55,10 @@
       {
         "from": "../../assets/icons/256x256.png",
         "to": "icons/256x256.png"
+      },
+      {
+        "from": "../../install.sh",
+        "to": "install.sh"
       }
     ],
     "fileAssociations": [

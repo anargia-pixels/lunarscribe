@@ -6,15 +6,67 @@ import { Button } from "@lunarscribe/components/ui/button";
 import { DialogTrigger } from "@lunarscribe/components/ui/dialog";
 import { SidebarHeader } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
-import { FilePlus, FolderOpen, PenTool, Search, Settings } from "lucide-react";
+import {
+  Download,
+  FilePlus,
+  FolderOpen,
+  Loader2,
+  PenTool,
+  RotateCw,
+  Search,
+  Settings,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import "./app-sidebar-header.css";
 
+/** A newer release: `available` to download, `downloading`, then `ready` to restart. */
+export type SidebarUpdate = {
+  version: string;
+  status: "available" | "downloading" | "ready";
+  onClick: () => void;
+};
+
+function getUpdateLabel({ version, status }: SidebarUpdate) {
+  if (status === "available") {
+    return `Update to ${version}`;
+  }
+
+  return status === "downloading"
+    ? `Downloading ${version}`
+    : "Restart to update";
+}
+
+const UPDATE_ICONS = {
+  available: <Download />,
+  downloading: <Loader2 className="animate-spin" />,
+  ready: <RotateCw />,
+} as const;
+
+/** The update button, shown only while a newer release exists. */
+function UpdateButton({ update }: { update: SidebarUpdate }) {
+  const label = getUpdateLabel(update);
+
+  return (
+    <Hint label={label} side="bottom">
+      <Button
+        variant="fluid"
+        size="icon-sm"
+        aria-label={label}
+        disabled={update.status === "downloading"}
+        onClick={update.onClick}
+      >
+        {UPDATE_ICONS[update.status]}
+      </Button>
+    </Hint>
+  );
+}
+
 /**
  * The Lunarscribe logo above the sidebar's action buttons. The settings button is a dialog
  * trigger, so `renderSettings` wraps it in the app's settings window. Open file shows only
- * when `onOpenFile` is given. Hovering the logo shows `version` when it is given.
+ * when `onOpenFile` is given, and the update button when `update` is given. Hovering the
+ * logo shows `version` when it is given.
  */
 export function AppSidebarHeader({
   modKeyLabel,
@@ -25,6 +77,7 @@ export function AppSidebarHeader({
   renderSettings,
   onSearch,
   onToggleTheme,
+  update,
 }: {
   modKeyLabel: string;
   version?: string;
@@ -34,6 +87,7 @@ export function AppSidebarHeader({
   renderSettings: (trigger: ReactNode) => ReactNode;
   onSearch: () => void;
   onToggleTheme: (origin: ThemeRevealOrigin) => void;
+  update?: SidebarUpdate | null;
 }) {
   const logo = <h1 className="font-logo text-primary text-3xl">Lunarscribe</h1>;
 
@@ -116,6 +170,7 @@ export function AppSidebarHeader({
               modKeyLabel={modKeyLabel}
               onToggle={onToggleTheme}
             />
+            {update && <UpdateButton update={update} />}
           </div>
         </div>
       </SidebarHeader>

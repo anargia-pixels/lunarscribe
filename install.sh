@@ -185,6 +185,7 @@ Name=Lunarscribe
 Comment=Write markdown and create drawings
 Exec="$EXEC_PATH" %U
 Icon=$ICON_PATH
+StartupWMClass=lunarscribe
 Terminal=false
 Categories=Office;TextEditor;
 MimeType=text/markdown;text/x-markdown;text/plain;x-scheme-handler/lunarscribe;

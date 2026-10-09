@@ -2,6 +2,7 @@
   "name": "desktop",
   "version": "0.13.22",
   "description": "Lunarscribe Markdown writing app",
+  "desktopName": "lunarscribe.desktop",
   "private": true,
   "type": "module",
   "main": "./out/main/main.js",

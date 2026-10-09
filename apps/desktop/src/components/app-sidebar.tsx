@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 
 import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
 import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
+import { SidebarResizeRail } from "@/components/sidebar-resize-rail";
 import { useTheme } from "@/components/theme-provider";
 import type { FileTarget } from "@/lib/editor-files";
 import { fileKey, isTextFile } from "@/lib/editor-files";
@@ -297,6 +298,7 @@ export function AppSidebar() {
             onDelete={() => deleteFile(dialog.target.name)}
           />
         )}
+        <SidebarResizeRail />
       </Sidebar>
       <FileSearchDialog
         open={isSearchOpen}

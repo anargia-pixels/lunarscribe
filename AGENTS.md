@@ -27,6 +27,8 @@ conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
 - Shared components stay state-agnostic: they take props and callbacks, and app state
   (zustand) is wired in the app.
 - Desktop buffers live in memory in zustand; markdown is never written to disk.
+- Persist app state (settings, layout, zoom) with zustand `persist`; JSON files in the
+  `userData` folder are only for main-process data such as sync credentials.
 - Theme: light palette is user-defined, dark is Catppuccin Mocha. Fonts are Poppins and
   Roboto Mono, bundled from `packages/utils/src/fonts` so they render offline.
 - Change only what the request names. When a UI term is ambiguous (which separator, which

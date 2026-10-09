@@ -8,6 +8,7 @@ import { ListGroup, Select } from "heroui-native";
 import { View } from "react-native";
 import { ScopedVariables } from "uniwind";
 
+import { PressableListItem } from "@/components/pressable-list-item";
 import type { Theme } from "@/lib/editor-types";
 
 /** Stands for the colors written in global.css rather than a color theme. */
@@ -72,14 +73,14 @@ export function ColorThemeSelect({
       }}
     >
       <Select.Trigger variant="unstyled" asChild>
-        <ListGroup.Item accessibilityLabel={LABELS[theme]}>
+        <PressableListItem accessibilityLabel={LABELS[theme]}>
           <ListGroup.ItemContent>
             <ListGroup.ItemTitle>{LABELS[theme]}</ListGroup.ItemTitle>
             <ListGroup.ItemDescription>{value.label}</ListGroup.ItemDescription>
           </ListGroup.ItemContent>
           {selected && <ColorThemeSwatches palette={selected[theme]} />}
           <ListGroup.ItemSuffix />
-        </ListGroup.Item>
+        </PressableListItem>
       </Select.Trigger>
       <Select.Portal>
         <Select.Overlay />

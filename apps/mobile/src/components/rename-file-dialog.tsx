@@ -1,15 +1,9 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
-import {
-  Button,
-  Dialog,
-  FieldError,
-  Input,
-  Label,
-  TextField,
-} from "heroui-native";
+import { Dialog, FieldError, Input, Label, TextField } from "heroui-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, View } from "react-native";
 
+import { PressableButton } from "@/components/pressable-button";
 import { stemOf } from "@/lib/editor-files";
 
 /** Asks for a new title for a saved file; stays open with the error if the rename fails. */
@@ -62,16 +56,16 @@ export function RenameFileDialog({
               <FieldError>{error}</FieldError>
             </TextField>
             <View className="flex-row justify-end gap-3">
-              <Button variant="ghost" size="sm" onPress={onClose}>
+              <PressableButton variant="ghost" size="sm" onPress={onClose}>
                 Cancel
-              </Button>
-              <Button
+              </PressableButton>
+              <PressableButton
                 size="sm"
                 isDisabled={isRenaming}
                 onPress={() => void submit()}
               >
                 Rename
-              </Button>
+              </PressableButton>
             </View>
           </Dialog.Content>
         </KeyboardAvoidingView>

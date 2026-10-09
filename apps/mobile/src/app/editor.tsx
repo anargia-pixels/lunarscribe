@@ -1,5 +1,5 @@
 import { Redirect, useRouter } from "expo-router";
-import { Button, Typography, useThemeColor } from "heroui-native";
+import { Typography, useThemeColor } from "heroui-native";
 import { ChevronLeft } from "lucide-react-native";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -7,6 +7,7 @@ import { View } from "react-native";
 import { DarkmodeToggle } from "@/components/darkmode-toggle";
 import { EditorSlot } from "@/components/editor-host";
 import { FileErrorAlert } from "@/components/file-error-alert";
+import { PressableButton } from "@/components/pressable-button";
 import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
 import { syncFiles } from "@/lib/sync/sync-service";
 import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
@@ -56,7 +57,7 @@ export default function EditorScreen() {
   return (
     <View className="bg-background pt-safe pb-safe flex-1">
       <View className="border-border h-12 flex-row items-center gap-1 border-b px-2">
-        <Button
+        <PressableButton
           variant="ghost"
           size="sm"
           isIconOnly
@@ -64,7 +65,7 @@ export default function EditorScreen() {
           onPress={() => router.back()}
         >
           <ChevronLeft size={20} color={foreground} />
-        </Button>
+        </PressableButton>
         <Typography
           type="body-sm"
           align="center"

@@ -1,5 +1,6 @@
-import { Alert, Button } from "heroui-native";
+import { Alert } from "heroui-native";
 
+import { PressableButton } from "@/components/pressable-button";
 import { useBufferStore } from "@/stores/buffer-store";
 
 /** The last failed file operation, until dismissed. */
@@ -18,9 +19,9 @@ export function FileErrorAlert() {
         <Alert.Title>File error</Alert.Title>
         <Alert.Description>{fileError}</Alert.Description>
       </Alert.Content>
-      <Button variant="ghost" size="sm" onPress={clearFileError}>
+      <PressableButton variant="ghost" size="sm" onPress={clearFileError}>
         Dismiss
-      </Button>
+      </PressableButton>
     </Alert>
   );
 }

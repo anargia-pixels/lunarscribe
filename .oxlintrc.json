@@ -160,6 +160,16 @@
     "packages/components/src/components/ui/**",
     "lunarscribe-rewrite/**"
   ],
+  "overrides": [
+    {
+      // Reanimated drives the mobile spring press through an animated style,
+      // which has no class equivalent.
+      "files": ["apps/mobile/src/components/pressable-*.tsx"],
+      "rules": {
+        "shadcn/no-inline-styles": "off"
+      }
+    }
+  ],
   "env": {
     "builtin": true
   }

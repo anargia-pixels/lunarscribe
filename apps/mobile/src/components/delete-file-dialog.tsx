@@ -1,7 +1,9 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
-import { Button, Dialog, FieldError } from "heroui-native";
+import { Dialog, FieldError } from "heroui-native";
 import { useState } from "react";
 import { View } from "react-native";
+
+import { PressableButton } from "@/components/pressable-button";
 
 /** Confirms deleting a saved file from the documents folder. */
 export function DeleteFileDialog({
@@ -40,17 +42,17 @@ export function DeleteFileDialog({
           </Dialog.Description>
           {error && <FieldError isInvalid>{error}</FieldError>}
           <View className="mt-5 flex-row justify-end gap-3">
-            <Button variant="ghost" size="sm" onPress={onClose}>
+            <PressableButton variant="ghost" size="sm" onPress={onClose}>
               Cancel
-            </Button>
-            <Button
+            </PressableButton>
+            <PressableButton
               variant="danger"
               size="sm"
               isDisabled={isDeleting}
               onPress={() => void confirm()}
             >
               Delete
-            </Button>
+            </PressableButton>
           </View>
         </Dialog.Content>
       </Dialog.Portal>

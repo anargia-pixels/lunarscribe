@@ -16,6 +16,7 @@ import { type ReactNode, useState } from "react";
 import { ScrollView, View } from "react-native";
 
 import { ColorThemeSelect } from "@/components/color-theme-select";
+import { PressableButton } from "@/components/pressable-button";
 import {
   cancelSyncSignIn,
   connectSync,
@@ -159,7 +160,7 @@ export default function SettingsScreen() {
   return (
     <View className="bg-background pt-safe pb-safe flex-1">
       <View className="border-border h-12 flex-row items-center gap-1 border-b px-2">
-        <Button
+        <PressableButton
           variant="ghost"
           size="sm"
           isIconOnly
@@ -167,7 +168,7 @@ export default function SettingsScreen() {
           onPress={() => router.back()}
         >
           <ChevronLeft size={20} color={foreground} />
-        </Button>
+        </PressableButton>
         <Typography.Heading type="h5" className="flex-1">
           Settings
         </Typography.Heading>
@@ -178,9 +179,13 @@ export default function SettingsScreen() {
             title="Appearances"
             action={
               (lightColorTheme !== null || darkColorTheme !== null) && (
-                <Button variant="ghost" size="sm" onPress={resetColorThemes}>
+                <PressableButton
+                  variant="ghost"
+                  size="sm"
+                  onPress={resetColorThemes}
+                >
                   Reset to defaults
-                </Button>
+                </PressableButton>
               )
             }
           />
@@ -237,35 +242,35 @@ export default function SettingsScreen() {
             {status.provider ? (
               <>
                 {status.isSignInRequired && (
-                  <Button isDisabled={isDisabled} onPress={connect}>
+                  <PressableButton isDisabled={isDisabled} onPress={connect}>
                     Sign in again
-                  </Button>
+                  </PressableButton>
                 )}
-                <Button isDisabled={isDisabled} onPress={sync}>
+                <PressableButton isDisabled={isDisabled} onPress={sync}>
                   <RefreshCw size={16} color={accentForeground} />
                   <Button.Label>
                     {status.isBusy && !connectStage ? "Syncing…" : "Sync now"}
                   </Button.Label>
-                </Button>
-                <Button
+                </PressableButton>
+                <PressableButton
                   variant="outline"
                   isDisabled={isDisabled}
                   onPress={disconnect}
                 >
                   Disconnect
-                </Button>
+                </PressableButton>
               </>
             ) : (
-              <Button isDisabled={isDisabled} onPress={connect}>
+              <PressableButton isDisabled={isDisabled} onPress={connect}>
                 {connectStage
                   ? "Connecting…"
                   : `Connect ${SYNC_PROVIDERS[selected]}`}
-              </Button>
+              </PressableButton>
             )}
             {connectStage === "signing-in" && (
-              <Button variant="outline" onPress={cancelSyncSignIn}>
+              <PressableButton variant="outline" onPress={cancelSyncSignIn}>
                 Cancel sign-in
-              </Button>
+              </PressableButton>
             )}
           </View>
           {connectMessage && (

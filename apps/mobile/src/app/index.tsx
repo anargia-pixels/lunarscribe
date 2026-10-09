@@ -1,7 +1,6 @@
 import { FILE_SECTIONS } from "@lunarscribe/utils/sidebar-sections";
 import { useRouter } from "expo-router";
 import {
-  Button,
   ListGroup,
   SearchField,
   Separator,
@@ -10,18 +9,21 @@ import {
   useThemeColor,
 } from "heroui-native";
 import { Plus, Settings } from "lucide-react-native";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
+import Animated from "react-native-reanimated";
 
 import { DarkmodeToggle } from "@/components/darkmode-toggle";
 import { DeleteFileDialog } from "@/components/delete-file-dialog";
 import { FileErrorAlert } from "@/components/file-error-alert";
 import { FileListItem } from "@/components/file-list-item";
+import { PressableButton } from "@/components/pressable-button";
 import { RenameFileDialog } from "@/components/rename-file-dialog";
 import { SyncAlert } from "@/components/sync-alert";
 import { type FileSearchMatch, searchFiles } from "@/lib/documents-folder";
 import { kindOf } from "@/lib/editor-files";
 import type { EditorKind } from "@/lib/editor-types";
+import { rowEntering, rowLayout, springs } from "@/lib/motion";
 import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";
 
@@ -33,6 +35,18 @@ type FileItem = { name: string; description?: string };
 const SECTIONS = FILE_SECTIONS.flatMap((section) =>
   section.kind === "external" ? [] : [section],
 );
+
+/** The tab indicator glides to the pressed tab on the default spatial spring. */
+const TAB_INDICATOR_SPRING = {
+  type: "spring",
+  config: springs.defaultSpatial,
+} as const;
+
+const TAB_INDICATOR_ANIMATION = {
+  width: TAB_INDICATOR_SPRING,
+  height: TAB_INDICATOR_SPRING,
+  translateX: TAB_INDICATOR_SPRING,
+};
 
 function isEditorKind(value: string): value is EditorKind {
   return SECTIONS.some((section) => section.kind === value);
@@ -113,7 +127,7 @@ export default function FilesScreen() {
   const renderList = (items: FileItem[]) => (
     <ListGroup>
       {items.map(({ name, description }, index) => (
-        <Fragment key={name}>
+        <Animated.View key={name} entering={rowEntering} layout={rowLayout}>
           {index > 0 && <Separator className="mx-4" />}
           <FileListItem
             name={name}
@@ -131,7 +145,7 @@ export default function FilesScreen() {
                 : undefined
             }
           />
-        </Fragment>
+        </Animated.View>
       ))}
     </ListGroup>
   );
@@ -142,7 +156,7 @@ export default function FilesScreen() {
         <Typography.Heading type="h5" className="font-logo text-accent flex-1">
           Lunarscribe
         </Typography.Heading>
-        <Button
+        <PressableButton
           variant="ghost"
           size="sm"
           isIconOnly
@@ -152,9 +166,9 @@ export default function FilesScreen() {
           onPress={() => createInEditor(activeKind)}
         >
           <Plus size={20} color={foreground} />
-        </Button>
+        </PressableButton>
         <DarkmodeToggle />
-        <Button
+        <PressableButton
           variant="ghost"
           size="sm"
           isIconOnly
@@ -162,7 +176,7 @@ export default function FilesScreen() {
           onPress={() => router.push("/settings")}
         >
           <Settings size={18} color={foreground} />
-        </Button>
+        </PressableButton>
       </View>
       <View className="px-4 pb-3">
         <SearchField value={query} onChange={setQuery}>
@@ -186,7 +200,10 @@ export default function FilesScreen() {
       >
         {/* Tabs, in the desktop tabs' colors */}
         <Tabs.List className="bg-surface-secondary mx-4">
-          <Tabs.Indicator className="bg-background dark:border-surface-tertiary dark:bg-surface-tertiary/30 rounded-tab-indicator dark:border" />
+          <Tabs.Indicator
+            animation={TAB_INDICATOR_ANIMATION}
+            className="bg-background dark:border-surface-tertiary dark:bg-surface-tertiary/30 rounded-tab-indicator dark:border"
+          />
           {SECTIONS.map((section) => (
             <Tabs.Trigger
               key={section.section}

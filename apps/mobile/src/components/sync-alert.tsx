@@ -1,5 +1,6 @@
-import { Alert, Button } from "heroui-native";
+import { Alert } from "heroui-native";
 
+import { PressableButton } from "@/components/pressable-button";
 import { useSyncStore } from "@/stores/sync-store";
 
 /** The last sync failure or conflicts, until dismissed. */
@@ -23,9 +24,9 @@ export function SyncAlert() {
           >{`${name}: ${reason}`}</Alert.Description>
         ))}
       </Alert.Content>
-      <Button variant="ghost" size="sm" onPress={clearNotice}>
+      <PressableButton variant="ghost" size="sm" onPress={clearNotice}>
         Dismiss
-      </Button>
+      </PressableButton>
     </Alert>
   );
 }

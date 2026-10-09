@@ -1,6 +1,8 @@
-import { Button, ListGroup, Menu, useThemeColor } from "heroui-native";
+import { ListGroup, Menu, useThemeColor } from "heroui-native";
 import { Ellipsis } from "lucide-react-native";
 
+import { PressableButton } from "@/components/pressable-button";
+import { PressableListItem } from "@/components/pressable-list-item";
 import { stemOf } from "@/lib/editor-files";
 
 /** One saved file: press to open it, or use its menu to rename, delete or force-sync it. */
@@ -26,7 +28,7 @@ export function FileListItem({
   const foreground = useThemeColor("foreground");
 
   return (
-    <ListGroup.Item onPress={onOpen} accessibilityLabel={`Open ${name}`}>
+    <PressableListItem onPress={onOpen} accessibilityLabel={`Open ${name}`}>
       <ListGroup.ItemContent>
         <ListGroup.ItemTitle
           numberOfLines={1}
@@ -43,14 +45,14 @@ export function FileListItem({
       <ListGroup.ItemSuffix>
         <Menu>
           <Menu.Trigger asChild>
-            <Button
+            <PressableButton
               variant="ghost"
               size="sm"
               isIconOnly
               accessibilityLabel={`Actions for ${name}`}
             >
               <Ellipsis size={18} color={foreground} />
-            </Button>
+            </PressableButton>
           </Menu.Trigger>
           <Menu.Portal>
             <Menu.Overlay />
@@ -70,6 +72,6 @@ export function FileListItem({
           </Menu.Portal>
         </Menu>
       </ListGroup.ItemSuffix>
-    </ListGroup.Item>
+    </PressableListItem>
   );
 }

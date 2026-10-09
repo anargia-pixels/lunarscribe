@@ -10,6 +10,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useSaveShortcut } from "@/components/use-save-shortcut";
 import { useSync } from "@/components/use-sync";
+import { useZoomShortcut } from "@/components/use-zoom-shortcut";
 import { useSidebarStore } from "@/stores/sidebar-store";
 
 /** App shell shared by every page: sidebar on the left, page content in the inset. */
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
   useSaveShortcut();
   useSync();
+  useZoomShortcut();
 
   return (
     <ThemeProvider>

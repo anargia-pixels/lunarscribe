@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webUtils } from "electron";
+import { contextBridge, ipcRenderer, webFrame, webUtils } from "electron";
 
 import type {
   ExternalFile,
@@ -56,6 +56,7 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     return () => ipcRenderer.off("sync:files", handler);
   },
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  setZoomLevel: (level: number) => webFrame.setZoomLevel(level),
   readExternalFile: (path: string): Promise<OpenedExternalFile> =>
     ipcRenderer.invoke("external-files:read", path),
   saveExternalFile: (path: string, markdown: string): Promise<void> =>

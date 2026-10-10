@@ -35,6 +35,8 @@ conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
   buttons), ask before editing.
 - Commit on the current branch. Ask before commiting or creating a new branch.
 - This application is being developed for Linux and macos. Windows is not supported yet
+- When releasing a new version, read the [release checklist](RELEASE.md) and follow the
+  steps in order.
 
 ## shadcn
 

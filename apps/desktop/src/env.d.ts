@@ -35,8 +35,10 @@ interface Window {
     getPathForFile: (file: File) => string;
     /** Scales the window, where 1 is 100%. */
     setZoomFactor: (factor: number) => void;
-    /** The newer release tag, such as `v1.2.3`, or `null`. Checks once per launch. */
-    checkForUpdate: () => Promise<string | null>;
+    /** Versions and folders for the About pane. */
+    getAppInfo: () => Promise<import("./lib/updates").AppInfo>;
+    /** Asks GitHub for a newer release. */
+    checkForUpdate: () => Promise<import("./lib/updates").UpdateCheck>;
     /** Downloads and installs the latest release over this copy; `error` explains a failure. */
     installUpdate: () => Promise<{ error: string | null }>;
     /** Restarts into the installed update. */

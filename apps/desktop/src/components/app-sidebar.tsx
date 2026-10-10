@@ -23,6 +23,7 @@ import {
 } from "@lunarscribe/utils/sidebar-sections";
 import { useEffect, useState } from "react";
 
+import { AboutPane } from "@/components/settings-dialog/about-pane";
 import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
 import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
 import { SidebarResizeRail } from "@/components/sidebar-resize-rail";
@@ -240,6 +241,7 @@ export function AppSidebar() {
             <SettingsDialog
               appearancePane={<AppearancePane />}
               syncingPane={<SyncingPane />}
+              aboutPane={<AboutPane />}
             >
               {trigger}
             </SettingsDialog>

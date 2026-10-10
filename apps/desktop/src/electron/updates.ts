@@ -5,10 +5,15 @@ import { promisify } from "node:util";
 import { jsonString, parseJson } from "@lunarscribe/utils/sync/json";
 import { app, ipcMain, net } from "electron";
 
+import type { AppInfo, UpdateCheck } from "../lib/updates";
+
 const execFileAsync = promisify(execFile);
 
 const LATEST_RELEASE_URL =
   "https://api.github.com/repos/anargia-pixels/lunarscribe/releases/latest";
+
+/** Shown when install.sh cannot replace this copy in place. */
+const CANNOT_UPDATE = "This copy of Lunarscribe cannot update itself.";
 
 /** Release tags read `v1.2.3`, with optional build metadata such as `+mobile`. */
 const RELEASE_TAG = /^v?(\d+)\.(\d+)\.(\d+)(?:\+[\w.-]+)?$/;
@@ -32,18 +37,25 @@ function isNewerVersion(latest: number[], current: number[]) {
   return false;
 }
 
+/** The app folder on Linux, and the app bundle on macOS. */
+function getApplicationFolder() {
+  // The executable sits at Lunarscribe.app/Contents/MacOS/Lunarscribe on macOS.
+  return process.platform === "darwin"
+    ? resolve(process.execPath, "../../..")
+    : dirname(process.execPath);
+}
+
 /**
  * The folder install.sh installs into: the app folder on Linux, and the folder holding
  * `Lunarscribe.app` on macOS. `null` when install.sh cannot replace this copy in place.
  */
 function getInstallDirectory() {
   if (process.platform === "linux" && process.arch === "x64") {
-    return dirname(process.execPath);
+    return getApplicationFolder();
   }
 
   if (process.platform === "darwin" && process.arch === "arm64") {
-    // The executable sits at Lunarscribe.app/Contents/MacOS/Lunarscribe.
-    const bundle = resolve(process.execPath, "../../..");
+    const bundle = getApplicationFolder();
 
     return basename(bundle) === "Lunarscribe.app" ? dirname(bundle) : null;
   }
@@ -52,9 +64,13 @@ function getInstallDirectory() {
 }
 
 /** The newest release tag without build metadata, or `null` when this copy is current. */
-async function findUpdate() {
-  if (!app.isPackaged || getInstallDirectory() === null) {
-    return null;
+async function findUpdate(): Promise<UpdateCheck> {
+  if (!app.isPackaged) {
+    return { version: null, error: "Development builds do not update." };
+  }
+
+  if (getInstallDirectory() === null) {
+    return { version: null, error: CANNOT_UPDATE };
   }
 
   const response = await net.fetch(LATEST_RELEASE_URL, {
@@ -73,10 +89,27 @@ async function findUpdate() {
   const current = parseVersion(app.getVersion());
 
   if (!latest || !current || !isNewerVersion(latest, current)) {
-    return null;
+    return { version: null, error: null };
   }
 
-  return `v${latest.join(".")}`;
+  return { version: `v${latest.join(".")}`, error: null };
+}
+
+/** Versions and folders for the About pane. */
+function getAppInfo(): AppInfo {
+  const system = process.platform === "darwin" ? "macOS" : "Linux";
+
+  return {
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    chromium: process.versions.chrome,
+    node: process.versions.node,
+    v8: process.versions.v8,
+    operatingSystem: `${system} ${process.getSystemVersion()}`,
+    architecture: process.arch,
+    applicationFolder: getApplicationFolder(),
+    userDataFolder: app.getPath("userData"),
+  };
 }
 
 /** Runs the bundled installer over this copy, which downloads and verifies the latest release. */
@@ -114,33 +147,24 @@ async function installUpdate(installDirectory: string) {
   }
 }
 
-/** Checks for a newer release once per launch and installs it when the renderer asks. */
+/** Answers update checks and installs from the renderer, which runs one of each at a time. */
 export function registerUpdates() {
-  let update: Promise<string | null> | null = null;
-  let installation: Promise<{ error: string | null }> | null = null;
+  ipcMain.handle("app:info", getAppInfo);
 
-  ipcMain.handle("updates:check", () => {
-    update ??= findUpdate().catch((error) => {
-      console.error("Unable to check for updates.", error);
+  ipcMain.handle("updates:check", () =>
+    findUpdate().catch((cause) => {
+      console.error("Unable to check for updates.", cause);
 
-      return null;
-    });
-
-    return update;
-  });
+      return { version: null, error: "GitHub could not be reached." };
+    }),
+  );
 
   ipcMain.handle("updates:install", () => {
     const installDirectory = getInstallDirectory();
 
-    if (installDirectory === null) {
-      return { error: "This copy of Lunarscribe cannot update itself." };
-    }
-
-    installation ??= installUpdate(installDirectory).finally(() => {
-      installation = null;
-    });
-
-    return installation;
+    return installDirectory === null
+      ? { error: CANNOT_UPDATE }
+      : installUpdate(installDirectory);
   });
 
   ipcMain.on("updates:restart", () => {

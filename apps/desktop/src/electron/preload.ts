@@ -12,6 +12,7 @@ import type {
   SyncResult,
   SyncedFileChange,
 } from "../lib/sync";
+import type { AppInfo, UpdateCheck } from "../lib/updates";
 
 /** Exposes file operations and lifecycle events without Node access in the renderer. */
 contextBridge.exposeInMainWorld("lunarscribe", {
@@ -57,7 +58,8 @@ contextBridge.exposeInMainWorld("lunarscribe", {
   },
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
-  checkForUpdate: (): Promise<string | null> =>
+  getAppInfo: (): Promise<AppInfo> => ipcRenderer.invoke("app:info"),
+  checkForUpdate: (): Promise<UpdateCheck> =>
     ipcRenderer.invoke("updates:check"),
   installUpdate: (): Promise<{ error: string | null }> =>
     ipcRenderer.invoke("updates:install"),

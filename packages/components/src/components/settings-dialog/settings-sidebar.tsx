@@ -7,17 +7,22 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@lunarscribe/components/ui/sidebar";
-import { Palette, RefreshCw } from "lucide-react";
+import { Info, Palette, RefreshCw } from "lucide-react";
 
-export type SettingsSection = "appearances" | "syncing";
+export type SettingsSection = "appearances" | "syncing" | "about";
 
-/** Settings navigation listing the sections of the settings window; it never collapses. */
+/**
+ * Settings navigation listing the sections of the settings window; it never collapses.
+ * About is listed only when `hasAbout` is set.
+ */
 export function SettingsSidebar({
   section,
   onSectionChange,
+  hasAbout,
 }: {
   section: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
+  hasAbout: boolean;
 }) {
   return (
     <Sidebar collapsible="none">
@@ -43,6 +48,17 @@ export function SettingsSidebar({
                 <span>Syncing</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            {hasAbout && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={section === "about"}
+                  onClick={() => onSectionChange("about")}
+                >
+                  <Info />
+                  <span>About</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

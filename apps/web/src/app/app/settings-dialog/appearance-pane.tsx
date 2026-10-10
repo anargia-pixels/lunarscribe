@@ -16,8 +16,9 @@ import { Switch } from "@lunarscribe/components/ui/switch";
 import { RotateCcw } from "lucide-react";
 import type { CSSProperties } from "react";
 
-import { FontSettings } from "@/components/settings-dialog/font-settings";
 import { type Theme, useAppearanceStore } from "@/stores/appearance-store";
+
+import { FontSettings } from "./font-settings";
 
 /** Stands for the colors written in globals.css rather than a color theme. */
 const DEFAULT_COLOR_THEME = "default";

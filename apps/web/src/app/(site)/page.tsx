@@ -1,31 +1,28 @@
 import { Button } from "@lunarscribe/components/ui/button";
-import { Separator } from "@lunarscribe/components/ui/separator";
 import { cn } from "@lunarscribe/utils/cn";
-import { Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Download } from "lucide-react";
-import type { ReactNode } from "react";
 
-import { Galaxy } from "@/components/landing/galaxy";
-import { InstallCommand } from "@/components/landing/install-command";
-import { TextType } from "@/components/landing/text-type";
+import { InlineLink } from "@/components/inline-link";
+import { EXTERNAL_LINKS } from "@/lib/external-links";
+import { pageHead } from "@/lib/seo";
 
-// Router links take external URLs at runtime; plain strings keep them off the typed route list.
-const EXTERNAL_LINKS = {
-  repository: "https://github.com/anargia-pixels/lunarscribe",
-  releases: "https://github.com/anargia-pixels/lunarscribe/releases/latest",
-  fff: "https://github.com/dmtrKovalenko/fff",
-  lexical: "https://lexical.dev/docs/intro",
-};
+import { Galaxy } from "./galaxy";
+import { InstallCommand } from "./install-command";
+import { TextType } from "./text-type";
+
+export const Route = createFileRoute("/(site)/")({
+  head: () =>
+    pageHead({
+      title: "Lunarscribe: an Obsidian OSS alternative",
+      description:
+        "A local first, open source markdown editor for Linux, macOS and the web, with tables, math, links, Excalidraw drawings and syncing.",
+      path: "/",
+    }),
+  component: LandingPage,
+});
 
 const HEADLINE = "An Obsidian OSS alternative";
-
-function InlineLink({ to, children }: { to: string; children: ReactNode }) {
-  return (
-    <Link to={to} className="text-primary underline-offset-4 hover:underline">
-      {children}
-    </Link>
-  );
-}
 
 /** Screenshots of the web app, captured at 1920×1200. */
 const SHOWCASE = [
@@ -109,30 +106,14 @@ function Screenshot({ src, alt }: { src: string; alt: string }) {
 }
 
 /** The marketing page at `/`; the web app itself lives at `/app`. */
-export function LandingPage() {
+function LandingPage() {
   return (
-    <div className="dark bg-sidebar text-foreground min-h-full">
+    <>
       <div className="relative isolate">
         <Galaxy className="absolute inset-0 -z-10 mask-b-from-50%" />
-        <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <span className="font-logo text-primary text-3xl">Lunarscribe</span>
-          <nav className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              className="max-sm:hidden"
-              nativeButton={false}
-              render={<Link to={EXTERNAL_LINKS.repository} />}
-            >
-              GitHub
-            </Button>
-            <Button nativeButton={false} render={<Link to="/app" />}>
-              Open web app
-            </Button>
-          </nav>
-        </header>
 
         <section>
-          <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 pt-20 pb-16 text-center">
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 pt-40 pb-16 text-center">
             <h1 className="text-primary max-w-3xl text-5xl font-bold tracking-tight text-balance">
               <span className="sr-only">{HEADLINE}</span>
               <span aria-hidden>
@@ -210,18 +191,6 @@ export function LandingPage() {
           ))}
         </section>
       </main>
-
-      <Separator />
-      <footer className="text-muted-foreground mx-auto flex max-w-6xl items-center justify-between px-6 py-8 text-sm">
-        <span className="font-logo text-primary text-xl">Lunarscribe</span>
-        <Button
-          variant="link"
-          nativeButton={false}
-          render={<Link to={EXTERNAL_LINKS.repository} />}
-        >
-          Source on GitHub
-        </Button>
-      </footer>
-    </div>
+    </>
   );
 }

@@ -23,10 +23,6 @@ import {
 } from "@lunarscribe/utils/sidebar-sections";
 import { useEffect, useState } from "react";
 
-import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
-import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
-import { SidebarResizeRail } from "@/components/sidebar-resize-rail";
-import { useTheme } from "@/components/theme-provider";
 import { downloadBlob } from "@/lib/download";
 import type { FileTarget } from "@/lib/editor-files";
 import { fileKey, isTextFile } from "@/lib/editor-files";
@@ -46,6 +42,11 @@ import {
 import { useFileAccessStore } from "@/stores/file-access-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSyncStore } from "@/stores/sync-store";
+
+import { AppearancePane } from "./settings-dialog/appearance-pane";
+import { SyncingPane } from "./settings-dialog/syncing-pane";
+import { SidebarResizeRail } from "./sidebar-resize-rail";
+import { useTheme } from "./theme-provider";
 
 type FileDialogState =
   | { kind: "rename"; target: FileTarget }

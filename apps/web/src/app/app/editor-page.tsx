@@ -14,12 +14,13 @@ import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
 import { useEffect, useState } from "react";
 
-import { EditorFileDropZone } from "@/components/editor-file-drop-zone";
 import { BUFFER_EXTENSIONS, isTextFile } from "@/lib/editor-files";
 import { MOD_KEY_LABEL } from "@/lib/platform";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";
+
+import { EditorFileDropZone } from "./editor-file-drop-zone";
 
 /** Loads the drawing canvas only when a drawing buffer opens. */
 function LazyDrawingEditor(props: DrawingEditorProps) {
@@ -72,7 +73,7 @@ function syncMessage(isSyncing: boolean, hasSyncedSuccessfully: boolean) {
 }
 
 /** Editor page for the active buffer. */
-export default function Page() {
+export default function EditorPage() {
   const buffer = useActiveBuffer();
   const setContent = useBufferStore((state) => state.setContent);
   const theme = useAppearanceStore((state) => state.theme);

@@ -5,7 +5,7 @@ import { OAUTH_CHANNEL } from "@/lib/sync/oauth";
 import type { OAuthCallback } from "@/lib/sync/oauth";
 
 /** Dropbox redirects its sign-in pop-up here; the code goes back to the opening tab. */
-export const Route = createFileRoute("/oauth/dropbox")({
+export const Route = createFileRoute("/oauth/dropbox/")({
   ssr: false,
   component: DropboxCallback,
 });

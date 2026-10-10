@@ -17,7 +17,8 @@ The Electron build of Lunarscribe in `apps/desktop`, where writing happens.
 _Avoid_: client, native app
 
 **Web app**:
-The TanStack Start app in `apps/web`, currently boilerplate.
+The TanStack Start app in `apps/web`, served at lunarscribe.doctorthe113.com: the
+landing and legal pages, and the browser editor at `/app`.
 _Avoid_: website, frontend
 
 ### Storage

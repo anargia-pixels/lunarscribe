@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="@tanstack/react-start" />
 
 /** File System Access API members that TypeScript's DOM library omits (Chromium only). */
 type FileSystemPermissionMode = { mode: "read" | "readwrite" };

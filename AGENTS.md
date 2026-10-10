@@ -9,7 +9,12 @@ conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
 - `apps/desktop`: Electron + React via electron-vite. Next.js-style `src/`:
   `app/layout.tsx` and `app/page.tsx` are the shell, `electron/` holds main and preload,
   `stores/` holds zustand stores.
-- `apps/web`: TanStack Start, kept as generator boilerplate until asked otherwise.
+- `apps/web`: TanStack Start with Next.js app-router routes in `src/app/`: `page.tsx` is
+  an index route, `layout.tsx` or `route.ts` a layout or server-handler route, and other
+  files beside them are that page's own components (rules in `tsr.config.json`). `(site)/`
+  holds the landing and legal pages; `app/` is the browser editor at `/app`, whose route
+  files stay thin and lazy-load `editor-*.tsx` so the Worker bundle stays small.
+  Cloudflare Workers Builds deploys it as the `lunarscribe` Worker on push to `main`.
 - `packages/components`: shared UI. `src/components/ui/` is shadcn (Base UI),
   `src/components/<feature>/` holds shared non-shadcn components (the Lexical markdown
   editor), `src/lib/` holds shared DOM and React helpers (DOCX and PDF export, file

@@ -4,16 +4,18 @@ import {
 } from "@lunarscribe/components/ui/sidebar";
 import { Toaster } from "@lunarscribe/components/ui/toast";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
-import type { CSSProperties, ReactNode } from "react";
+import { Outlet } from "@tanstack/react-router";
+import type { CSSProperties } from "react";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import { ThemeProvider } from "@/components/theme-provider";
-import { useSaveShortcut } from "@/components/use-save-shortcut";
-import { useSync } from "@/components/use-sync";
 import { useSidebarStore } from "@/stores/sidebar-store";
 
-/** App shell shared by every page: sidebar on the left, page content in the inset. */
-export default function RootLayout({ children }: { children: ReactNode }) {
+import { AppSidebar } from "./app-sidebar";
+import { ThemeProvider } from "./theme-provider";
+import { useSaveShortcut } from "./use-save-shortcut";
+import { useSync } from "./use-sync";
+
+/** The editor's shell: sidebar on the left, the page in the inset. */
+export default function EditorLayout() {
   const sidebarOpen = useSidebarStore((state) => state.open);
   const setSidebarOpen = useSidebarStore((state) => state.setOpen);
   const sidebarWidth = useSidebarStore((state) => state.width);
@@ -35,7 +37,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             style={sidebarStyle}
           >
             <AppSidebar />
-            <SidebarInset className="min-w-0">{children}</SidebarInset>
+            <SidebarInset className="min-w-0">
+              <Outlet />
+            </SidebarInset>
           </SidebarProvider>
         </TooltipProvider>
       </Toaster>

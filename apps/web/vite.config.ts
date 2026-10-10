@@ -5,6 +5,8 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import routerConfig from "./tsr.config.json" with { type: "json" };
+
 const config = defineConfig({
   publicDir: "../../assets",
   resolve: { tsconfigPaths: true },
@@ -12,7 +14,17 @@ const config = defineConfig({
     devtools(),
     cloudflare({ viteEnvironment: { name: "ssr" } }),
     tailwindcss(),
-    tanstackStart(),
+    // Next.js-style app router: `page` and `layout`/`route` files are routes, and other
+    // files beside them are the page's own components. tsr.config.json holds the same
+    // rules for the `tsr generate` CLI; this plugin resolves the folder from `src`.
+    tanstackStart({
+      router: {
+        routesDirectory: "app",
+        indexToken: routerConfig.indexToken,
+        routeToken: routerConfig.routeToken,
+        routeFileIgnorePattern: routerConfig.routeFileIgnorePattern,
+      },
+    }),
     viteReact(),
   ],
 });

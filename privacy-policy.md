@@ -1,14 +1,14 @@
 # Privacy Policy
 
-Effective date: October 6, 2026
+Effective date: October 11, 2026
 
 Lunarscribe is a markdown writing app for desktop, web, and mobile. This policy explains
 what data Lunarscribe uses and where that data goes.
 
 ## Summary
 
-- Lunarscribe has no server. Its developers do not receive your writing, your account
-  details, or your sign-in tokens.
+- Lunarscribe has no server that receives your data. Its developers do not receive your
+  writing, your account details, or your sign-in tokens.
 - Your files stay on your device unless you turn on sync.
 - If you turn on sync, your files go only to the provider you choose: GitHub, Google
   Drive, or Dropbox.
@@ -30,6 +30,14 @@ Android Keystore. The web app keeps them in your browser's storage.
 You can delete this data at any time. Delete your files, or uninstall the app, or clear
 the site data in your browser. **Disconnect** in Syncing removes the sync settings and
 tokens.
+
+## Website hosting
+
+Cloudflare hosts the Lunarscribe website and web app at lunarscribe.doctorthe113.com. The
+site sends your browser its pages and files. It does not receive or store your notes,
+drawings, settings, or sign-in tokens. Cloudflare may process technical request data, such
+as your IP address and browser type, to deliver and protect the site. The
+[Cloudflare Privacy Policy](https://www.cloudflare.com/privacypolicy/) covers that data.
 
 ## Sync providers
 

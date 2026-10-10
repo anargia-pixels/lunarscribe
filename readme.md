@@ -79,7 +79,7 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
 Run this command to install or update Lunarscribe:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/anargia-pixels/lunarscribe/main/install.sh | bash
+curl -fsSL https://lunarscribe.doctorthe113.com/install | bash
 ```
 
 The installer downloads the latest release and checks its SHA-256 checksum. It requires

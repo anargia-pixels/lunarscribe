@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lunarscribe",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "routes": [
+    { "pattern": "lunarscribe.doctorthe113.com", "custom_domain": true }
+  ]
+}

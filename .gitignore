@@ -32,6 +32,9 @@ build
 # Turbo
 .turbo
 
+# Cloudflare
+.wrangler
+
 # Misc
 *.tgz
 .cache

@@ -75,6 +75,11 @@ export default function Page() {
   const buffer = useActiveBuffer();
   const setContent = useBufferStore((state) => state.setContent);
   const theme = useAppearanceStore((state) => state.theme);
+
+  const showEditorToolbar = useAppearanceStore(
+    (state) => state.showEditorToolbar,
+  );
+
   const clearFileError = useBufferStore((state) => state.clearFileError);
   const fileError = useBufferStore((state) => state.fileError);
 
@@ -167,6 +172,7 @@ export default function Page() {
             key={`${buffer.id}:${buffer.syncRevision}`}
             markdown={buffer.content}
             onChange={(markdown) => setContent(buffer.id, markdown)}
+            showToolbar={showEditorToolbar}
           />
         </EditorFileDropZone>
       )}

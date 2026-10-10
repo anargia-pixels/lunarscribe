@@ -15,12 +15,7 @@ import {
 } from "@lexical/table";
 import { mergeRegister } from "@lexical/utils";
 import { Button } from "@lunarscribe/components/ui/button";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@lunarscribe/components/ui/context-menu";
+import type { ContextMenuItem } from "@lunarscribe/components/ui/context-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +35,7 @@ import {
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
 import { ChevronDown } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const ACTIONS = [
   { action: "row-above", label: "Insert row above", variant: "default" },
@@ -54,7 +49,7 @@ const ACTIONS = [
 
 type TableAction = (typeof ACTIONS)[number]["action"];
 
-function TableMenuItems({
+export function TableMenuItems({
   item: Item,
   onAction,
 }: {
@@ -117,7 +112,8 @@ function $updateTableFormatting(
   }
 }
 
-function getCellKey(
+/** The table cell holding `target`, if it is inside the editor. */
+export function getCellKey(
   editor: LexicalEditor,
   target: EventTarget | null,
 ): NodeKey | null {
@@ -134,7 +130,7 @@ function getCellKey(
   });
 }
 
-function applyAction(
+export function applyAction(
   editor: LexicalEditor,
   cellKey: NodeKey | null,
   action: TableAction,
@@ -192,11 +188,10 @@ function applyAction(
   });
 }
 
-export function TableCellMenuPlugin({ children }: { children: ReactNode }) {
+/** A menu button on the cell holding the caret, with the table actions. */
+export function TableCellMenuPlugin() {
   const [editor] = useLexicalComposerContext();
   const [cellKey, setCellKey] = useState<NodeKey | null>(null);
-  const contextCellKey = useRef<NodeKey | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -231,10 +226,10 @@ export function TableCellMenuPlugin({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const cell = cellKey === null ? null : editor.getElementByKey(cellKey);
-    const container = containerRef.current;
     const button = buttonRef.current;
+    const container = button?.offsetParent;
 
-    if (!cell || !container || !button) {
+    if (!cell || !button || !container) {
       return;
     }
 
@@ -263,67 +258,33 @@ export function TableCellMenuPlugin({ children }: { children: ReactNode }) {
     };
   }, [cellKey, editor]);
 
+  if (cellKey === null) {
+    return null;
+  }
+
   return (
-    <ContextMenu>
-      <ContextMenuTrigger
-        ref={containerRef}
-        // A grid stretches the content editable to full height. Do not use flex: in Chrome, a click outside a flex parent can focus the editor.
-        className="relative grid flex-1 grid-cols-1"
-        onContextMenu={(event) => {
-          contextCellKey.current = getCellKey(editor, event.target);
-
-          if (contextCellKey.current === null) {
-            event.preventBaseUIHandler();
-            event.stopPropagation();
+    <div ref={buttonRef} className="absolute z-10 p-1" contentEditable={false}>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="outline"
+              size="icon-xs"
+              aria-label="Table cell actions"
+            />
           }
-        }}
-        onTouchStart={(event) => {
-          contextCellKey.current = getCellKey(editor, event.target);
-
-          if (contextCellKey.current === null) {
-            event.preventBaseUIHandler();
-          }
-        }}
-      >
-        {children}
-        {cellKey !== null && (
-          <div
-            ref={buttonRef}
-            className="absolute z-10 p-1"
-            contentEditable={false}
-          >
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="icon-xs"
-                    aria-label="Table cell actions"
-                  />
-                }
-              >
-                <ChevronDown />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                finalFocus={() => editor.getRootElement() ?? false}
-              >
-                <TableMenuItems
-                  item={DropdownMenuItem}
-                  onAction={(action) => applyAction(editor, cellKey, action)}
-                />
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
-      </ContextMenuTrigger>
-      <ContextMenuContent finalFocus={() => editor.getRootElement() ?? false}>
-        <TableMenuItems
-          item={ContextMenuItem}
-          onAction={(action) =>
-            applyAction(editor, contextCellKey.current, action)
-          }
-        />
-      </ContextMenuContent>
-    </ContextMenu>
+        >
+          <ChevronDown />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          finalFocus={() => editor.getRootElement() ?? false}
+        >
+          <TableMenuItems
+            item={DropdownMenuItem}
+            onAction={(action) => applyAction(editor, cellKey, action)}
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }

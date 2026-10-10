@@ -6,7 +6,8 @@ export const editorTheme: EditorThemeClasses = {
   blockCursor:
     "pointer-events-none relative block h-0 before:absolute before:top-0 before:left-0 before:h-7 before:w-px before:animate-caret-blink before:bg-foreground",
   paragraph: "leading-7",
-  quote: "mb-3 border-l-2 border-border pl-4 text-muted-foreground italic",
+  quote:
+    "mb-3 border-l-3 border-primary pl-4 py-2 bg-muted text-muted-foreground italic",
   heading: {
     h1: "mb-4 text-3xl font-bold tracking-tight text-heading-1",
     h2: "mb-3 text-2xl font-semibold tracking-tight text-heading-2",
@@ -16,8 +17,8 @@ export const editorTheme: EditorThemeClasses = {
     h6: "mb-2 text-sm font-semibold",
   },
   list: {
-    ul: "mb-3 ml-4 list-disc",
-    ol: "mb-3 ml-6 list-decimal",
+    ul: "editor-list editor-list-bullet mb-3",
+    ol: "editor-list editor-list-number mb-3",
     listitem: "my-1",
     checklist: "editor-checklist mb-3 list-none",
     listitemChecked: "editor-checklist-item editor-checklist-checked",
@@ -25,7 +26,7 @@ export const editorTheme: EditorThemeClasses = {
     nested: { listitem: "list-none" },
   },
   link: "text-primary underline underline-offset-4",
-  hr: "my-4 border-0 border-t border-border",
+  hr: "my-4 border-0 border-t border-primary",
   hrSelected: "outline outline-ring",
   code: "mb-3 block overflow-x-auto rounded-md bg-muted p-3 font-code text-sm",
   codeHighlight: {
@@ -72,7 +73,8 @@ export const editorTheme: EditorThemeClasses = {
     bold: "font-bold",
     italic: "italic",
     strikethrough: "line-through",
-    underline: "underline",
+    underline: "underline underline-offset-4",
+    underlineStrikethrough: "underline line-through underline-offset-4",
     code: "rounded bg-muted px-1 py-0.5 font-code text-sm",
   },
 };

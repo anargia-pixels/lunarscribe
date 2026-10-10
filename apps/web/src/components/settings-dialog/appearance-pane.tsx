@@ -4,6 +4,7 @@ import {
   type ColorPalette,
 } from "@lunarscribe/components/themes/color-themes";
 import { Button } from "@lunarscribe/components/ui/button";
+import { Label } from "@lunarscribe/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -11,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@lunarscribe/components/ui/select";
+import { Switch } from "@lunarscribe/components/ui/switch";
 import { RotateCcw } from "lucide-react";
 import type { CSSProperties } from "react";
 
@@ -101,6 +103,28 @@ function ColorThemeSwatches({ palette }: { palette: ColorPalette }) {
   });
 }
 
+/** Hides the toolbar; the editor context menu keeps every action. */
+function EditorToolbarSwitch() {
+  const showEditorToolbar = useAppearanceStore(
+    (state) => state.showEditorToolbar,
+  );
+
+  const setShowEditorToolbar = useAppearanceStore(
+    (state) => state.setShowEditorToolbar,
+  );
+
+  return (
+    <div className="flex items-center justify-between gap-6">
+      <Label htmlFor="show-editor-toolbar">Show toolbar</Label>
+      <Switch
+        id="show-editor-toolbar"
+        checked={showEditorToolbar}
+        onCheckedChange={setShowEditorToolbar}
+      />
+    </div>
+  );
+}
+
 /** Appearances pane: color themes and separate UI, buffer, and code fonts. */
 export function AppearancePane() {
   const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
@@ -149,6 +173,9 @@ export function AppearancePane() {
         Reset to defaults
       </Button>
       <FontSettings />
+      <div className="flex max-w-lg flex-col gap-4">
+        <EditorToolbarSwitch />
+      </div>
     </div>
   );
 }

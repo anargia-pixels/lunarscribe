@@ -151,6 +151,8 @@ function ContextMenuSubContent({
       data-slot="context-menu-sub-content"
       className="shadow-lg"
       side="right"
+      // Offsets the popup's p-1 so the first item lines up with the trigger.
+      alignOffset={-4}
       {...props}
     />
   );

@@ -87,9 +87,21 @@ The text form of a buffer and its source of truth; the editor loads it and
 writes it back on every change.
 _Avoid_: content, body, source
 
+**Frontmatter**:
+The block of YAML metadata at the top of a buffer's markdown, between `---`
+fences. The markdown editor loads only the body, and the frontmatter panel
+edits the block as one row per key and value pair.
+_Avoid_: metadata, header, yaml header, properties
+
 **Markdown editor**:
 The WYSIWYG Lexical editor that renders markdown as rich text while you type.
 _Avoid_: text editor, rich text editor, textarea
+
+**Frontmatter panel**:
+The section above the markdown editor that lists and edits the active buffer's
+frontmatter. Its add button is on every buffer and writes nothing until a row
+is named.
+_Avoid_: properties panel, frontmatter editor, metadata panel
 
 **Markdown shortcut**:
 Markdown syntax typed at the start of a block or around text (`## `, `> `,
@@ -114,8 +126,15 @@ _Avoid_: titlebar, navbar, top bar
 
 **Toolbar**:
 The row of formatting controls below the header: history, inline formats, and
-block types.
+block types. The Appearances pane can hide it, since the editor context menu
+holds the same actions.
 _Avoid_: titlebar, header buttons, menu bar
+
+**Editor context menu**:
+The menu a right click on the markdown editor opens, modeled on Obsidian's: link
+actions, then Format, Paragraph, Insert, and (inside a table) Table submenus,
+then history and clipboard actions.
+_Avoid_: right-click menu, popup menu, editor menu
 
 **Mobile view**:
 The layout for narrow screens, below the mobile breakpoint of 768px (Tailwind's

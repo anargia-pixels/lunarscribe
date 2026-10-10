@@ -8,6 +8,7 @@ import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 
 import { editorTheme } from "./editor-theme";
+import { parseFrontmatter } from "./frontmatter";
 import { MARKDOWN_TRANSFORMERS } from "./plugins/markdown-transformers";
 import { MathNode } from "./plugins/math-node";
 import { MermaidNode } from "./plugins/mermaid-node";
@@ -33,9 +34,10 @@ export function createMarkdownConfig(markdown: string): InitialConfigType {
       MathNode,
       MermaidNode,
     ],
+    // Frontmatter belongs to the frontmatter panel, not to the editor graph.
     editorState: () =>
       $convertFromMarkdownString(
-        markdown,
+        parseFrontmatter(markdown).body,
         MARKDOWN_TRANSFORMERS,
         undefined,
         true,

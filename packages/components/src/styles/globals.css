@@ -241,6 +241,42 @@
   }
 }
 
+/* Bullets and numbers are left aligned at the same edge as checkboxes, with the
+   text at the same indent. */
+@utility editor-list {
+  margin-inline: 0.5rem 0;
+  list-style: none;
+
+  & > li {
+    position: relative;
+    padding-inline-start: 1.5rem;
+  }
+
+  & > li:not([role="checkbox"], :has(> :is(ul, ol)))::before {
+    position: absolute;
+    inset-inline-start: 0;
+    color: var(--primary);
+  }
+}
+
+@utility editor-list-bullet {
+  & > li:not([role="checkbox"], :has(> :is(ul, ol)))::before {
+    content: "•";
+  }
+}
+
+@utility editor-list-number {
+  & > li:not(:has(> :is(ul, ol)))::before {
+    content: counter(list-item) ".";
+    font-family: var(--font-code);
+  }
+
+  /* Two-digit numbers need more room than the shared indent. */
+  &:has(> li:nth-child(10)) > li {
+    padding-inline-start: 2.25rem;
+  }
+}
+
 /* Lexical supplies checkbox roles and keyboard handling; these glyphs follow
    its left-edge hit area without placing a second control inside the list item. */
 @utility editor-checklist {

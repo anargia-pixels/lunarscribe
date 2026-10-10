@@ -12,17 +12,19 @@ type AppearanceStore = {
   uiFont: string;
   bufferFont: string;
   codeFont: string;
+  showEditorToolbar: boolean;
   setTheme: (theme: Theme) => void;
   setLightColorTheme: (colorTheme: string | null) => void;
   setDarkColorTheme: (colorTheme: string | null) => void;
   setUiFont: (font: string) => void;
   setBufferFont: (font: string) => void;
   setCodeFont: (font: string) => void;
+  setShowEditorToolbar: (showEditorToolbar: boolean) => void;
   /** Drops both color themes, so the colors in globals.css apply again. */
   resetColorThemes: () => void;
 };
 
-/** Remembers the theme, color themes, and fonts across launches. */
+/** Remembers the theme, color themes, fonts, and toolbar visibility across launches. */
 export const useAppearanceStore = create<AppearanceStore>()(
   persist(
     (set) => ({
@@ -34,12 +36,14 @@ export const useAppearanceStore = create<AppearanceStore>()(
       uiFont: "Poppins",
       bufferFont: "Poppins",
       codeFont: "Roboto Mono",
+      showEditorToolbar: true,
       setTheme: (theme) => set({ theme }),
       setLightColorTheme: (lightColorTheme) => set({ lightColorTheme }),
       setDarkColorTheme: (darkColorTheme) => set({ darkColorTheme }),
       setUiFont: (uiFont) => set({ uiFont }),
       setBufferFont: (bufferFont) => set({ bufferFont }),
       setCodeFont: (codeFont) => set({ codeFont }),
+      setShowEditorToolbar: (showEditorToolbar) => set({ showEditorToolbar }),
       resetColorThemes: () =>
         set({ lightColorTheme: null, darkColorTheme: null }),
     }),

@@ -5,7 +5,6 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
@@ -26,6 +25,7 @@ import { type MouseEvent, useEffect, useState } from "react";
 import { createMarkdownConfig } from "./markdown-config";
 import { CheckListReorderPlugin } from "./plugins/check-list-reorder-plugin";
 import { CodeHighlightPlugin } from "./plugins/code-highlight-plugin";
+import { EditorContextMenuPlugin } from "./plugins/editor-context-menu-plugin";
 import { MarkdownShortcutPlugin } from "./plugins/markdown-shortcut-plugin";
 import { MARKDOWN_TRANSFORMERS } from "./plugins/markdown-transformers";
 import { MathPlugin } from "./plugins/math-plugin";
@@ -227,7 +227,7 @@ export function MarkdownMobileEditor({
     <LexicalComposer initialConfig={initialConfig}>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
         <div className="relative mx-auto flex min-h-full w-full max-w-3xl flex-col px-5 pt-5">
-          <TableCellMenuPlugin>
+          <EditorContextMenuPlugin>
             <RichTextPlugin
               contentEditable={
                 <ContentEditable
@@ -244,13 +244,13 @@ export function MarkdownMobileEditor({
               }
               ErrorBoundary={LexicalErrorBoundary}
             />
-          </TableCellMenuPlugin>
+            <TableCellMenuPlugin />
+          </EditorContextMenuPlugin>
         </div>
       </div>
       <MobileToolbarPlugin />
       <ScrollCaretIntoViewPlugin />
       <HistoryPlugin />
-      <HorizontalRulePlugin />
       <ListPlugin />
       <CheckListPlugin disableTakeFocusOnClick />
       <CheckListReorderPlugin />

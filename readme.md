@@ -4,7 +4,7 @@ Lunarscribe is a desktop markdown writing app for Linux and Apple Silicon Macs. 
 markdown editor shows formatted text as you type. The app has a formatting toolbar, local
 file storage, Excalidraw drawings, and PDF and DOCX export.
 
-![The markdown editor with formatted lists, checkboxes, and code blocks](assets/screenshot-editor.webp)
+![The markdown editor with formatted lists, checkboxes, links, and code blocks](assets/screenshot-editor.webp)
 
 ![An Excalidraw drawing open in Lunarscribe](assets/screenshot-drawing.webp)
 
@@ -20,13 +20,28 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
   selected text. It also has undo and redo controls.
 - **Tables:** The toolbar has a control to insert tables. The editor also loads markdown
   tables. Each cell has an action menu to insert or delete rows and columns, or delete the
-  table. A right-click in a cell opens the same actions. Wide tables have horizontal
-  scroll controls inside the editor.
+  table. In a cell, the right-click menu has the same actions under Table. Wide tables
+  have horizontal scroll controls inside the editor.
+- **Links:** Type `[text](url)` or use the toolbar's link control to add a link with its
+  own text. With the caret in a link, a bar under it shows the URL and can edit or remove
+  the link. Ctrl+click (⌘+click on macOS) opens a link.
+- **Collapsible headings:** Hovering a heading shows a chevron that collapses everything
+  under it until the next heading of the same or a higher level.
+- **Right-click menu:** A right-click in the editor opens a menu like Obsidian's, with
+  link actions, Format, Paragraph, Insert, and Table submenus, undo and redo, and
+  clipboard actions. Settings → Appearances can hide the toolbar, since the menu holds all
+  of its actions.
 - **Math:** KaTeX shows LaTeX equations as inline math or math blocks. The toolbar has
   controls to insert both types. The editor also converts `$...$`, `$$...$$`, and pasted
   markdown equations to math. You can edit the LaTeX source of a selected equation.
 - **Drawings:** The app has an Excalidraw canvas to create and edit drawings. Lunarscribe
   saves drawing scenes as local `.draw` files.
+- **Frontmatter:** A buffer's markdown can start with frontmatter, a block of YAML
+  metadata between `---` fences. The frontmatter panel above the editor lists the block as
+  one row per key and value pair, with an editor for each value's type: text, number,
+  checkbox, or a list of text. The panel adds, renames, and removes rows. Removing the
+  last row removes the block from the file. Frontmatter never appears as writing and is
+  left out of exports.
 - **Local storage:** Lunarscribe automatically saves changes two seconds after the last
   edit. The save shortcut saves the active buffer immediately. When the app starts, it
   opens the last selected saved file.

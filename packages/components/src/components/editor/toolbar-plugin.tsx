@@ -19,6 +19,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@lunarscribe/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@lunarscribe/components/ui/popover";
 import { Separator } from "@lunarscribe/components/ui/separator";
 import { Toggle } from "@lunarscribe/components/ui/toggle";
 import {
@@ -45,6 +50,7 @@ import {
   Heading2,
   Heading3,
   Italic,
+  Link,
   List,
   ListChecks,
   ListOrdered,
@@ -66,6 +72,13 @@ import {
 } from "lucide-react";
 import { type ReactElement, type ReactNode, useEffect, useState } from "react";
 
+import {
+  $applyLink,
+  $getLinkDraft,
+  $removeLink,
+  type LinkDraft,
+  LinkForm,
+} from "./link-form";
 import { INSERT_MATH_COMMAND } from "./plugins/math-plugin";
 import { INSERT_MERMAID_COMMAND } from "./plugins/mermaid-plugin";
 
@@ -90,8 +103,8 @@ export const TEXT_FORMATS: {
   { format: "code", label: "Inline code", icon: Code },
 ];
 
-/** Block types and inserted blocks; lists go through commands so ListPlugin can merge siblings. */
-export const INSERTIONS: ToolbarAction[] = [
+/** Block types; lists go through commands so ListPlugin can merge siblings. */
+export const BLOCK_TYPES: ToolbarAction[] = [
   {
     label: "Paragraph",
     icon: Pilcrow,
@@ -118,11 +131,6 @@ export const INSERTIONS: ToolbarAction[] = [
     apply: (editor) => setBlock(editor, $createQuoteNode),
   },
   {
-    label: "Code block",
-    icon: SquareCode,
-    apply: (editor) => setBlock(editor, $createCodeNode),
-  },
-  {
     label: "Bulleted list",
     icon: List,
     apply: (editor) =>
@@ -139,6 +147,15 @@ export const INSERTIONS: ToolbarAction[] = [
     icon: ListChecks,
     apply: (editor) =>
       editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined),
+  },
+];
+
+/** Inserted blocks: code, tables, math and diagrams. */
+export const INSERTS: ToolbarAction[] = [
+  {
+    label: "Code block",
+    icon: SquareCode,
+    apply: (editor) => setBlock(editor, $createCodeNode),
   },
   {
     label: "Insert table",
@@ -167,6 +184,9 @@ export const INSERTIONS: ToolbarAction[] = [
       editor.dispatchCommand(INSERT_MERMAID_COMMAND, undefined),
   },
 ];
+
+/** Block types and inserted blocks, as the toolbar shows them. */
+export const INSERTIONS: ToolbarAction[] = [...BLOCK_TYPES, ...INSERTS];
 
 /** Converts every block touched by the selection to the node `createBlock` returns. */
 function setBlock(editor: LexicalEditor, createBlock: () => ElementNode) {
@@ -309,6 +329,56 @@ export function InsertMenu(props: ToolbarMenuProps) {
   );
 }
 
+const EMPTY_LINK_DRAFT: LinkDraft = { text: "", url: "", isLink: false };
+
+/** Adds a link to the selection, or edits the link around it. */
+function LinkButton() {
+  const [editor] = useLexicalComposerContext();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(EMPTY_LINK_DRAFT);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setDraft(editor.read($getLinkDraft));
+    }
+
+    setOpen(nextOpen);
+  };
+
+  const finish = (apply?: () => void) => {
+    setOpen(false);
+
+    if (apply) {
+      editor.update(apply);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <Hint label="Link">
+        <PopoverTrigger
+          render={<Button variant="fluid" size="icon-sm" aria-label="Link" />}
+        >
+          <Link />
+        </PopoverTrigger>
+      </Hint>
+      <PopoverContent
+        initialFocus={false}
+        finalFocus={() => editor.getRootElement() ?? false}
+      >
+        {open && (
+          <LinkForm
+            draft={draft}
+            onSubmit={(text, url) => finish(() => $applyLink(text, url))}
+            onRemove={() => finish($removeLink)}
+            onCancel={() => finish()}
+          />
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function ToolbarSeparator() {
   return (
     <Separator
@@ -383,6 +453,7 @@ export function ToolbarPlugin() {
           hasHint
           button={<Button variant="fluid" size="sm" className="@2xl:hidden" />}
         />
+        <LinkButton />
         <ToolbarSeparator />
         <div className="hidden @3xl:contents">
           {INSERTIONS.map(({ label, icon: Icon, apply }) => (

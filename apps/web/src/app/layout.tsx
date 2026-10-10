@@ -4,7 +4,7 @@ import {
 } from "@lunarscribe/components/ui/sidebar";
 import { Toaster } from "@lunarscribe/components/ui/toast";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -16,6 +16,11 @@ import { useSidebarStore } from "@/stores/sidebar-store";
 export default function RootLayout({ children }: { children: ReactNode }) {
   const sidebarOpen = useSidebarStore((state) => state.open);
   const setSidebarOpen = useSidebarStore((state) => state.setOpen);
+  const sidebarWidth = useSidebarStore((state) => state.width);
+
+  const sidebarStyle: CSSProperties & Record<"--sidebar-width", string> = {
+    "--sidebar-width": `${sidebarWidth}px`,
+  };
 
   useSaveShortcut();
   useSync();
@@ -24,7 +29,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <ThemeProvider>
       <Toaster>
         <TooltipProvider>
-          <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SidebarProvider
+            open={sidebarOpen}
+            onOpenChange={setSidebarOpen}
+            style={sidebarStyle}
+          >
             <AppSidebar />
             <SidebarInset className="min-w-0">{children}</SidebarInset>
           </SidebarProvider>

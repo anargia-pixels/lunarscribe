@@ -25,6 +25,7 @@ import { useEffect, useState } from "react";
 
 import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
 import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
+import { SidebarResizeRail } from "@/components/sidebar-resize-rail";
 import { useTheme } from "@/components/theme-provider";
 import { downloadBlob } from "@/lib/download";
 import type { FileTarget } from "@/lib/editor-files";
@@ -34,6 +35,7 @@ import { exportPdf } from "@/lib/export-pdf";
 import { pickTextFiles } from "@/lib/external-files";
 import { searchFiles } from "@/lib/file-search";
 import { MOD_KEY_LABEL } from "@/lib/platform";
+import { formatTimeAgo } from "@/lib/relative-time";
 import { listFiles, onFilesChanged, readFile } from "@/lib/saved-files";
 import {
   kindOf,
@@ -41,6 +43,7 @@ import {
   useActiveBuffer,
   useBufferStore,
 } from "@/stores/buffer-store";
+import { useFileAccessStore } from "@/stores/file-access-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSyncStore } from "@/stores/sync-store";
 
@@ -56,6 +59,8 @@ export function AppSidebar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isForcingSync, setIsForcingSync] = useState(false);
+  const [nowMs, setNowMs] = useState(Date.now);
+  const accessedAt = useFileAccessStore((state) => state.accessedAt);
 
   const canForceSync = useSyncStore(
     (state) => state.provider !== null && !state.busy && !state.needsSignIn,
@@ -102,6 +107,23 @@ export function AppSidebar() {
     const group = fileGroups.find((section) => section.kind === kind);
     group?.files.push({ kind: "saved", name });
   }
+
+  // Most recently accessed first; files never opened here follow by name.
+  for (const group of fileGroups) {
+    group.files.sort(
+      (first, second) =>
+        (accessedAt[fileKey(second)] ?? 0) -
+          (accessedAt[fileKey(first)] ?? 0) ||
+        first.name.localeCompare(second.name),
+    );
+  }
+
+  // Keeps the time since each file was accessed current.
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 60_000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useSearchShortcut(() => setIsSearchOpen(true));
 
@@ -269,6 +291,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                   {section.files.map((target) => {
                     const key = fileKey(target);
+                    const accessedMs = accessedAt[key];
 
                     const isActive =
                       target.kind === "saved"
@@ -285,6 +308,11 @@ export function AppSidebar() {
                             : stemOf(target.name)
                         }
                         title={target.name}
+                        accessedLabel={
+                          accessedMs === undefined
+                            ? undefined
+                            : formatTimeAgo(accessedMs, nowMs)
+                        }
                         isExternal={target.kind === "external"}
                         canExport={isTextFile(target.name)}
                         isActive={isActive}
@@ -340,6 +368,7 @@ export function AppSidebar() {
             onDelete={() => deleteFile(dialog.target.name)}
           />
         )}
+        <SidebarResizeRail />
       </Sidebar>
       <FileSearchDialog
         open={isSearchOpen}

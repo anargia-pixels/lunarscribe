@@ -19,7 +19,7 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "Lunarscribe",
   slug: "lunarscribe",
-  version: "0.13.25",
+  version: "0.13.26",
   orientation: "default",
   // The desktop app icon. Absolute, because Expo Go requests it as `/assets/<path>`
   // and a leading `../` collapses out of that URL.

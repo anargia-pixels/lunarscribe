@@ -16,7 +16,7 @@
     },
     "apps/desktop": {
       "name": "desktop",
-      "version": "0.13.24",
+      "version": "0.13.26",
       "dependencies": {
         "@ff-labs/fff-node": "catalog:",
         "@tanstack/pacer": "catalog:",
@@ -45,7 +45,7 @@
     },
     "apps/mobile": {
       "name": "mobile",
-      "version": "0.13.24",
+      "version": "0.13.26",
       "dependencies": {
         "@expo-google-fonts/pixelify-sans": "^0.4.2",
         "@expo-google-fonts/poppins": "^0.4.1",

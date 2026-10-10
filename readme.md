@@ -4,6 +4,10 @@ Lunarscribe is a desktop markdown writing app for Linux and Apple Silicon Macs. 
 markdown editor shows formatted text as you type. The app has a formatting toolbar, local
 file storage, Excalidraw drawings, and PDF and DOCX export.
 
+![The markdown editor with formatted lists, checkboxes, and code blocks](assets/screenshot-editor.webp)
+
+![An Excalidraw drawing open in Lunarscribe](assets/screenshot-drawing.webp)
+
 ## Features
 
 - **Markdown editor:** Markdown shortcuts apply headings, quotes, bulleted lists, numbered

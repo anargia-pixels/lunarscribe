@@ -23,13 +23,15 @@ import {
 } from "lucide-react";
 import { useRef } from "react";
 
+import "./sidebar-file-item.css";
+
 export type FileMenuState = { key: string; anchor: HTMLElement | null };
 
 /**
  * One sidebar entry with a menu shared by right-click and its action button. Menu items
  * whose callback is omitted are left out, so each app offers only what its platform can do.
  * `accessedLabel` sits at the right edge and gives way to the action button on hover;
- * sidebar-file-section.css styles it.
+ * sidebar-file-item.css styles it.
  */
 export function SidebarFileItem({
   name,

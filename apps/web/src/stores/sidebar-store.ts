@@ -5,48 +5,38 @@ import { persist } from "zustand/middleware";
 
 type SidebarStore = {
   open: boolean;
-  sectionsOpen: Record<SidebarSection, boolean>;
+  section: SidebarSection;
   setOpen: (open: boolean) => void;
-  setSectionOpen: (section: SidebarSection, open: boolean) => void;
+  setSection: (section: SidebarSection) => void;
 };
 
-/** Sidebar visibility and each section's expanded state, remembered across launches. */
+/** Sidebar visibility and selected section tab, remembered across launches. */
 export const useSidebarStore = create<SidebarStore>()(
   persist(
     (set) => ({
       open: true,
-      sectionsOpen: { notes: true, drawings: true, "external-files": true },
+      section: "notes",
       setOpen: (open) => set({ open }),
-      setSectionOpen: (section, open) =>
-        set((state) => ({
-          sectionsOpen: { ...state.sectionsOpen, [section]: open },
-        })),
+      setSection: (section) => set({ section }),
     }),
     {
       name: "lunarscribe-sidebar",
-      // Older saved state omitted open sections. Keep those defaults during hydration.
+      // Saved state may predate a field or hold an unknown section; keep defaults for those.
       merge: (persisted, current) => {
         if (!(persisted instanceof Object)) {
           return current;
         }
 
-        const previousSections =
-          "sectionsOpen" in persisted ? persisted.sectionsOpen : null;
-
-        const sectionsOpen = { ...current.sectionsOpen };
-
-        if (previousSections instanceof Object) {
-          for (const [section, open] of Object.entries(previousSections)) {
-            if (isSidebarSection(section)) {
-              sectionsOpen[section] = open !== false;
-            }
-          }
-        }
+        const section =
+          "section" in persisted ? String(persisted.section) : null;
 
         return {
           ...current,
           open: "open" in persisted ? persisted.open !== false : current.open,
-          sectionsOpen,
+          section:
+            section !== null && isSidebarSection(section)
+              ? section
+              : current.section,
         };
       },
     },

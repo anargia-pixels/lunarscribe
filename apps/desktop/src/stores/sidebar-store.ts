@@ -20,46 +20,33 @@ function clampWidth(width: number) {
 type SidebarStore = {
   open: boolean;
   width: number;
-  sectionsOpen: Record<SidebarSection, boolean>;
+  section: SidebarSection;
   setOpen: (open: boolean) => void;
   setWidth: (width: number) => void;
-  setSectionOpen: (section: SidebarSection, open: boolean) => void;
+  setSection: (section: SidebarSection) => void;
 };
 
-/** Sidebar visibility, width and each section's expanded state, remembered across launches. */
+/** Sidebar visibility, width and selected section tab, remembered across launches. */
 export const useSidebarStore = create<SidebarStore>()(
   persist(
     (set) => ({
       open: true,
       width: SIDEBAR_DEFAULT_WIDTH,
-      sectionsOpen: { notes: true, drawings: true, "external-files": true },
+      section: "notes",
       setOpen: (open) => set({ open }),
       setWidth: (width) => set({ width: clampWidth(width) }),
-      setSectionOpen: (section, open) =>
-        set((state) => ({
-          sectionsOpen: { ...state.sectionsOpen, [section]: open },
-        })),
+      setSection: (section) => set({ section }),
     }),
     {
       name: "lunarscribe-sidebar",
-      // Older saved state omitted open sections. Keep those defaults during hydration.
+      // Saved state may predate a field or hold an unknown section; keep defaults for those.
       merge: (persisted, current) => {
         if (!(persisted instanceof Object)) {
           return current;
         }
 
-        const previousSections =
-          "sectionsOpen" in persisted ? persisted.sectionsOpen : null;
-
-        const sectionsOpen = { ...current.sectionsOpen };
-
-        if (previousSections instanceof Object) {
-          for (const [section, open] of Object.entries(previousSections)) {
-            if (isSidebarSection(section)) {
-              sectionsOpen[section] = open !== false;
-            }
-          }
-        }
+        const section =
+          "section" in persisted ? String(persisted.section) : null;
 
         const width = "width" in persisted ? Number(persisted.width) : null;
 
@@ -70,7 +57,10 @@ export const useSidebarStore = create<SidebarStore>()(
             width !== null && Number.isFinite(width)
               ? clampWidth(width)
               : current.width,
-          sectionsOpen,
+          section:
+            section !== null && isSidebarSection(section)
+              ? section
+              : current.section,
         };
       },
     },

@@ -7,14 +7,20 @@ import { SettingsDialog } from "@lunarscribe/components/settings-dialog/settings
 import { AppSidebarHeader } from "@lunarscribe/components/sidebar/app-sidebar-header";
 import { SidebarFileItem } from "@lunarscribe/components/sidebar/sidebar-file-item";
 import type { FileMenuState } from "@lunarscribe/components/sidebar/sidebar-file-item";
-import { SidebarFileSection } from "@lunarscribe/components/sidebar/sidebar-file-section";
+import {
+  FILE_SECTION_ICONS,
+  SidebarFileTabs,
+} from "@lunarscribe/components/sidebar/sidebar-file-tabs";
 import {
   Sidebar,
   SidebarContent,
   SidebarMenu,
 } from "@lunarscribe/components/ui/sidebar";
 import { toast } from "@lunarscribe/components/ui/toast";
-import { FILE_SECTIONS } from "@lunarscribe/utils/sidebar-sections";
+import {
+  FILE_SECTIONS,
+  isSidebarSection,
+} from "@lunarscribe/utils/sidebar-sections";
 import { useEffect, useState } from "react";
 
 import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
@@ -65,8 +71,8 @@ export function AppSidebar() {
     (state) => state.removeExternalFile,
   );
 
-  const sectionsOpen = useSidebarStore((state) => state.sectionsOpen);
-  const setSectionOpen = useSidebarStore((state) => state.setSectionOpen);
+  const activeSection = useSidebarStore((state) => state.section);
+  const setSection = useSidebarStore((state) => state.setSection);
   const { toggleTheme } = useTheme();
 
   const activeBuffer = useActiveBuffer();
@@ -246,69 +252,76 @@ export function AppSidebar() {
           onToggleTheme={toggleTheme}
         />
         <SidebarContent className="overflow-hidden">
-          {fileGroups.map((section) => (
-            <SidebarFileSection
-              key={section.section}
-              label={section.label}
-              count={section.files.length}
-              open={sectionsOpen[section.section]}
-              onOpenChange={(open) => setSectionOpen(section.section, open)}
-            >
-              <SidebarMenu>
-                {section.files.map((target) => {
-                  const key = fileKey(target);
+          <SidebarFileTabs
+            value={activeSection}
+            onValueChange={(section) => {
+              if (isSidebarSection(section)) {
+                setSection(section);
+              }
+            }}
+            tabs={fileGroups.map((section) => ({
+              value: section.section,
+              label: section.label,
+              shortLabel: section.shortLabel,
+              icon: FILE_SECTION_ICONS[section.section],
+              count: section.files.length,
+              content: (
+                <SidebarMenu>
+                  {section.files.map((target) => {
+                    const key = fileKey(target);
 
-                  const isActive =
-                    target.kind === "saved"
-                      ? target.name === activeBuffer?.fileName
-                      : target.id === activeBuffer?.externalId;
+                    const isActive =
+                      target.kind === "saved"
+                        ? target.name === activeBuffer?.fileName
+                        : target.id === activeBuffer?.externalId;
 
-                  return (
-                    <SidebarFileItem
-                      key={key}
-                      name={target.name}
-                      label={
-                        target.kind === "external"
-                          ? target.name
-                          : stemOf(target.name)
-                      }
-                      title={target.name}
-                      isExternal={target.kind === "external"}
-                      canExport={isTextFile(target.name)}
-                      isActive={isActive}
-                      menu={menu?.key === key ? menu : null}
-                      onMenuChange={(open, anchor) =>
-                        setMenu((current) => {
-                          if (open) {
-                            return { key, anchor };
-                          }
+                    return (
+                      <SidebarFileItem
+                        key={key}
+                        name={target.name}
+                        label={
+                          target.kind === "external"
+                            ? target.name
+                            : stemOf(target.name)
+                        }
+                        title={target.name}
+                        isExternal={target.kind === "external"}
+                        canExport={isTextFile(target.name)}
+                        isActive={isActive}
+                        menu={menu?.key === key ? menu : null}
+                        onMenuChange={(open, anchor) =>
+                          setMenu((current) => {
+                            if (open) {
+                              return { key, anchor };
+                            }
 
-                          return current?.key === key ? null : current;
-                        })
-                      }
-                      onOpen={() => void openTarget(target)}
-                      onRename={() => setDialog({ kind: "rename", target })}
-                      onDownload={
-                        target.kind === "saved"
-                          ? () => void downloadTarget(target)
-                          : undefined
-                      }
-                      onExportPdf={() => void exportTarget(target, "PDF")}
-                      onExportDocx={() => void exportTarget(target, "DOCX")}
-                      isExporting={isExporting}
-                      canForceSync={canForceSync && !isForcingSync}
-                      onForceSync={
-                        target.kind === "saved"
-                          ? () => void forceSyncTarget(target)
-                          : undefined
-                      }
-                      onDelete={() => deleteTarget(target)}
-                    />
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarFileSection>
-          ))}
+                            return current?.key === key ? null : current;
+                          })
+                        }
+                        onOpen={() => void openTarget(target)}
+                        onRename={() => setDialog({ kind: "rename", target })}
+                        onDownload={
+                          target.kind === "saved"
+                            ? () => void downloadTarget(target)
+                            : undefined
+                        }
+                        onExportPdf={() => void exportTarget(target, "PDF")}
+                        onExportDocx={() => void exportTarget(target, "DOCX")}
+                        isExporting={isExporting}
+                        canForceSync={canForceSync && !isForcingSync}
+                        onForceSync={
+                          target.kind === "saved"
+                            ? () => void forceSyncTarget(target)
+                            : undefined
+                        }
+                        onDelete={() => deleteTarget(target)}
+                      />
+                    );
+                  })}
+                </SidebarMenu>
+              ),
+            }))}
+          />
         </SidebarContent>
         {dialog?.kind === "rename" && (
           <RenameFileDialog

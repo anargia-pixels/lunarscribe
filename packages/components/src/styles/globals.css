@@ -57,6 +57,8 @@
   --shadow-color: 28 13% 20%;
   --shadow-opacity: 0.12;
   --shadow-opacity-strong: 0.3;
+  /* Hover pill behind tabs. */
+  --hover: rgb(0 0 0 / 0.04);
 }
 
 /* Catppuccin Mocha: https://catppuccin.com/palette */
@@ -107,6 +109,7 @@
   --shadow-color: 240 23% 9%;
   --shadow-opacity: 0.4;
   --shadow-opacity-strong: 0.8;
+  --hover: rgb(255 255 255 / 0.06);
 }
 
 /* Font utilities must read runtime variables, including when used with variants. */
@@ -193,6 +196,7 @@
 
   --tracking-normal: 0em;
   --spacing: 0.25rem;
+  --color-hover: var(--hover);
 }
 
 /* Motion for hover highlights and popups: entries settle on a spring-like ease-out,

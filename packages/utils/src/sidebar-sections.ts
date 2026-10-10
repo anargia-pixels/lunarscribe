@@ -1,8 +1,18 @@
-/** The sidebar's section labels and the kinds of files each section contains. */
+/** The sidebar's section labels, short tab labels and the kinds of files each section contains. */
 export const FILE_SECTIONS = [
-  { section: "notes", label: "Notes", kind: "markdown" },
-  { section: "drawings", label: "Drawings", kind: "drawing" },
-  { section: "external-files", label: "External files", kind: "external" },
+  { section: "notes", label: "Notes", shortLabel: "Notes", kind: "markdown" },
+  {
+    section: "drawings",
+    label: "Drawings",
+    shortLabel: "Drawings",
+    kind: "drawing",
+  },
+  {
+    section: "external-files",
+    label: "External files",
+    shortLabel: "External",
+    kind: "external",
+  },
 ] as const;
 
 export type SidebarSection = (typeof FILE_SECTIONS)[number]["section"];

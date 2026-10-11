@@ -7,8 +7,8 @@ import { InlineLink } from "@/components/inline-link";
 import { EXTERNAL_LINKS } from "@/lib/external-links";
 import { pageHead } from "@/lib/seo";
 
-import { Galaxy } from "./galaxy";
 import { InstallCommand } from "./install-command";
+import { PixelSnow } from "./pixel-snow";
 import { TextType } from "./text-type";
 
 export const Route = createFileRoute("/(site)/")({
@@ -100,7 +100,7 @@ function Screenshot({ src, alt }: { src: string; alt: string }) {
       width={1920}
       height={1200}
       loading="lazy"
-      className="ring-foreground/10 w-full rounded-xl shadow-2xl ring-1"
+      className="w-full rounded-xl shadow-2xl"
     />
   );
 }
@@ -110,14 +110,29 @@ function LandingPage() {
   return (
     <>
       <div className="relative isolate">
-        <Galaxy className="absolute inset-0 -z-10 mask-b-from-50%" />
+        <PixelSnow
+          className="absolute inset-0 -z-10 bg-black mask-b-from-50%"
+          color="#cba6f7"
+          variant="square"
+          density={0.4}
+          speed={1}
+          wind={0.25}
+          flakeSize={0.3}
+          pixelSize={3}
+          glow={0.3}
+          sway={0.3}
+          twinkle={0}
+          mouseInteraction
+          lightMode
+          opacity={0.5}
+        />
 
         <section>
           <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 pt-40 pb-16 text-center">
-            <h1 className="text-primary max-w-3xl text-5xl font-bold tracking-tight text-balance">
+            <h1 className="text-primary max-w-3xl text-5xl font-semibold tracking-tight text-balance">
               <span className="sr-only">{HEADLINE}</span>
               <span aria-hidden>
-                <TextType text={HEADLINE} durationMs={800} />
+                <TextType text={HEADLINE} durationMs={960} />
               </span>
             </h1>
             <p className="text-muted-foreground max-w-2xl text-lg text-pretty">
@@ -158,7 +173,7 @@ function LandingPage() {
               alt="The markdown editor with frontmatter, a checklist and a table"
               width={1920}
               height={1200}
-              className="ring-foreground/10 shadow-primary/20 w-full rounded-xl shadow-2xl ring-1"
+              className="w-full rounded-xl"
             />
           </div>
         </section>

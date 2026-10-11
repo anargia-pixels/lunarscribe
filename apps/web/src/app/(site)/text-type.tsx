@@ -55,7 +55,7 @@ export function TextType({
     <span className="inline-block whitespace-pre-wrap">
       <span>{text.slice(0, typedLength)}</span>
       <span ref={cursorRef} className="ml-1 inline-block">
-        |
+        _
       </span>
     </span>
   );

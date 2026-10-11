@@ -50,6 +50,18 @@ export function DrawingEditor({ scene, theme, onChange }: DrawingEditorProps) {
         initialData={initialData}
         theme={theme}
         onChange={(elements, appState, files) => {
+          // Mid-gesture edits fire on every pointer move; serializing the whole scene each
+          // frame stalls drawing, so wait for the gesture to finish.
+          if (
+            appState.newElement ||
+            appState.multiElement ||
+            appState.resizingElement ||
+            appState.selectedElementsAreBeingDragged ||
+            appState.isRotating
+          ) {
+            return;
+          }
+
           // onChange also fires for pointer moves and selection; only element edits count.
           const version = hashElementsVersion(elements);
 

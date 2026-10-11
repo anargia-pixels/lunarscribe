@@ -55,11 +55,8 @@ function showEditor() {
   window.focus();
 }
 
-// Memory trims. A text editor needs no GPU, so compositing runs in software.
-app.disableHardwareAcceleration();
-
-// Runs that software compositor inside the main process instead of a GPU process.
-app.commandLine.appendSwitch("in-process-gpu");
+// Memory trims. GPU acceleration stays on: the drawing canvas is unusably slow when
+// Chromium rasterizes it in software.
 
 // Runs the network service inside the main process instead of a utility process.
 app.commandLine.appendSwitch("enable-features", "NetworkServiceInProcess2");

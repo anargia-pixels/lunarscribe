@@ -6,8 +6,12 @@ import {
   restore,
   serializeAsJSON,
 } from "@excalidraw/excalidraw";
-import type { ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
-import { useRef, useState } from "react";
+import type {
+  ExcalidrawImperativeAPI,
+  ExcalidrawInitialDataState,
+} from "@excalidraw/excalidraw/types";
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 export type DrawingEditorProps = {
   scene: string;
@@ -44,9 +48,51 @@ export function DrawingEditor({ scene, theme, onChange }: DrawingEditorProps) {
     hashElementsVersion(initialData?.elements ?? []),
   );
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null);
+
+  // Excalidraw sizes its canvas from state set by its own ResizeObserver, which React
+  // renders after the next paint, so the canvas trails window resizes and the sidebar
+  // animation. Apply the new size synchronously so it lands in the same frame.
+  useEffect(() => {
+    // The element Excalidraw measures for its own size and pointer offsets.
+    const container = wrapperRef.current?.querySelector(
+      ".excalidraw-container",
+    );
+
+    if (!api || !container) {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      const { width, height, left, top } = container.getBoundingClientRect();
+      const appState = api.getAppState();
+
+      if (
+        appState.width === width &&
+        appState.height === height &&
+        appState.offsetLeft === left &&
+        appState.offsetTop === top
+      ) {
+        return;
+      }
+
+      flushSync(() => {
+        api.updateScene({
+          appState: { width, height, offsetLeft: left, offsetTop: top },
+        });
+      });
+    });
+
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [api]);
+
   return (
-    <div className="min-h-0 flex-1">
+    <div ref={wrapperRef} className="min-h-0 flex-1">
       <Excalidraw
+        excalidrawAPI={setApi}
         initialData={initialData}
         theme={theme}
         onChange={(elements, appState, files) => {

@@ -120,3 +120,9 @@
     display: none;
   }
 }
+
+/* Excalidraw always renders its main menu (a custom <MainMenu> only replaces the items),
+   so hide the trigger. Its shortcuts keep working. */
+:root .excalidraw .main-menu-trigger {
+  display: none;
+}

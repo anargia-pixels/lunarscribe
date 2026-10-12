@@ -3,7 +3,8 @@
   "name": "lunarscribe",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry",
+  // Our own entry wraps Start's handler to set Cache-Control on rendered pages.
+  "main": "./src/server.ts",
   // The Vite client build is uploaded as the Worker's static assets: the public
   // files and the hashed bundle output are served from Cloudflare's CDN, and only
   // paths no asset matches reach the worker to render. @cloudflare/vite-plugin

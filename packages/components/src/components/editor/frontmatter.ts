@@ -2,9 +2,15 @@
 export type FrontmatterValue = string | number | boolean | string[] | null;
 
 /** One frontmatter entry: an editable property or raw YAML text kept as written. */
-export type FrontmatterEntry =
+type DecodedEntry =
   | { kind: "property"; key: string; value: FrontmatterValue }
   | { kind: "raw"; text: string };
+
+/**
+ * A decoded entry the panel can render. `id` names the row and never reaches
+ * the markdown, so it sits beside the content instead of inside it.
+ */
+export type FrontmatterEntry = DecodedEntry & { id: string };
 
 /** A buffer's markdown split into frontmatter entries and the markdown body. */
 export type ParsedFrontmatter = {
@@ -45,7 +51,27 @@ export function parseFrontmatter(markdown: string): ParsedFrontmatter {
     return { entries: [], body: markdown };
   }
 
-  return { entries: decodeEntries(fences.yaml), body: fences.body };
+  return {
+    entries: decodeEntries(fences.yaml).map(nameEntry),
+    body: fences.body,
+  };
+}
+
+/** A blank property row, for the panel's add button. */
+export function createPropertyEntry(): FrontmatterEntry {
+  return { id: nextEntryId(), kind: "property", key: "", value: "" };
+}
+
+let entryCount = 0;
+
+function nextEntryId(): string {
+  entryCount += 1;
+
+  return `entry-${entryCount}`;
+}
+
+function nameEntry(entry: DecodedEntry): FrontmatterEntry {
+  return { id: nextEntryId(), ...entry };
 }
 
 /**
@@ -92,9 +118,9 @@ function splitFences(markdown: string): { yaml: string; body: string } | null {
   };
 }
 
-function decodeEntries(yaml: string): FrontmatterEntry[] {
+function decodeEntries(yaml: string): DecodedEntry[] {
   const lines = yaml.split("\n");
-  const entries: FrontmatterEntry[] = [];
+  const entries: DecodedEntry[] = [];
   let index = 0;
 
   while (index < lines.length) {
@@ -146,7 +172,7 @@ function decodeEntries(yaml: string): FrontmatterEntry[] {
 }
 
 /** Keeps a key and the lines under it as written, such as a nested mapping. */
-function rawBlock(line: string, block: readonly string[]): FrontmatterEntry {
+function rawBlock(line: string, block: readonly string[]): DecodedEntry {
   return { kind: "raw", text: [line, ...block].join("\n") };
 }
 

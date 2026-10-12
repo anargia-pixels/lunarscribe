@@ -21,6 +21,7 @@ import {
 import { useState } from "react";
 
 import {
+  createPropertyEntry,
   type FrontmatterEntry,
   type FrontmatterValue,
   isCheckboxValue,
@@ -44,8 +45,7 @@ export function FrontmatterPanel({
   entries: FrontmatterEntry[];
   onChange: (entries: FrontmatterEntry[]) => void;
 }) {
-  const addProperty = () =>
-    onChange([...entries, { kind: "property", key: "", value: "" }]);
+  const addProperty = () => onChange([...entries, createPropertyEntry()]);
 
   return (
     <section className="flex flex-col gap-2 pb-6">
@@ -64,7 +64,7 @@ export function FrontmatterPanel({
       </div>
       {entries.map((entry, index) => (
         <FrontmatterRow
-          key={index}
+          key={entry.id}
           entry={entry}
           isKeyTaken={(key) => isKeyTakenBy(entries, index, key)}
           onChange={(next) =>
@@ -115,11 +115,10 @@ function FrontmatterRow({
       return;
     }
 
-    onChange({ kind: "property", key, value: entry.value });
+    onChange({ ...entry, key });
   };
 
-  const setValue = (value: FrontmatterValue) =>
-    onChange({ kind: "property", key: entry.key, value });
+  const setValue = (value: FrontmatterValue) => onChange({ ...entry, value });
 
   return (
     <div className="flex items-center gap-2">

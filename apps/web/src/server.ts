@@ -49,9 +49,13 @@ export default createServerEntry({
 
     const headers = new Headers(response.headers);
 
+    // An error is worth keeping: a page that starts working should not wait out
+    // a cached 404.
     headers.set(
       "Cache-Control",
-      cacheControlFor(new URL(request.url).pathname),
+      response.ok
+        ? cacheControlFor(new URL(request.url).pathname)
+        : VISITOR_CACHE_CONTROL,
     );
 
     return new Response(response.body, {

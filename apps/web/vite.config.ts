@@ -16,7 +16,7 @@ import routerConfig from "./tsr.config.json" with { type: "json" };
  * plus the icons it shares with the desktop app. Assembled under node_modules so
  * the source tree keeps only the committed files.
  */
-const publicDir = resolve(__dirname, "node_modules/.web-assets");
+const publicDir = resolve(import.meta.dirname, "node_modules/.web-assets");
 
 /**
  * Assembles the served files. Cloudflare uploads the client build, public files
@@ -29,9 +29,11 @@ function servedFiles(): Plugin {
     name: "served-files",
     buildStart() {
       rmSync(publicDir, { force: true, recursive: true });
-      cpSync(resolve(__dirname, "public"), publicDir, { recursive: true });
+      cpSync(resolve(import.meta.dirname, "public"), publicDir, {
+        recursive: true,
+      });
       cpSync(
-        resolve(__dirname, "../../assets/icons"),
+        resolve(import.meta.dirname, "../../assets/icons"),
         resolve(publicDir, "icons"),
         {
           recursive: true,
@@ -58,6 +60,19 @@ const config = defineConfig({
         indexToken: routerConfig.indexToken,
         routeToken: routerConfig.routeToken,
         routeFileIgnorePattern: routerConfig.routeFileIgnorePattern,
+      },
+      // Rendered while building and uploaded as static assets, so a visit to these
+      // pages costs no worker invocation. Only the listed pages: discovery would
+      // also take the editor and the OAuth window, which render per request, and
+      // crawling is off so no link can pull them in either. Each page lands beside
+      // its hashed bundle output rather than in a folder, so its address answers
+      // with the file itself instead of a redirect to a trailing slash.
+      pages: [{ path: "/" }, { path: "/privacy" }, { path: "/terms" }],
+      prerender: {
+        enabled: true,
+        autoStaticPathsDiscovery: false,
+        autoSubfolderIndex: false,
+        crawlLinks: false,
       },
     }),
     viteReact(),

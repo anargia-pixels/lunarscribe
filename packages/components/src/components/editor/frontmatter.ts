@@ -8,7 +8,7 @@ type DecodedEntry =
 
 /**
  * A decoded entry the panel can render. `id` names the row and never reaches
- * the markdown, so it sits beside the content instead of inside it.
+ * the markdown.
  */
 export type FrontmatterEntry = DecodedEntry & { id: string };
 

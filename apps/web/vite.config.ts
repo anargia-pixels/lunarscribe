@@ -12,18 +12,12 @@ import type { Plugin } from "vite";
 import routerConfig from "./tsr.config.json" with { type: "json" };
 
 /**
- * The files the site serves at their plain paths: this app's own public folder
- * plus the icons it shares with the desktop app. Assembled under node_modules so
- * the source tree keeps only the committed files.
+ * The files the site serves at their plain paths, assembled under node_modules
+ * so the source tree keeps only the committed files.
  */
 const publicDir = resolve(import.meta.dirname, "node_modules/.web-assets");
 
-/**
- * Assembles the served files. Cloudflare uploads the client build, public files
- * included, as the Worker's static assets, so everything here is served from the
- * CDN and never reaches the worker. Icon sources for packaging (Aseprite,
- * macOS) are left out.
- */
+/** Copies this app's public files and the icons it shares with the desktop app. */
 function servedFiles(): Plugin {
   return {
     name: "served-files",
@@ -35,13 +29,15 @@ function servedFiles(): Plugin {
       cpSync(
         resolve(import.meta.dirname, "../../assets/icons"),
         resolve(publicDir, "icons"),
-        {
-          recursive: true,
-          filter: (path) => !path.endsWith(".ase") && !path.endsWith(".icns"),
-        },
+        { filter: isWebIcon, recursive: true },
       );
     },
   };
+}
+
+/** Keeps the icon files; drops the sources desktop packaging builds from. */
+function isWebIcon(path: string): boolean {
+  return !path.endsWith(".ase") && !path.endsWith(".icns");
 }
 
 const config = defineConfig({
@@ -61,18 +57,14 @@ const config = defineConfig({
         routeToken: routerConfig.routeToken,
         routeFileIgnorePattern: routerConfig.routeFileIgnorePattern,
       },
-      // Rendered while building and uploaded as static assets, so a visit to these
-      // pages costs no worker invocation. Only the listed pages: discovery would
-      // also take the editor and the OAuth window, which render per request, and
-      // crawling is off so no link can pull them in either. Each page lands beside
-      // its hashed bundle output rather than in a folder, so its address answers
-      // with the file itself instead of a redirect to a trailing slash.
+      // Rendered while building and uploaded as static assets, so a visit to
+      // these pages costs no worker request.
       pages: [{ path: "/" }, { path: "/privacy" }, { path: "/terms" }],
       prerender: {
         enabled: true,
-        autoStaticPathsDiscovery: false,
-        autoSubfolderIndex: false,
-        crawlLinks: false,
+        autoStaticPathsDiscovery: false, // do not add every route with a component
+        autoSubfolderIndex: false, // write privacy.html, not privacy/index.html
+        crawlLinks: false, // do not follow a landing page link into /app
       },
     }),
     viteReact(),

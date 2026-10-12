@@ -1,3 +1,7 @@
+import {
+  DEFAULT_HIGHLIGHT_COLOR,
+  type HighlightColor,
+} from "@lunarscribe/components/themes/highlight-colors";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -13,6 +17,7 @@ type AppearanceStore = {
   bufferFont: string;
   codeFont: string;
   showEditorToolbar: boolean;
+  highlightColor: HighlightColor;
   setTheme: (theme: Theme) => void;
   setLightColorTheme: (colorTheme: string | null) => void;
   setDarkColorTheme: (colorTheme: string | null) => void;
@@ -20,11 +25,12 @@ type AppearanceStore = {
   setBufferFont: (font: string) => void;
   setCodeFont: (font: string) => void;
   setShowEditorToolbar: (showEditorToolbar: boolean) => void;
+  setHighlightColor: (highlightColor: HighlightColor) => void;
   /** Drops both color themes, so the colors in globals.css apply again. */
   resetColorThemes: () => void;
 };
 
-/** Remembers the theme, color themes, fonts, and toolbar visibility across launches. */
+/** Remembers the theme, color themes, fonts, toolbar visibility, and highlighter color across launches. */
 export const useAppearanceStore = create<AppearanceStore>()(
   persist(
     (set) => ({
@@ -37,6 +43,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       bufferFont: "Poppins",
       codeFont: "Roboto Mono",
       showEditorToolbar: true,
+      highlightColor: DEFAULT_HIGHLIGHT_COLOR,
       setTheme: (theme) => set({ theme }),
       setLightColorTheme: (lightColorTheme) => set({ lightColorTheme }),
       setDarkColorTheme: (darkColorTheme) => set({ darkColorTheme }),
@@ -44,6 +51,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       setBufferFont: (bufferFont) => set({ bufferFont }),
       setCodeFont: (codeFont) => set({ codeFont }),
       setShowEditorToolbar: (showEditorToolbar) => set({ showEditorToolbar }),
+      setHighlightColor: (highlightColor) => set({ highlightColor }),
       resetColorThemes: () =>
         set({ lightColorTheme: null, darkColorTheme: null }),
     }),

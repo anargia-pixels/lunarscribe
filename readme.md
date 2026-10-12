@@ -18,6 +18,8 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
 - **Inline formats:** The editor supports bold, italic, underline, strikethrough,
   superscript, subscript, and inline code. The toolbar shows the inline formats of the
   selected text. It also has undo and redo controls.
+- **Highlighter:** Type `==text==` or pick Highlight in the right-click menu to highlight
+  text, as in Obsidian. Settings → Appearances → Misc sets the highlighter color.
 - **Tables:** The toolbar has a control to insert tables. The editor also loads markdown
   tables. Each cell has an action menu to insert or delete rows and columns, or delete the
   table. In a cell, the right-click menu has the same actions under Table. Wide tables
@@ -28,9 +30,9 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
 - **Collapsible headings:** Hovering a heading shows a chevron that collapses everything
   under it until the next heading of the same or a higher level.
 - **Right-click menu:** A right-click in the editor opens a menu like Obsidian's, with
-  link actions, Format, Paragraph, Insert, and Table submenus, undo and redo, and
-  clipboard actions. Settings → Appearances can hide the toolbar, since the menu holds all
-  of its actions.
+  link actions, Highlight, Format, Paragraph, Insert, and Table submenus, undo and redo,
+  and clipboard actions. Settings → Appearances can hide the toolbar, since the menu holds
+  all of its actions.
 - **Math:** KaTeX shows LaTeX equations as inline math or math blocks. The toolbar has
   controls to insert both types. The editor also converts `$...$`, `$$...$$`, and pasted
   markdown equations to math. You can edit the LaTeX source of a selected equation.

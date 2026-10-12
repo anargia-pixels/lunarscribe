@@ -59,6 +59,8 @@
   --shadow-opacity-strong: 0.3;
   /* Hover pill behind tabs. */
   --hover: rgb(0 0 0 / 0.04);
+  /* The `==text==` highlighter; the appearance setting overrides it on <html>. */
+  --highlight: #facc15;
 }
 
 /* Catppuccin Mocha: https://catppuccin.com/palette */
@@ -145,6 +147,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-highlight: var(--highlight);
   --color-heading-1: var(--heading-1);
   --color-heading-2: var(--heading-2);
   --color-heading-3: var(--heading-3);
@@ -375,6 +378,12 @@
 
   body {
     @apply bg-background text-foreground font-ui tracking-normal antialiased;
+  }
+
+  /* Highlights paint their own color, so the browser's yellow and black stay off. */
+  mark {
+    background-color: transparent;
+    color: inherit;
   }
 }
 

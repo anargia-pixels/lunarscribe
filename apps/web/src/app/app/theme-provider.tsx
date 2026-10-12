@@ -3,6 +3,7 @@ import {
   findColorTheme,
   type ColorPalette,
 } from "@lunarscribe/components/themes/color-themes";
+import { highlightColorValue } from "@lunarscribe/components/themes/highlight-colors";
 import {
   createContext,
   type ReactNode,
@@ -49,6 +50,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const uiFont = useAppearanceStore((state) => state.uiFont);
   const bufferFont = useAppearanceStore((state) => state.bufferFont);
   const codeFont = useAppearanceStore((state) => state.codeFont);
+  const highlightColor = useAppearanceStore((state) => state.highlightColor);
 
   const colorTheme = findColorTheme(
     theme === "dark" ? darkColorTheme : lightColorTheme,
@@ -73,6 +75,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty("--font-buffer", bufferFamily);
     root.style.setProperty("--font-code", codeFamily);
   }, [uiFont, bufferFont, codeFont]);
+
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty(
+      "--highlight",
+      highlightColorValue(highlightColor),
+    );
+  }, [highlightColor]);
 
   // Non-default fonts come from Google Fonts; until they load, the fallbacks above show.
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { HighlightColorPicker } from "@lunarscribe/components/settings-dialog/highlight-color-picker";
 import {
   COLOR_THEMES,
   findColorTheme,
@@ -104,6 +105,22 @@ function ColorThemeSwatches({ palette }: { palette: ColorPalette }) {
   });
 }
 
+/** Picks the color `==text==` highlights are painted with. */
+function HighlightColorSetting() {
+  const highlightColor = useAppearanceStore((state) => state.highlightColor);
+
+  const setHighlightColor = useAppearanceStore(
+    (state) => state.setHighlightColor,
+  );
+
+  return (
+    <HighlightColorPicker
+      value={highlightColor}
+      onValueChange={setHighlightColor}
+    />
+  );
+}
+
 /** Hides the toolbar; the editor context menu keeps every action. */
 function EditorToolbarSwitch() {
   const showEditorToolbar = useAppearanceStore(
@@ -126,7 +143,7 @@ function EditorToolbarSwitch() {
   );
 }
 
-/** Appearances pane: color themes and separate UI, buffer, and code fonts. */
+/** Appearances pane: color themes, separate UI, buffer, and code fonts, then misc settings. */
 export function AppearancePane() {
   const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
   const darkColorTheme = useAppearanceStore((state) => state.darkColorTheme);
@@ -175,6 +192,13 @@ export function AppearancePane() {
       </Button>
       <FontSettings />
       <div className="flex max-w-lg flex-col gap-4">
+        <header className="flex flex-col gap-1">
+          <h3 className="text-base font-medium">Misc</h3>
+          <p className="text-muted-foreground text-sm text-pretty">
+            The highlighter color and the editor toolbar.
+          </p>
+        </header>
+        <HighlightColorSetting />
         <EditorToolbarSwitch />
       </div>
     </div>

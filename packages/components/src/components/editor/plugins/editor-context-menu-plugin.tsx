@@ -29,6 +29,7 @@ import {
 import {
   ClipboardPaste,
   Copy,
+  Highlighter,
   Link,
   Pilcrow,
   Plus,
@@ -57,7 +58,11 @@ import {
   TableMenuItems,
 } from "./table-cell-menu-plugin";
 
-type SelectionState = { isLink: boolean; isCollapsed: boolean };
+type SelectionState = {
+  isLink: boolean;
+  isCollapsed: boolean;
+  isHighlighted: boolean;
+};
 
 const MODIFIER = IS_APPLE ? "⌘" : "Ctrl+";
 
@@ -97,6 +102,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
   const [selection, setSelection] = useState<SelectionState>({
     isLink: false,
     isCollapsed: true,
+    isHighlighted: false,
   });
 
   // Clipboard and link actions need the editor focused, so they run once the
@@ -110,10 +116,15 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
       const isLink = $getSelectedLink() !== null;
       const isCollapsed = !$isRangeSelection(current) || current.isCollapsed();
 
+      const isHighlighted =
+        $isRangeSelection(current) && current.hasFormat("highlight");
+
       setSelection((previous) =>
-        previous.isLink === isLink && previous.isCollapsed === isCollapsed
+        previous.isLink === isLink &&
+        previous.isCollapsed === isCollapsed &&
+        previous.isHighlighted === isHighlighted
           ? previous
-          : { isLink, isCollapsed },
+          : { isLink, isCollapsed, isHighlighted },
       );
     };
 
@@ -186,6 +197,15 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
             Remove link
           </ContextMenuItem>
         )}
+        <ContextMenuCheckboxItem
+          checked={selection.isHighlighted}
+          onCheckedChange={() =>
+            editor.dispatchCommand(FORMAT_TEXT_COMMAND, "highlight")
+          }
+        >
+          <Highlighter />
+          Highlight
+        </ContextMenuCheckboxItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
           <ContextMenuSubTrigger>

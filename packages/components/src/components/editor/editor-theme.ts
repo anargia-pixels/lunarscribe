@@ -72,6 +72,9 @@ export const editorTheme: EditorThemeClasses = {
   text: {
     bold: "font-bold",
     italic: "italic",
+    // Lexical wraps highlights in <mark>; globals.css clears its native colors.
+    // A solid fill keeps the color vivid; dark text stays readable on it in both themes.
+    highlight: "bg-highlight text-neutral-900",
     strikethrough: "line-through",
     underline: "underline underline-offset-4",
     underlineStrikethrough: "underline line-through underline-offset-4",

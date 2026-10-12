@@ -52,7 +52,7 @@ function TooltipContent({
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
           className={cn(
-            "bg-popover text-popover-foreground border-border relative isolate z-50 inline-flex w-fit max-w-xs items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:rounded-sm",
+            "bg-popover text-popover-foreground border-border relative isolate z-50 inline-flex w-fit max-w-xs items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs select-none has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:rounded-sm",
             "before:bg-popover before:pointer-events-none before:absolute before:inset-px before:-z-1 before:rounded-[inherit]",
             fluidPopupMotion,
             className,

@@ -57,7 +57,7 @@ function SignInCard({
 }: SignInCardProps) {
   return (
     <div className="flex w-full max-w-105 flex-col items-center">
-      <header className="font-logo text-primary mb-6 flex items-center gap-2 text-2xl/none">
+      <header className="font-logo text-primary mb-6 flex items-center gap-2 text-2xl/none select-none">
         <img src={appIcon} alt="" width={28} height={28} className="shrink-0" />
         <span>Lunarscribe</span>
       </header>

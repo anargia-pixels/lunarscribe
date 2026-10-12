@@ -247,7 +247,9 @@ export function SyncingPane() {
               Last sync: {new Date(status.lastSyncedAt).toLocaleString()}
             </p>
           )}
-          {status.error && <p className="text-destructive">{status.error}</p>}
+          {status.error && (
+            <p className="text-destructive select-text">{status.error}</p>
+          )}
         </div>
         <Separator />
         <p className="text-muted-foreground text-sm text-pretty">

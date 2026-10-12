@@ -255,7 +255,7 @@ export function FindPlugin() {
       className="absolute top-2 right-4 left-4 z-20 sm:left-auto"
     >
       <CollapsibleContent ref={panelRef}>
-        <search aria-label="Find in buffer">
+        <search aria-label="Find in buffer" className="select-none">
           <Card size="xs">
             <CardContent>
               <div className="flex flex-wrap items-center gap-0.5 text-sm">

@@ -23,6 +23,9 @@ conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
 - `packages/utils`: shared libs without DOM or React (`cn`, `tryCatch`, operation queue,
   sync JSON and provider types, self-hosted fonts).
 - `tools/oxlint`: custom lint rules, including `anti-slop/*`.
+- `assets/`: images and icon sources more than one app needs. Anything only the web app
+  serves (landing screenshots, the web manifest) belongs in `apps/web/public`, which the
+  Vite build serves and Cloudflare uploads as the Worker's static assets.
 
 ## Conventions
 

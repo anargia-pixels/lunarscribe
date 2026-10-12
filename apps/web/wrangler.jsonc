@@ -4,6 +4,13 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry",
+  // The Vite client build is uploaded as the Worker's static assets: the public
+  // files and the hashed bundle output are served from Cloudflare's CDN, and only
+  // paths no asset matches reach the worker to render. @cloudflare/vite-plugin
+  // fills in `directory` and points wrangler at the resolved config it writes.
+  "assets": {
+    "not_found_handling": "none"
+  },
   "routes": [
     { "pattern": "lunarscribe.doctorthe113.com", "custom_domain": true }
   ]

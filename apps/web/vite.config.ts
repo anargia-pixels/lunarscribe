@@ -58,13 +58,20 @@ const config = defineConfig({
         routeFileIgnorePattern: routerConfig.routeFileIgnorePattern,
       },
       // Rendered while building and uploaded as static assets, so a visit to
-      // these pages costs no worker request.
-      pages: [{ path: "/" }, { path: "/privacy" }, { path: "/terms" }],
+      // these pages costs no worker request. The editor and the OAuth window
+      // skip SSR, so theirs is the same empty shell for every visitor.
+      pages: [
+        { path: "/" },
+        { path: "/privacy" },
+        { path: "/terms" },
+        { path: "/app" },
+        { path: "/oauth/dropbox" },
+      ],
       prerender: {
         enabled: true,
-        autoStaticPathsDiscovery: false, // do not add every route with a component
+        autoStaticPathsDiscovery: false, // render only the pages listed above
         autoSubfolderIndex: false, // write privacy.html, not privacy/index.html
-        crawlLinks: false, // do not follow a landing page link into /app
+        crawlLinks: false, // render only the pages listed above
       },
     }),
     viteReact(),

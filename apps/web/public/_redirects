@@ -1,0 +1,2 @@
+# `curl -fsSL <origin>/install | bash` follows this to the installer on the default branch.
+/install https://raw.githubusercontent.com/anargia-pixels/lunarscribe/main/install.sh 302

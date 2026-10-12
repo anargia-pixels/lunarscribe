@@ -13,11 +13,12 @@ conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
   an index route, `layout.tsx` or `route.ts` a layout or server-handler route, and other
   files beside them are that page's own components (rules in `tsr.config.json`). `(site)/`
   holds the landing and legal pages; `app/` is the browser editor at `/app`, whose route
-  files stay thin and lazy-load `editor-*.tsx` so the Worker bundle stays small. The
-  `(site)/` pages listed in `pages` in `vite.config.ts` are prerendered at build time and
-  served as static assets; anything not listed there renders per request through
-  `src/server.ts`. Cloudflare Workers Builds deploys it as the `lunarscribe` Worker on
-  push to `main`.
+  files stay thin and lazy-load `editor-*.tsx` so the Worker bundle stays small. Every
+  page is listed in `pages` in `vite.config.ts` and prerendered at build time, so it is
+  served as a static asset; add new pages there. `robots.txt`, `sitemap.xml` and the
+  `/install` redirect (`_redirects`) are static files in `public/`, so the Worker only
+  answers 404s. Cloudflare Workers Builds deploys it as the `lunarscribe` Worker on push
+  to `main`.
 - `packages/components`: shared UI. `src/components/ui/` is shadcn (Base UI),
   `src/components/<feature>/` holds shared non-shadcn components (the Lexical markdown
   editor), `src/lib/` holds shared DOM and React helpers (DOCX and PDF export, file

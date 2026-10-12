@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://lunarscribe.doctorthe113.com/sitemap.xml

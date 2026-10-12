@@ -1,4 +1,5 @@
 import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
+import { SettingsPane } from "@lunarscribe/components/settings-dialog/settings-pane";
 import {
   Alert,
   AlertDescription,
@@ -146,7 +147,7 @@ export function SyncingPane() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-auto p-6">
+    <SettingsPane>
       <header className="flex flex-col gap-1">
         <h2 className="text-base font-medium">Syncing</h2>
         <p className="text-muted-foreground text-sm text-pretty">
@@ -155,7 +156,7 @@ export function SyncingPane() {
           open.
         </p>
       </header>
-      <div className="flex max-w-lg flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-6">
           <Label htmlFor="sync-provider">Provider</Label>
           <Select<SyncProvider>
@@ -262,6 +263,6 @@ export function SyncingPane() {
           </p>
         )}
       </div>
-    </div>
+    </SettingsPane>
   );
 }

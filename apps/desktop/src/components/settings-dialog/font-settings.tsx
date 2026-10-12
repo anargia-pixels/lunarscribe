@@ -124,7 +124,7 @@ export function FontSettings() {
   }, [attempt]);
 
   return (
-    <div className="flex max-w-lg flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-1">
         <h3 className="text-base font-medium">Fonts</h3>
         <p className="text-muted-foreground text-sm text-pretty">

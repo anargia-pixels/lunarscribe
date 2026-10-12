@@ -1,3 +1,4 @@
+import { SettingsPane } from "@lunarscribe/components/settings-dialog/settings-pane";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Spinner } from "@lunarscribe/components/ui/spinner";
 import { Download, RefreshCw, RotateCw } from "lucide-react";
@@ -68,7 +69,7 @@ export function AboutPane() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-auto p-6">
+    <SettingsPane>
       <header className="flex flex-col gap-1">
         <h2 className="text-base font-medium">About</h2>
         <p className="text-muted-foreground text-sm text-pretty">
@@ -108,7 +109,7 @@ export function AboutPane() {
           </Button>
         )}
       </div>
-      <dl className="flex max-w-2xl flex-col gap-2 text-sm">
+      <dl className="flex flex-col gap-2 text-sm">
         {INFO_ROWS.map((row) => (
           <div key={row.key} className="flex gap-6">
             <dt className="w-40 shrink-0">{row.label}</dt>
@@ -118,6 +119,6 @@ export function AboutPane() {
           </div>
         ))}
       </dl>
-    </div>
+    </SettingsPane>
   );
 }

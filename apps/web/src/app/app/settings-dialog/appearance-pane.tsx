@@ -1,4 +1,5 @@
 import { HighlightColorPicker } from "@lunarscribe/components/settings-dialog/highlight-color-picker";
+import { SettingsPane } from "@lunarscribe/components/settings-dialog/settings-pane";
 import {
   COLOR_THEMES,
   findColorTheme,
@@ -161,7 +162,7 @@ export function AppearancePane() {
   );
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-auto p-6">
+    <SettingsPane>
       <header className="flex flex-col gap-1">
         <h2 className="text-base font-medium">Appearances</h2>
         <p className="text-muted-foreground text-sm">
@@ -169,7 +170,7 @@ export function AppearancePane() {
           own.
         </p>
       </header>
-      <div className="flex max-w-lg flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <ColorThemeSelect
           theme="light"
           colorTheme={lightColorTheme}
@@ -191,7 +192,7 @@ export function AppearancePane() {
         Reset to defaults
       </Button>
       <FontSettings />
-      <div className="flex max-w-lg flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <header className="flex flex-col gap-1">
           <h3 className="text-base font-medium">Misc</h3>
           <p className="text-muted-foreground text-sm text-pretty">
@@ -201,6 +202,6 @@ export function AppearancePane() {
         <HighlightColorSetting />
         <EditorToolbarSwitch />
       </div>
-    </div>
+    </SettingsPane>
   );
 }

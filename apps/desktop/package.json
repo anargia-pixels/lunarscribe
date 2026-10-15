@@ -33,7 +33,6 @@
     "electron-builder": "catalog:",
     "electron-vite": "^5.0.0",
     "lucide-react": "catalog:",
-    "react-grab": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "^7.3.0",

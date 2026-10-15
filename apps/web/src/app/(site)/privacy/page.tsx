@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { InlineLink } from "@/components/inline-link";
 import {
   LegalCode,
   LegalHeading,
@@ -8,6 +7,7 @@ import {
   LegalDocument,
   LegalSubheading,
 } from "@/components/legal-document";
+import { EXTERNAL_LINKS } from "@/lib/external-links";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/(site)/privacy/")({
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/(site)/privacy/")({
 /** Mirrors privacy-policy.md at the repository root; keep the two in sync. */
 function PrivacyPolicy() {
   return (
-    <LegalDocument title="Privacy Policy" effectiveDate="October 11, 2026">
+    <LegalDocument title="Privacy Policy" effectiveDate="October 16, 2026">
       <p>
         Lunarscribe is a markdown writing app for desktop, web, and mobile. This
         policy explains what data Lunarscribe uses and where that data goes.
@@ -46,27 +46,27 @@ function PrivacyPolicy() {
       </LegalList>
 
       <LegalHeading>Data stored on your device</LegalHeading>
-      <p>Lunarscribe stores these items on your device:</p>
+      <p>
+        Lunarscribe keeps a small amount of data on your device, and it stays
+        there unless you turn on sync. None of it reaches a Lunarscribe server:
+      </p>
       <LegalList>
         <li>Your saved notes and drawings.</li>
         <li>Your app settings, such as theme and appearance.</li>
         <li>
           Sync settings, if you connect a provider: the provider name, your
           account email, the backup folder ID, sign-in tokens, and a hash of
-          each file's last synced version.
+          each file&apos;s last synced version.
         </li>
       </LegalList>
       <p>
         The desktop app keeps these items in your documents folder and its user
         data folder. The mobile app keeps them in its own storage. It keeps
-        sign-in tokens in the iOS Keychain or Android Keystore. The web app
-        keeps them in your browser's storage.
-      </p>
-      <p>
-        You can delete this data at any time. Delete your files, or uninstall
-        the app, or clear the site data in your browser.{" "}
-        <strong>Disconnect</strong> in Syncing removes the sync settings and
-        tokens.
+        sign-in tokens in the iOS Keychain or Android Keystore, and the web app
+        keeps them in your browser&apos;s storage. You can delete this data at
+        any time: delete your files, or uninstall the app, or clear the site
+        data in your browser. Disconnect in Syncing removes the sync settings
+        and tokens.
       </p>
 
       <LegalHeading>Website hosting</LegalHeading>
@@ -76,9 +76,9 @@ function PrivacyPolicy() {
         files. It does not receive or store your notes, drawings, settings, or
         sign-in tokens. Cloudflare may process technical request data, such as
         your IP address and browser type, to deliver and protect the site. The{" "}
-        <InlineLink to="https://www.cloudflare.com/privacypolicy/">
+        <Link to={EXTERNAL_LINKS.cloudflarePrivacy}>
           Cloudflare Privacy Policy
-        </InlineLink>{" "}
+        </Link>{" "}
         covers that data.
       </p>
 
@@ -95,25 +95,19 @@ function PrivacyPolicy() {
         <LegalCode>drive.file</LegalCode>. It lets Lunarscribe create, read,
         update, and delete only the files and folders that Lunarscribe creates
         or that you open with it. Lunarscribe cannot see other files in your
-        Drive.
-      </p>
-      <p>
-        Lunarscribe also reads your Google account email from Drive and shows it
+        Drive. It also reads your Google account email from Drive and shows it
         in Syncing, so you know which account is connected.
       </p>
       <p>
         Lunarscribe uses this access only to keep a backup of your notes and
-        drawings in a folder named <LegalCode>lunarscribe-bak-files</LegalCode>{" "}
-        and to sync it with your devices. Lunarscribe does not use Google user
-        data for advertising, does not sell it, and does not transfer it to
-        anyone. No person reads it.
-      </p>
-      <p>
-        Lunarscribe's use and transfer of information received from Google APIs
-        adheres to the{" "}
-        <InlineLink to="https://developers.google.com/terms/api-services-user-data-policy">
+        drawings in a folder named lunarscribe-bak-files and to sync it with
+        your devices. Lunarscribe does not use Google user data for advertising,
+        does not sell it, and does not transfer it to anyone. No person reads
+        it. Lunarscribe&apos;s use and transfer of information received from
+        Google APIs adheres to the{" "}
+        <Link to={EXTERNAL_LINKS.googleApiDataPolicy}>
           Google API Services User Data Policy
-        </InlineLink>
+        </Link>
         , including the Limited Use requirements.
       </p>
 
@@ -127,81 +121,71 @@ function PrivacyPolicy() {
       <LegalSubheading>GitHub</LegalSubheading>
       <p>
         If you connect GitHub, the desktop app uses the GitHub CLI already
-        signed in on your computer. It stores your files in a repository named{" "}
-        <LegalCode>lunarscribe-bak-files</LegalCode> in your account.
+        signed in on your computer. It stores your files in a repository named
+        lunarscribe-bak-files in your account.
       </p>
 
       <LegalSubheading>Provider policies</LegalSubheading>
-      <p>Each provider handles your data under its own privacy policy:</p>
+      <p>
+        Each provider handles the data you send it under its own privacy policy,
+        and that policy applies instead of this one for that data:
+      </p>
       <LegalList>
         <li>
-          <InlineLink to="https://policies.google.com/privacy">
-            Google Privacy Policy
-          </InlineLink>
+          <Link to={EXTERNAL_LINKS.googlePrivacy}>Google Privacy Policy</Link>
         </li>
         <li>
-          <InlineLink to="https://www.dropbox.com/privacy">
-            Dropbox Privacy Policy
-          </InlineLink>
+          <Link to={EXTERNAL_LINKS.dropboxPrivacy}>Dropbox Privacy Policy</Link>
         </li>
         <li>
-          <InlineLink to="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">
+          <Link to={EXTERNAL_LINKS.githubPrivacy}>
             GitHub Privacy Statement
-          </InlineLink>
+          </Link>
         </li>
       </LegalList>
 
       <LegalHeading>Revoking access</LegalHeading>
       <p>
-        To stop sync, select <strong>Disconnect</strong> in Settings → General →
-        Syncing. You can also remove Lunarscribe's access from your provider
+        To stop sync, select Disconnect in Settings → General → Syncing.
+        Removing access does not delete your backup, so you can delete the
+        lunarscribe-bak-files folder or repository yourself when you are ready.
+        You can also remove Lunarscribe&apos;s access from your provider
         account:
       </p>
       <LegalList>
         <li>
           Google:{" "}
-          <InlineLink to="https://myaccount.google.com/permissions">
+          <Link to={EXTERNAL_LINKS.googlePermissions}>
             https://myaccount.google.com/permissions
-          </InlineLink>
+          </Link>
         </li>
         <li>
           Dropbox:{" "}
-          <InlineLink to="https://www.dropbox.com/account/connected_apps">
+          <Link to={EXTERNAL_LINKS.dropboxConnectedApps}>
             https://www.dropbox.com/account/connected_apps
-          </InlineLink>
+          </Link>
         </li>
         <li>
           GitHub:{" "}
-          <InlineLink to="https://github.com/settings/applications">
+          <Link to={EXTERNAL_LINKS.githubApplications}>
             https://github.com/settings/applications
-          </InlineLink>
+          </Link>
         </li>
       </LegalList>
-      <p>
-        Removing access does not delete your backup. You can delete the{" "}
-        <LegalCode>lunarscribe-bak-files</LegalCode> folder or repository
-        yourself.
-      </p>
 
       <LegalHeading>Children</LegalHeading>
       <p>
         Lunarscribe is not directed at children under 13 and does not knowingly
-        collect data from them.
+        collect data from them. Because no Lunarscribe server receives your
+        data, there is nowhere for such data to be sent.
       </p>
 
-      <LegalHeading>Changes to this policy</LegalHeading>
+      <LegalHeading>Changes and contact</LegalHeading>
       <p>
         If this policy changes, the new version will be published at this
-        location with a new effective date.
-      </p>
-
-      <LegalHeading>Contact</LegalHeading>
-      <p>
-        For questions about this policy, open an issue at{" "}
-        <InlineLink to="https://github.com/anargia-pixels/lunarscribe/issues">
-          https://github.com/anargia-pixels/lunarscribe/issues
-        </InlineLink>
-        .
+        location with a new effective date. For questions about this policy,
+        open an issue in the{" "}
+        <Link to={EXTERNAL_LINKS.issues}>Lunarscribe issue tracker</Link>.
       </p>
     </LegalDocument>
   );

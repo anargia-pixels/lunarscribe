@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { useJustifiedParagraphs } from "@/lib/legal/use-justified-paragraphs";
+
 /** The body of the privacy policy and terms of service: title, date and sections. */
 export function LegalDocument({
   title,
@@ -10,8 +12,14 @@ export function LegalDocument({
   effectiveDate: string;
   children: ReactNode;
 }) {
+  const ref = useJustifiedParagraphs<HTMLElement>();
+
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-4 px-6 pt-32 pb-24 leading-relaxed">
+    <main
+      ref={ref}
+      data-justify="pending"
+      className="mx-auto flex max-w-6xl flex-col gap-4 px-6 pt-32 pb-24 leading-relaxed"
+    >
       <h1 className="text-4xl font-bold tracking-tight">{title}</h1>
       <p className="text-muted-foreground">Effective date: {effectiveDate}</p>
       {children}

@@ -18,3 +18,18 @@
     transition: none;
   }
 }
+
+/* Hide legal paragraphs until they are justified, so the ragged text never
+   shows. Without script, show them at once. After 2s, show them anyway. */
+@media (scripting: enabled) {
+  [data-justify="pending"] p {
+    animation: justify-reveal 0s 2s forwards;
+    visibility: hidden;
+  }
+}
+
+@keyframes justify-reveal {
+  to {
+    visibility: visible;
+  }
+}

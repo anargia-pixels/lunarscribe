@@ -40,8 +40,11 @@
     "lexical": "catalog:",
     "lucide-react": "catalog:",
     "mermaid": "catalog:",
+    "mesurer": "catalog:",
     "react-day-picker": "catalog:",
+    "react-grab": "catalog:",
     "react-resizable-panels": "catalog:",
+    "react-scan": "catalog:",
     "recharts": "catalog:",
     "shadcn": "catalog:",
     "tw-animate-css": "catalog:"

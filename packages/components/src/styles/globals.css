@@ -380,6 +380,11 @@
     @apply bg-background text-foreground font-ui tracking-normal antialiased;
   }
 
+  /* Style all links like editor links. Button links keep their own styles. */
+  a:not([data-slot="button"]) {
+    @apply text-primary underline-offset-4 hover:underline;
+  }
+
   /* Highlights paint their own color, so the browser's yellow and black stay off. */
   mark {
     background-color: transparent;

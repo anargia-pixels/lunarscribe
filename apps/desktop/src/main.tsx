@@ -9,10 +9,6 @@ import Page from "@/app/page";
 // electron.vite.config.ts) instead of its CDN, so drawings render offline.
 window.EXCALIDRAW_ASSET_PATH = new URL("./", window.location.href).href;
 
-if (import.meta.env.DEV) {
-  void import("react-grab");
-}
-
 const container = document.getElementById("root");
 
 if (!container) {

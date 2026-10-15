@@ -7,7 +7,10 @@ import { EXTERNAL_LINKS } from "@/lib/external-links";
 export function SiteHeader() {
   return (
     <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-      <Link to="/" className="font-logo text-primary text-3xl">
+      <Link
+        to="/"
+        className="font-logo text-primary text-3xl hover:no-underline"
+      >
         Lunarscribe
       </Link>
       <nav className="flex items-center gap-1">

@@ -25,7 +25,7 @@ export const editorTheme: EditorThemeClasses = {
     listitemUnchecked: "editor-checklist-item",
     nested: { listitem: "list-none" },
   },
-  link: "text-primary underline underline-offset-4",
+  link: "text-primary hover:underline underline-offset-4",
   hr: "my-4 border-0 border-t border-primary",
   hrSelected: "outline outline-ring",
   code: "mb-3 block overflow-x-auto rounded-md bg-muted p-3 font-code text-sm",

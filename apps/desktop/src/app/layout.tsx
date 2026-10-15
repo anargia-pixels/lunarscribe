@@ -1,3 +1,4 @@
+import { DevTools } from "@lunarscribe/components/dev-tools/dev-tools";
 import {
   SidebarInset,
   SidebarProvider,
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <AppSidebar />
             <SidebarInset className="min-w-0">{children}</SidebarInset>
           </SidebarProvider>
+          {import.meta.env.DEV && <DevTools />}
         </TooltipProvider>
       </Toaster>
     </ThemeProvider>

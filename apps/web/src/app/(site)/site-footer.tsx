@@ -10,7 +10,10 @@ export function SiteFooter() {
     <>
       <Separator />
       <footer className="text-muted-foreground mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm">
-        <Link to="/" className="font-logo text-primary text-xl">
+        <Link
+          to="/"
+          className="font-logo text-primary text-xl hover:no-underline"
+        >
           Lunarscribe
         </Link>
         <nav className="flex flex-wrap items-center gap-1">

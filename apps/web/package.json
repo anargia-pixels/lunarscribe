@@ -15,6 +15,7 @@
     "check-types": "tsr generate && tsc --noEmit"
   },
   "dependencies": {
+    "@kitlangton/justice": "^0.3.2",
     "@lunarscribe/components": "workspace:*",
     "@lunarscribe/utils": "workspace:*",
     "@tailwindcss/vite": "catalog:",
@@ -39,7 +40,6 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^6.0.1",
-    "react-grab": "catalog:",
     "typescript": "catalog:",
     "vite": "^8.0.0",
     "wrangler": "^4.147.0"

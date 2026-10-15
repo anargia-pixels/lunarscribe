@@ -3,7 +3,6 @@ import { cn } from "@lunarscribe/utils/cn";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Download } from "lucide-react";
 
-import { InlineLink } from "@/components/inline-link";
 import { EXTERNAL_LINKS } from "@/lib/external-links";
 import { pageHead } from "@/lib/seo";
 
@@ -29,8 +28,7 @@ const SHOWCASE = [
   {
     title: (
       <>
-        <InlineLink to={EXTERNAL_LINKS.lexical}>Lexical</InlineLink> powered
-        markdown editor
+        <Link to={EXTERNAL_LINKS.lexical}>Lexical</Link> powered markdown editor
       </>
     ),
     description: "Local first OSS alternative to Obsidian.",
@@ -68,7 +66,7 @@ const SHOWCASE = [
   {
     title: (
       <>
-        File search by <InlineLink to={EXTERNAL_LINKS.fff}>fff</InlineLink>
+        File search by <Link to={EXTERNAL_LINKS.fff}>fff</Link>
       </>
     ),
     description:

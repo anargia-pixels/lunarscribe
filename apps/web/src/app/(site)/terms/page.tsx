@@ -22,7 +22,7 @@ export const Route = createFileRoute("/(site)/terms/")({
 /** Mirrors terms-of-service.md at the repository root; keep the two in sync. */
 function TermsOfService() {
   return (
-    <LegalDocument title="Terms of Service" effectiveDate="October 6, 2026">
+    <LegalDocument title="Terms of Service" effectiveDate="October 16, 2026">
       <p>
         These terms apply when you use Lunarscribe, a markdown writing app for
         desktop, web, and mobile. By using Lunarscribe, you agree to these
@@ -91,6 +91,30 @@ function TermsOfService() {
         To the extent the law allows, the developers of Lunarscribe are not
         liable for any loss of data, profits, or other damages that come from
         using or being unable to use Lunarscribe.
+      </p>
+
+      <LegalHeading>License</LegalHeading>
+      <p>
+        Lunarscribe is open source software licensed under the{" "}
+        <InlineLink to="https://www.gnu.org/licenses/agpl-3.0.html">
+          GNU Affero General Public License v3.0
+        </InlineLink>{" "}
+        or any later version. The license covers the software&apos;s source
+        code. It does not cover your content, and it does not replace these
+        terms.
+      </p>
+      <p>
+        You may use, copy, change, and redistribute Lunarscribe for any purpose,
+        including commercial ones. The source code is published at{" "}
+        <InlineLink to="https://github.com/anargia-pixels/lunarscribe">
+          https://github.com/anargia-pixels/lunarscribe
+        </InlineLink>
+        .
+      </p>
+      <p>
+        If you change Lunarscribe and let others interact with your version over
+        a network, such as a hosted copy, a web app, or an API, you must offer
+        those users the complete source code of your version.
       </p>
 
       <LegalHeading>Changes</LegalHeading>

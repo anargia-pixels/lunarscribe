@@ -254,3 +254,10 @@ release's packages. A push to `main` does not start a release.
 The root `package.json` catalog specifies dependency versions. Workspaces use `catalog:`
 references. Refer to [AGENTS.md](AGENTS.md) for repository conventions. Refer to
 [GLOSSARY.md](GLOSSARY.md) for product and codebase terms.
+
+## License
+
+Lunarscribe is licensed under the [GNU Affero General Public License v3.0](LICENSE) or
+later. You may use, change, and redistribute it for any purpose, including commercial
+ones. If you run a modified version as a network service, you must offer its complete
+source code to the people who use it. Lunarscribe comes with no warranty of any kind.

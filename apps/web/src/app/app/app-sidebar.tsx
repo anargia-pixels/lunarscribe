@@ -259,7 +259,7 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar>
+      <Sidebar side="left">
         <AppSidebarHeader
           modKeyLabel={MOD_KEY_LABEL}
           onNewNote={() => createBuffer("markdown", files)}

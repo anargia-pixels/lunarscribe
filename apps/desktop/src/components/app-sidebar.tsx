@@ -233,7 +233,7 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar>
+      <Sidebar side="left">
         <AppSidebarHeader
           modKeyLabel={window.lunarscribe.platform === "darwin" ? "⌘" : "Ctrl"}
           version={__APP_VERSION__}

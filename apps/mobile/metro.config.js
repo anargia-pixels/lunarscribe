@@ -19,25 +19,6 @@ config.resolver.unstable_conditionsByPlatform = {
   web: ["browser", "production"],
 };
 
-// Use Mermaid's single-file build, so it stays one lazy chunk on editor pages.
-const MERMAID_FILES = {
-  mermaid: `${__dirname}/mermaid-single-file.js`,
-  "mermaid/dist/mermaid.min.js": require.resolve(
-    "mermaid/dist/mermaid.min.js",
-    {
-      paths: [`${__dirname}/../../packages/components`],
-    },
-  ),
-};
-
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  const filePath = platform === "web" ? MERMAID_FILES[moduleName] : undefined;
-
-  return filePath
-    ? { type: "sourceFile", filePath }
-    : context.resolveRequest(context, moduleName, platform);
-};
-
 module.exports = withUniwindConfig(config, {
   cssEntryFile: "./src/global.css",
   dtsFile: "./src/uniwind-types.d.ts",

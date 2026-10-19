@@ -1,12 +1,20 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import type { Mounted } from "pele";
 import { useEffect, useRef } from "react";
 
-let renderQueue = Promise.resolve();
-
-let nextRenderId = 0;
-
-export function MermaidPreview({ code }: { code: string }) {
+/**
+ * Renders Mermaid text with Pele. Colors come from CSS variables, so theme
+ * changes need no redraw. `interactive` adds zoom and pan.
+ */
+export function MermaidPreview({
+  code,
+  interactive = false,
+}: {
+  code: string;
+  interactive?: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef<Mounted>(undefined);
 
   useEffect(() => {
     const element = ref.current;
@@ -16,55 +24,40 @@ export function MermaidPreview({ code }: { code: string }) {
     }
 
     let isCancelled = false;
-    let revision = 0;
-    let timeoutId: number | undefined;
 
-    const isCurrent = (renderRevision: number) =>
-      !isCancelled && revision === renderRevision;
+    const unmount = () => {
+      mountedRef.current?.destroy();
+      mountedRef.current = undefined;
+    };
 
-    const renderDiagram = async (renderRevision: number) => {
-      if (!isCurrent(renderRevision)) {
-        return;
-      }
-
+    const renderDiagram = async () => {
       try {
         if (!code.trim()) {
+          unmount();
           element.textContent = "Enter Mermaid text to preview a diagram.";
           delete element.dataset.mermaidError;
 
           return;
         }
 
-        const { default: mermaid } = await import("mermaid");
+        const { mount } = await import("pele");
 
         await document.fonts.ready;
 
-        if (!isCurrent(renderRevision)) {
+        if (isCancelled) {
           return;
         }
 
-        mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: "strict",
-          suppressErrorRendering: true,
-          theme: document.documentElement.classList.contains("dark")
-            ? "dark"
-            : "default",
-          fontFamily: "var(--font-buffer)",
-        });
-
-        const id = `mermaid-diagram-${++nextRenderId}`;
-        const { svg } = await mermaid.render(id, code);
-
-        if (!isCurrent(renderRevision)) {
-          return;
+        if (mountedRef.current) {
+          mountedRef.current.update(code);
+        } else {
+          mountedRef.current = mount(element, code, { zoom: interactive });
         }
 
-        // Mermaid sanitizes SVG in strict mode before returning it.
-        element.innerHTML = svg;
         delete element.dataset.mermaidError;
       } catch (cause) {
-        if (isCurrent(renderRevision)) {
+        if (!isCancelled) {
+          unmount();
           element.textContent = errorMessage(
             cause,
             "Unable to render Mermaid diagram.",
@@ -72,31 +65,25 @@ export function MermaidPreview({ code }: { code: string }) {
           element.dataset.mermaidError = "true";
         }
       } finally {
-        if (isCurrent(renderRevision)) {
+        if (!isCancelled) {
           delete element.dataset.mermaidPending;
         }
       }
     };
 
-    const scheduleRender = () => {
-      const currentRevision = ++revision;
+    element.dataset.mermaidPending = "true";
 
-      window.clearTimeout(timeoutId);
-      element.dataset.mermaidPending = "true";
-      timeoutId = window.setTimeout(() => {
-        // Mermaid shares configuration across renders. Serialize initialization
-        // with rendering so concurrent blocks cannot change each other's theme.
-        renderQueue = renderQueue.then(() => renderDiagram(currentRevision));
-      }, 150);
-    };
+    // Rendering takes under a millisecond; the delay only keeps half-typed
+    // definitions from flashing errors.
+    const timeoutId = window.setTimeout(renderDiagram, 150);
 
-    scheduleRender();
-
-    const observer = new MutationObserver(scheduleRender);
+    // Pele measures labels with the buffer font, so measure again when the
+    // appearance styles change it.
+    const observer = new MutationObserver(() => mountedRef.current?.refresh());
 
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class", "style"],
+      attributeFilter: ["style"],
     });
 
     return () => {
@@ -104,7 +91,9 @@ export function MermaidPreview({ code }: { code: string }) {
       window.clearTimeout(timeoutId);
       observer.disconnect();
     };
-  }, [code]);
+  }, [code, interactive]);
+
+  useEffect(() => () => mountedRef.current?.destroy(), []);
 
   return <div data-mermaid-render data-mermaid-pending="true" ref={ref} />;
 }

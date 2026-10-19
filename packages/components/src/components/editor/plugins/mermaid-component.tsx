@@ -158,13 +158,20 @@ export function MermaidComponent({
         />
       )}
       {editable ? (
+        // A div, because the diagram holds Pele's zoom buttons.
         <Button
           variant="ghost"
+          render={<div />}
+          nativeButton={false}
           data-mermaid-preview
           aria-label="Edit Mermaid block"
           onMouseDown={(event) => event.preventDefault()}
           onClick={(event) => {
-            if (event.shiftKey) {
+            if (
+              event.shiftKey ||
+              (event.target instanceof Element &&
+                event.target.closest(".pele-zoom"))
+            ) {
               return;
             }
 
@@ -178,7 +185,7 @@ export function MermaidComponent({
             inputRef.current?.focus();
           }}
         >
-          <MermaidPreview code={code} />
+          <MermaidPreview code={code} interactive />
         </Button>
       ) : (
         <MermaidPreview code={code} />

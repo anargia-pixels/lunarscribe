@@ -53,16 +53,24 @@ of backticks in the definition.
 
 `MermaidComponent` owns source-field focus and edit state. Its preview button remains
 mounted during editing. Mouse presses on that button preserve source-field focus until the
-click handler selects the block. This prevents editing from immediately closing.
+click handler selects the block. This prevents editing from immediately closing. The
+button renders as a `div` because the diagram holds Pele's zoom buttons, and clicks on
+those buttons do not open editing.
 
-`MermaidPreview` loads Mermaid on demand. It schedules rendering 150 milliseconds after
-the latest edit. Rendering runs in a shared queue because Mermaid has shared
-configuration. Revision checks prevent an older result from replacing a newer preview. The
-preview updates when the theme or appearance styles change.
+`MermaidPreview` renders with [Pele](https://pele.run), loaded on demand, 150 milliseconds
+after the latest edit. Pele colors and fonts come from `--pele-*` variables mapped to the
+theme in `mermaid-plugin.css`, so theme changes need no redraw; appearance style changes
+re-measure labels.
 
-Mermaid uses strict rendering with its error graphic disabled. Invalid definitions show
-error text in the preview. Empty definitions show a prompt. SVGs use responsive widths and
-automatic heights; toolbar button icon styles must not constrain diagram dimensions.
+In the editor, diagrams zoom with pinch, Ctrl or Cmd with the wheel, double-click, the
+zoom buttons, or `+`, `-` and `0` when focused, and pan by dragging or with the arrow
+keys. A plain wheel scrolls the document. The export snapshot renders diagrams without
+zoom. The viewer is at most 80% of the viewport height; taller diagrams shrink to fit and
+can be zoomed in. The viewer uses margins, not padding, because Pele sizes a zoomed
+diagram to the viewer's padding box.
+
+Invalid definitions show error text in the preview. Empty definitions show a prompt.
+Toolbar button icon styles must not constrain diagram dimensions.
 
 Exports with Mermaid blocks use a read-only markdown snapshot. The snapshot waits for
 pending diagrams before export. The desktop export path has a 15-second render timeout.

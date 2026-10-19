@@ -1,6 +1,27 @@
 .editor-mermaid {
   margin-block: 1rem;
   color: var(--foreground);
+  --pele-bg: var(--background);
+  --pele-fg: var(--foreground);
+  --pele-muted: var(--muted-foreground);
+  --pele-line: var(--foreground);
+  --pele-surface: var(--muted);
+  --pele-surface-alt: var(--secondary);
+  --pele-border: var(--primary);
+  --pele-accent: var(--primary);
+  --pele-critical: var(--destructive);
+  --pele-font: var(--font-buffer);
+  --pele-font-mono: var(--font-code);
+  --pele-radius: var(--radius);
+  --pele-series-1: var(--chart-1);
+  --pele-series-2: var(--chart-2);
+  --pele-series-3: var(--chart-3);
+  --pele-series-4: var(--chart-4);
+  --pele-series-5: var(--chart-5);
+  /* Themes define five chart colors; the heading colors fill the last three. */
+  --pele-series-6: var(--heading-1);
+  --pele-series-7: var(--heading-2);
+  --pele-series-8: var(--heading-3);
 }
 
 .editor-mermaid [data-mermaid-preview] {
@@ -29,17 +50,22 @@
   font-family: var(--font-code);
 }
 
+/* Margins, not padding: Pele sizes the zoomed diagram to the viewer's padding box. */
 [data-mermaid-render] {
   width: 100%;
-  overflow-x: auto;
-  padding-block: 0.75rem;
+  max-height: 80dvh;
+  overflow: hidden;
+  margin-block: 0.75rem;
 }
 
+/* Fit tall diagrams to the viewer; zooming sets inline sizes over these. */
 .editor-mermaid [data-mermaid-render] > svg {
   display: block;
-  width: 100%;
-  height: auto;
+  width: auto;
+  max-height: 80dvh;
   margin-inline: auto;
+  /* Undo the button's icon rule so the diagram shows Pele's grab cursor. */
+  pointer-events: auto;
 }
 
 [data-mermaid-error] {

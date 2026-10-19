@@ -26,9 +26,15 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
   have horizontal scroll controls inside the editor.
 - **Links:** Type `[text](url)` or use the toolbar's link control to add a link with its
   own text. With the caret in a link, a bar under it shows the URL and can edit or remove
-  the link. Ctrl+click (⌘+click on macOS) opens a link.
-- **Collapsible headings:** Hovering a heading shows a chevron that collapses everything
-  under it until the next heading of the same or a higher level.
+  the link. Ctrl+click (⌘+click on macOS) opens a link. A link to `#heading-name` jumps to
+  that heading in the same note, for tables of contents and glossaries; the link form
+  suggests one for every heading.
+- **Collapsible headings:** A chevron beside every heading collapses everything under it
+  until the next heading of the same or a higher level.
+- **Outline:** The outline lists a markdown note's headings, indented by nesting and
+  colored like the editor's headings. Tap or click a heading to jump to it. On desktop it
+  is a resizable panel on the right; on Android it opens from the editor header as a panel
+  from the left.
 - **Right-click menu:** A right-click in the editor opens a menu like Obsidian's, with
   link actions, Highlight, Format, Paragraph, Insert, and Table submenus, undo and redo,
   and clipboard actions. Settings → Appearances can hide the toolbar, since the menu holds
@@ -56,7 +62,8 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
 - **External files:** The editor opens `.md`, `.markdown`, and `.txt` files. You can drag
   files into the markdown editor or give their paths to the desktop app. Packaged apps
   support file associations and `lunarscribe://open?path=...` links. Lunarscribe saves
-  changes to the original file.
+  changes to the original file. When another program, such as an AI agent, changes an open
+  file, the editor reloads it; if you have unsaved edits, they are kept instead.
 - **Sidebar:** The sidebar has Notes, Drawings, and External files sections. Each section
   shows its file count and has separate scroll controls. The app keeps the sidebar
   visibility and section settings between app starts. File actions are Rename, Copy path,
@@ -181,16 +188,17 @@ To insert a horizontal rule, type `---` on a separate line and press Enter.
 
 ### Keyboard shortcuts
 
-| Action                | Linux    | macOS         |
-| --------------------- | -------- | ------------- |
-| Save active buffer    | `Ctrl+S` | `Cmd+S`       |
-| Find in active buffer | `Ctrl+F` | `Cmd+F`       |
-| Search saved files    | `Ctrl+E` | `Ctrl+E`      |
-| Bold                  | `Ctrl+B` | `Cmd+B`       |
-| Italic                | `Ctrl+I` | `Cmd+I`       |
-| Underline             | `Ctrl+U` | `Cmd+U`       |
-| Undo                  | `Ctrl+Z` | `Cmd+Z`       |
-| Redo                  | `Ctrl+Y` | `Cmd+Shift+Z` |
+| Action                | Linux        | macOS          |
+| --------------------- | ------------ | -------------- |
+| Save active buffer    | `Ctrl+S`     | `Cmd+S`        |
+| Find in active buffer | `Ctrl+F`     | `Cmd+F`        |
+| Search saved files    | `Ctrl+E`     | `Ctrl+E`       |
+| Toggle outline        | `Ctrl+Alt+B` | `Cmd+Option+B` |
+| Bold                  | `Ctrl+B`     | `Cmd+B`        |
+| Italic                | `Ctrl+I`     | `Cmd+I`        |
+| Underline             | `Ctrl+U`     | `Cmd+U`        |
+| Undo                  | `Ctrl+Z`     | `Cmd+Z`        |
+| Redo                  | `Ctrl+Y`     | `Cmd+Shift+Z`  |
 
 In Find, press Enter to select the next match. Press Shift+Enter to select the previous
 match. Press Escape to close Find.

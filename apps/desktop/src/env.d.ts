@@ -76,5 +76,12 @@ interface Window {
     ) => Promise<string>;
     deleteFile: (name: string) => Promise<void>;
     onFilesChanged: (listener: (files: string[]) => void) => () => void;
+    /** Replaces the files the file watcher follows. */
+    watchFiles: (files: import("./lib/editor-files").WatchedFile[]) => void;
+    onWatchedFileChanged: (
+      listener: (
+        change: import("./lib/editor-files").WatchedFileChange,
+      ) => void,
+    ) => () => void;
   };
 }

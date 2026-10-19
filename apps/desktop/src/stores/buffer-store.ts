@@ -10,7 +10,11 @@ import {
   getFileExtension,
   INVALID_FILE_TITLE_CHARACTERS,
 } from "@/lib/editor-files";
-import type { ExternalFile, FileTarget } from "@/lib/editor-files";
+import type {
+  ExternalFile,
+  FileTarget,
+  WatchedFileChange,
+} from "@/lib/editor-files";
 import type { SyncedFileChange } from "@/lib/sync";
 import { useFileAccessStore } from "@/stores/file-access-store";
 import { createBufferFileWrites } from "@/stores/file-writes";
@@ -47,6 +51,8 @@ export type BufferStore = {
   fileError: string | null;
   clearFileError: () => void;
   applySyncedFiles: (changes: SyncedFileChange[]) => string[];
+  /** Loads markdown another program wrote; returns false when pending edits were kept instead. */
+  applyWatchedFile: (change: WatchedFileChange) => boolean;
   renameBuffer: (id: string, title: string) => void;
   setContent: (id: string, content: string) => void;
   saveActiveBuffer: () => Promise<string>;
@@ -259,6 +265,14 @@ export const useBufferStore = create<BufferStore>()(
             continue;
           }
 
+          // The file watcher may have loaded this download already.
+          if (
+            buffer.content === change.after &&
+            buffer.savedContent === change.after
+          ) {
+            continue;
+          }
+
           if (
             buffer.content !== change.before ||
             buffer.title !== stemOf(change.name)
@@ -290,6 +304,39 @@ export const useBufferStore = create<BufferStore>()(
         }
 
         return conflicts;
+      },
+
+      applyWatchedFile: (change) => {
+        const buffer = get().buffers.find((candidate) =>
+          change.kind === "saved"
+            ? candidate.fileName === change.name
+            : candidate.externalPath === change.path,
+        );
+
+        // Lunarscribe's own saves come back through the watcher too.
+        if (!buffer || change.content === buffer.savedContent) {
+          return true;
+        }
+
+        if (buffer.content !== buffer.savedContent) {
+          return false;
+        }
+
+        bufferFileWrites.discardSaveTimer(buffer.id);
+        set((state) => ({
+          buffers: state.buffers.map((candidate) =>
+            candidate.id === buffer.id
+              ? {
+                  ...candidate,
+                  content: change.content,
+                  savedContent: change.content,
+                  syncRevision: candidate.syncRevision + 1,
+                }
+              : candidate,
+          ),
+        }));
+
+        return true;
       },
 
       renameBuffer: (id, rawTitle) => {

@@ -50,6 +50,14 @@ export type FileTarget =
   | { kind: "saved"; name: string }
   | { kind: "external"; path: string; name: string };
 
+/** An open buffer's file followed by the file watcher. */
+export type WatchedFile =
+  | { kind: "saved"; name: string }
+  | { kind: "external"; path: string };
+
+/** A watched file's markdown after another program wrote it. */
+export type WatchedFileChange = WatchedFile & { content: string };
+
 /** Slashes and null characters cannot appear in a file title. */
 export const INVALID_FILE_TITLE_CHARACTERS = /[/\\\0]/gu;
 

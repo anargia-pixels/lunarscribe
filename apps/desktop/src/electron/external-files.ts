@@ -170,6 +170,11 @@ async function renameTextFile(
   });
 }
 
+/** Whether the renderer opened this canonical path, so main may read it. */
+export function isOpenedPath(path: string) {
+  return openedPaths.has(path);
+}
+
 /** Delivers queued paths only after the renderer has subscribed, including on cold launch. */
 function deliverPendingFiles() {
   if (!app.isReady()) {

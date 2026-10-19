@@ -2,18 +2,25 @@ import { SidebarRail, useSidebar } from "@lunarscribe/components/ui/sidebar";
 import type { PointerEvent } from "react";
 import { useRef } from "react";
 
-import { useSidebarStore } from "@/stores/sidebar-store";
-
 /** Pointer travel that turns a rail click into a drag. */
 const DRAG_THRESHOLD = 3;
 
 type Drag = { startX: number; startWidth: number; hasMoved: boolean };
 
-/** Sidebar rail that resizes the open sidebar on drag and toggles it on click. */
-export function SidebarResizeRail() {
+/**
+ * Sidebar rail that resizes the open sidebar on drag and toggles it on click. A right
+ * sidebar grows as the rail moves left. The app owns `width` and keeps it in bounds.
+ */
+export function SidebarResizeRail({
+  width,
+  onWidthChange,
+  side = "left",
+}: {
+  width: number;
+  onWidthChange: (width: number) => void;
+  side?: "left" | "right";
+}) {
   const { open, toggleSidebar } = useSidebar();
-  const width = useSidebarStore((state) => state.width);
-  const setWidth = useSidebarStore((state) => state.setWidth);
   const drag = useRef<Drag | null>(null);
   const wasDragged = useRef(false);
 
@@ -39,7 +46,8 @@ export function SidebarResizeRail() {
       return;
     }
 
-    const offset = event.clientX - current.startX;
+    const offset =
+      (event.clientX - current.startX) * (side === "left" ? 1 : -1);
 
     if (!current.hasMoved && Math.abs(offset) < DRAG_THRESHOLD) {
       return;
@@ -53,7 +61,7 @@ export function SidebarResizeRail() {
         ?.setAttribute("data-resizing", "");
     }
 
-    setWidth(current.startWidth + offset);
+    onWidthChange(current.startWidth + offset);
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLButtonElement>) => {

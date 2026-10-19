@@ -12,12 +12,14 @@ import {
 import { Button } from "@lunarscribe/components/ui/button";
 import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
+import { PanelRightIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { EditorFileDropZone } from "@/components/editor-file-drop-zone";
 import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSyncStore } from "@/stores/sync-store";
 
 /** Loads the drawing canvas only when a drawing buffer opens. */
@@ -75,6 +77,8 @@ export default function Page() {
   const buffer = useActiveBuffer();
   const setContent = useBufferStore((state) => state.setContent);
   const theme = useAppearanceStore((state) => state.theme);
+  const setOutline = useSidebarStore((state) => state.setOutline);
+  const toggleOutline = useSidebarStore((state) => state.toggleOutline);
 
   const showEditorToolbar = useAppearanceStore(
     (state) => state.showEditorToolbar,
@@ -147,6 +151,27 @@ export default function Page() {
               ? syncMessage(isSyncing, hasSyncedSuccessfully)
               : null}
           </output>
+          {buffer.kind === "markdown" && (
+            <Hint
+              label="Toggle outline"
+              side="bottom"
+              shortcut={[
+                window.lunarscribe.platform === "darwin" ? "⌘" : "Ctrl",
+                window.lunarscribe.platform === "darwin" ? "⌥" : "Alt",
+                "B",
+              ]}
+            >
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Toggle outline"
+                className="absolute right-3 hidden md:inline-flex"
+                onClick={toggleOutline}
+              >
+                <PanelRightIcon />
+              </Button>
+            </Hint>
+          )}
         </header>
       </TooltipProvider>
       {fileError && (
@@ -173,6 +198,7 @@ export default function Page() {
             markdown={buffer.content}
             onChange={(markdown) => setContent(buffer.id, markdown)}
             showToolbar={showEditorToolbar}
+            onOutlineChange={setOutline}
           />
         </EditorFileDropZone>
       )}

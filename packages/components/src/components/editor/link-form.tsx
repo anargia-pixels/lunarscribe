@@ -4,6 +4,7 @@ import {
   $toggleLink,
   type LinkNode,
 } from "@lexical/link";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $findMatchingParent } from "@lexical/utils";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Input } from "@lunarscribe/components/ui/input";
@@ -12,9 +13,12 @@ import {
   type FormEvent,
   type KeyboardEvent,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
+
+import { $getHeadingAnchors } from "./heading-anchors";
 
 export type LinkDraft = { text: string; url: string; isLink: boolean };
 
@@ -106,7 +110,10 @@ export function $removeLink() {
   link.remove();
 }
 
-/** Link text and URL fields. Saving an empty URL removes an existing link. */
+/**
+ * Link text and URL fields. Saving an empty URL removes an existing link. The
+ * URL field suggests a `#slug` for every heading, to link to that section.
+ */
 export function LinkForm({
   draft,
   onSubmit,
@@ -123,6 +130,9 @@ export function LinkForm({
   const [focusUrl] = useState(draft.text !== "");
   const textRef = useRef<HTMLInputElement>(null);
   const urlRef = useRef<HTMLInputElement>(null);
+  const [editor] = useLexicalComposerContext();
+  const [headings] = useState(() => editor.read($getHeadingAnchors));
+  const headingListId = useId();
 
   useEffect(() => {
     (focusUrl ? urlRef : textRef).current?.focus();
@@ -163,11 +173,19 @@ export function LinkForm({
         ref={urlRef}
         inputMode="url"
         aria-label="Link URL"
-        placeholder="https://"
+        placeholder="https:// or #heading"
+        list={headingListId}
         value={url}
         onChange={(event) => setUrl(event.target.value)}
         onKeyDown={handleKeyDown}
       />
+      <datalist id={headingListId}>
+        {headings.map((heading) => (
+          <option key={heading.key} value={`#${heading.slug}`}>
+            {heading.text}
+          </option>
+        ))}
+      </datalist>
       <div className="flex justify-end gap-1">
         {draft.isLink && (
           <Button type="button" variant="ghost" size="sm" onClick={onRemove}>

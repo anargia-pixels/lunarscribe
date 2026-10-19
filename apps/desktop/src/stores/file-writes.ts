@@ -52,6 +52,15 @@ export function createBufferFileWrites(store: StoreApi<BufferStore>) {
         buffer.content,
       );
 
+      // The file watcher compares against this to ignore the save it sees.
+      store.setState((state) => ({
+        buffers: state.buffers.map((candidate) =>
+          candidate.id === id
+            ? { ...candidate, savedContent: buffer.content }
+            : candidate,
+        ),
+      }));
+
       return {
         status: "saved",
         fileName:

@@ -5,6 +5,8 @@ import type {
   FileExtension,
   FileSearchMatch,
   OpenedExternalFile,
+  WatchedFile,
+  WatchedFileChange,
 } from "../lib/editor-files";
 import type {
   SyncProvider,
@@ -122,5 +124,17 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     ipcRenderer.on("files:changed", handler);
 
     return () => ipcRenderer.off("files:changed", handler);
+  },
+  watchFiles: (files: WatchedFile[]) =>
+    ipcRenderer.send("file-watcher:watch", files),
+  onWatchedFileChanged: (listener: (change: WatchedFileChange) => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      change: WatchedFileChange,
+    ) => listener(change);
+
+    ipcRenderer.on("file-watcher:changed", handler);
+
+    return () => ipcRenderer.off("file-watcher:changed", handler);
   },
 });

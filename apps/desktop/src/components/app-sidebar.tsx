@@ -11,6 +11,7 @@ import {
   FILE_SECTION_ICONS,
   SidebarFileTabs,
 } from "@lunarscribe/components/sidebar/sidebar-file-tabs";
+import { SidebarResizeRail } from "@lunarscribe/components/sidebar/sidebar-resize-rail";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +27,6 @@ import { useEffect, useState } from "react";
 import { AboutPane } from "@/components/settings-dialog/about-pane";
 import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
 import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
-import { SidebarResizeRail } from "@/components/sidebar-resize-rail";
 import { useTheme } from "@/components/theme-provider";
 import { useUpdate } from "@/components/use-update";
 import type { FileTarget } from "@/lib/editor-files";
@@ -75,6 +75,8 @@ export function AppSidebar() {
 
   const activeSection = useSidebarStore((state) => state.section);
   const setSection = useSidebarStore((state) => state.setSection);
+  const sidebarWidth = useSidebarStore((state) => state.width);
+  const setSidebarWidth = useSidebarStore((state) => state.setWidth);
   const { toggleTheme } = useTheme();
   const update = useUpdate();
 
@@ -343,7 +345,10 @@ export function AppSidebar() {
             onDelete={() => deleteFile(dialog.target.name)}
           />
         )}
-        <SidebarResizeRail />
+        <SidebarResizeRail
+          width={sidebarWidth}
+          onWidthChange={setSidebarWidth}
+        />
       </Sidebar>
       <FileSearchDialog
         open={isSearchOpen}

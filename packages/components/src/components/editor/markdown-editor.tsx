@@ -26,6 +26,10 @@ import { CodeHighlightPlugin } from "./plugins/code-highlight-plugin";
 import { EditorContextMenuPlugin } from "./plugins/editor-context-menu-plugin";
 import { FindPlugin } from "./plugins/find-plugin";
 import { HeadingCollapsePlugin } from "./plugins/heading-collapse-plugin";
+import {
+  HeadingOutlinePlugin,
+  type Outline,
+} from "./plugins/heading-outline-plugin";
 import { LinkEditorPlugin } from "./plugins/link-editor-plugin";
 import { LinkOpenPlugin } from "./plugins/link-open-plugin";
 import { MarkdownShortcutPlugin } from "./plugins/markdown-shortcut-plugin";
@@ -41,15 +45,18 @@ import { ToolbarPlugin } from "./toolbar-plugin";
  * Frontmatter is parsed out of the markdown into the frontmatter panel and
  * joined back onto the body of every reported markdown string. The right-click
  * menu holds every toolbar action, so `showToolbar` can hide the toolbar.
+ * `onOutlineChange` receives the headings for an outline sidebar.
  */
 export function MarkdownEditor({
   markdown,
   onChange,
   showToolbar = true,
+  onOutlineChange,
 }: {
   markdown: string;
   onChange: (markdown: string) => void;
   showToolbar?: boolean;
+  onOutlineChange?: (outline: Outline | null) => void;
 }) {
   const initialConfig = createMarkdownConfig(markdown);
   const [parsed] = useState(() => parseFrontmatter(markdown));
@@ -127,6 +134,7 @@ export function MarkdownEditor({
       <LinkPlugin />
       <MarkdownShortcutPlugin />
       <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
+      {onOutlineChange && <HeadingOutlinePlugin onChange={onOutlineChange} />}
     </LexicalComposer>
   );
 }

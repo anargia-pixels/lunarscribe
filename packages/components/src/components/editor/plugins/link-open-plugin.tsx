@@ -10,6 +10,8 @@ import {
 } from "lexical";
 import { useEffect, useState } from "react";
 
+import { $getHeadingAnchors, goToHeading } from "../heading-anchors";
+
 const MODIFIER = IS_APPLE ? "⌘" : "Ctrl";
 
 /** The link anchor holding `target`, if it is inside the editor. */
@@ -20,7 +22,21 @@ function getLinkElement(editor: LexicalEditor, target: EventTarget | null) {
   return anchor && root?.contains(anchor) ? anchor : null;
 }
 
-/** Opens a link on Ctrl+click (⌘+click on macOS) and hints at it on hover. */
+/** Jumps to the heading `slug` names, if the buffer has one. */
+function goToSection(editor: LexicalEditor, slug: string) {
+  const key = editor.read(
+    () => $getHeadingAnchors().find((heading) => heading.slug === slug)?.key,
+  );
+
+  if (key !== undefined) {
+    goToHeading(editor, key);
+  }
+}
+
+/**
+ * Opens a link on Ctrl+click (⌘+click on macOS) and hints at it on hover. A
+ * `#slug` link jumps to the heading with that slug instead.
+ */
 export function LinkOpenPlugin() {
   const [editor] = useLexicalComposerContext();
   const [hovered, setHovered] = useState<HTMLAnchorElement | null>(null);
@@ -45,7 +61,10 @@ export function LinkOpenPlugin() {
         return $isLinkNode(link) ? link.sanitizeUrl(link.getURL()) : null;
       });
 
-      if (url) {
+      if (url?.startsWith("#")) {
+        event.preventDefault();
+        goToSection(editor, url.slice(1));
+      } else if (url) {
         event.preventDefault();
         // The desktop app hands new windows to the system browser.
         window.open(url, "_blank", "noopener");

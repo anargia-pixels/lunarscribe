@@ -149,6 +149,14 @@ _Avoid_: phone layout, small screen, responsive mode
 The collapsible panel on the left of the window, currently empty.
 _Avoid_: drawer, nav, side panel
 
+**Outline sidebar**:
+The collapsible panel on the right of the window listing the active buffer's
+headings, VS Code style: indented by nesting and colored like the editor's
+headings. Clicking a heading moves the caret to it. It shows only for markdown
+buffers, and Ctrl+Alt+B (⌘+Alt+B on macOS), its rail, or the outline trigger on
+the right of the header opens and collapses it.
+_Avoid_: outline panel, table of contents, TOC, right sidebar
+
 **Sidebar inset**:
 The main area beside the sidebar; it holds the header, toolbar, and markdown
 editor.

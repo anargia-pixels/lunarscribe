@@ -11,6 +11,7 @@ import {
   INVALID_FILE_TITLE_CHARACTERS,
 } from "../lib/editor-files";
 import { registerFileSearch } from "./file-search";
+import { registerFileWatcher } from "./file-watcher";
 import { registerSync } from "./sync/sync-service";
 
 /** Saves buffers as `<title><extension>` in Documents/lunarscribe and tells windows when the folder changes. */
@@ -25,6 +26,7 @@ export function registerDocumentsFolder() {
 
   mkdirSync(folder, { recursive: true });
   registerFileSearch(folder);
+  registerFileWatcher(folder);
   registerSync(folder, queueFileOperation);
 
   ipcMain.handle("files:list", listFiles);

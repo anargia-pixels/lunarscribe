@@ -4,12 +4,10 @@ import { mergeRegister } from "@lexical/utils";
 import { Button } from "@lunarscribe/components/ui/button";
 import { cn } from "@lunarscribe/utils/cn";
 import {
-  $getNearestNodeFromDOMNode,
   $getNodeByKey,
   $getRoot,
   $getSelection,
   $isRangeSelection,
-  type LexicalEditor,
   type LexicalNode,
   type NodeKey,
 } from "lexical";
@@ -57,14 +55,6 @@ function $getSelectedBlockKey() {
     : undefined;
 }
 
-function getHeadingKey(editor: LexicalEditor, target: Node) {
-  return editor.read(() => {
-    const block = $getNearestNodeFromDOMNode(target)?.getTopLevelElement();
-
-    return block && $isHeadingNode(block) ? block.getKey() : null;
-  });
-}
-
 /**
  * Collapses the blocks under a heading up to the next heading of the same or a
  * higher level. Collapsing only hides DOM, so the markdown never changes.
@@ -73,14 +63,13 @@ export function HeadingCollapsePlugin() {
   const [editor] = useLexicalComposerContext();
   const [toggles, setToggles] = useState<Toggle[]>([]);
   const collapsedRef = useRef(new Set<NodeKey>());
-  const hoveredRef = useRef<NodeKey | null>(null);
   const syncRef = useRef<(expandSelection: boolean) => void>(() => {});
 
   useEffect(() => {
     const collapsed = collapsedRef.current;
 
-    // Hides collapsed sections and places a toggle beside every collapsed or
-    // hovered heading. A caret moved into a hidden section expands it.
+    // Hides collapsed sections and places a toggle beside every visible
+    // heading. A caret moved into a hidden section expands it.
     const sync = (expandSelection: boolean) =>
       editor.read(() => {
         for (const key of collapsed) {
@@ -110,13 +99,13 @@ export function HeadingCollapsePlugin() {
             continue;
           }
 
-          element.hidden = hidden.has(key);
+          // Only write changed blocks; rewriting all of them on every update
+          // and resize frame invalidates style across a long buffer.
+          if (element.hidden !== hidden.has(key)) {
+            element.hidden = hidden.has(key);
+          }
 
-          if (
-            hidden.has(key) ||
-            !$isHeadingNode(child) ||
-            (!collapsed.has(key) && key !== hoveredRef.current)
-          ) {
+          if (hidden.has(key) || !$isHeadingNode(child)) {
             continue;
           }
 
@@ -133,38 +122,26 @@ export function HeadingCollapsePlugin() {
           });
         }
 
-        setToggles(nextToggles);
+        setToggles((previous) =>
+          previous.length === nextToggles.length &&
+          previous.every((toggle, index) => {
+            const next = nextToggles[index];
+
+            return (
+              toggle.key === next?.key &&
+              toggle.top === next.top &&
+              toggle.left === next.left &&
+              toggle.collapsed === next.collapsed
+            );
+          })
+            ? previous
+            : nextToggles,
+        );
       });
-
-    const onPointerMove = (event: PointerEvent) => {
-      const root = editor.getRootElement();
-      const { target } = event;
-
-      // The toggle sits outside the content editable; hovering it keeps its
-      // heading hovered.
-      if (
-        target instanceof Element &&
-        target.closest("[data-heading-toggle]")
-      ) {
-        return;
-      }
-
-      const key =
-        root && target instanceof Node && root.contains(target)
-          ? getHeadingKey(editor, target)
-          : null;
-
-      if (key !== hoveredRef.current) {
-        hoveredRef.current = key;
-        sync(false);
-      }
-    };
 
     syncRef.current = sync;
 
     const observer = new ResizeObserver(() => sync(false));
-
-    document.addEventListener("pointermove", onPointerMove);
 
     return mergeRegister(
       editor.registerRootListener((root, previousRoot) => {
@@ -177,10 +154,7 @@ export function HeadingCollapsePlugin() {
         }
       }),
       editor.registerUpdateListener(() => sync(true)),
-      () => {
-        observer.disconnect();
-        document.removeEventListener("pointermove", onPointerMove);
-      },
+      () => observer.disconnect(),
     );
   }, [editor]);
 
@@ -218,8 +192,7 @@ export function HeadingCollapsePlugin() {
   };
 
   return toggles.map(({ key, top, left, collapsed }) => {
-    // Geometry comes from the heading; appearance stays in Tailwind. The
-    // `after` strip spans the gap so hovering across it keeps the toggle.
+    // Geometry comes from the heading; appearance stays in Tailwind.
     const style: ToggleStyle = {
       "--toggle-top": `${top}px`,
       "--toggle-left": `${left}px`,
@@ -228,11 +201,10 @@ export function HeadingCollapsePlugin() {
     return (
       <Button
         key={key}
-        data-heading-toggle
         variant="ghost"
         size="xs"
         aria-label={collapsed ? "Expand section" : "Collapse section"}
-        className="absolute top-(--toggle-top) left-(--toggle-left) z-10 -ml-1.5 -translate-x-full after:absolute after:inset-y-0 after:left-full after:w-1.5"
+        className="absolute top-(--toggle-top) left-(--toggle-left) z-10 -ml-1.5 -translate-x-full"
         style={style}
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => toggle(key)}

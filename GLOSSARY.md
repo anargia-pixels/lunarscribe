@@ -154,7 +154,8 @@ The collapsible panel on the right of the window listing the active buffer's
 headings, VS Code style: indented by nesting and colored like the editor's
 headings. Clicking a heading moves the caret to it. It shows only for markdown
 buffers, and Ctrl+Alt+B (⌘+Alt+B on macOS), its rail, or the outline trigger on
-the right of the header opens and collapses it.
+the right of the header opens and collapses it. The mobile app shows the same list
+in a sheet from the left, opened from its editor header.
 _Avoid_: outline panel, table of contents, TOC, right sidebar
 
 **Sidebar inset**:

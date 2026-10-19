@@ -14,6 +14,8 @@ export default function MarkdownDom({
   palette,
   isShown,
   onChange,
+  isOutlineOpen,
+  onOutlineOpenChange,
 }: EditorDomProps) {
   useEditorDomPage(theme, palette, isShown);
 
@@ -23,6 +25,8 @@ export default function MarkdownDom({
         key={contentKey}
         markdown={content}
         onChange={onChange}
+        isOutlineOpen={isOutlineOpen}
+        onOutlineOpenChange={onOutlineOpenChange}
       />
     </div>
   );

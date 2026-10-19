@@ -7,9 +7,11 @@ import type { EditorKind } from "@/lib/editor-types";
 type EditorHostState = {
   slot: LayoutRectangle | null; // window coordinates; null when no editor shows
   isLoaded: Record<EditorKind, boolean>; // editors whose page has loaded
+  isOutlineOpen: boolean; // the markdown editor's outline sheet
 };
 
 export const useEditorHostStore = create<EditorHostState>(() => ({
   slot: null,
   isLoaded: { markdown: false, drawing: false },
+  isOutlineOpen: false,
 }));

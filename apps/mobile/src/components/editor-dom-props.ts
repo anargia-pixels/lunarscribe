@@ -7,6 +7,7 @@ import type { Theme } from "@/lib/editor-types";
  * Props of the editor DOM components. Each loads `content` when `contentKey`
  * changes and reports every edit through `onChange`; the buffer store stays the
  * source of truth. `palette` is the color theme's colors, or null for globals.css.
+ * Only the markdown editor has an outline sheet.
  */
 export type EditorDomProps = {
   content: string;
@@ -15,5 +16,7 @@ export type EditorDomProps = {
   palette: ColorPalette | null;
   isShown: boolean; // false while the editor host hides the page
   onChange: (content: string) => Promise<void>;
+  isOutlineOpen: boolean;
+  onOutlineOpenChange: (open: boolean) => Promise<void>;
   dom?: DOMProps;
 };

@@ -46,6 +46,49 @@ function withDepths(headings: HeadingAnchor[]) {
 }
 
 /**
+ * The headings as a menu, indented by nesting and colored like the editor's
+ * headings. Needs a sidebar provider, as every sidebar menu does.
+ */
+export function OutlineMenu({
+  headings,
+  onSelect,
+}: {
+  headings: HeadingAnchor[];
+  onSelect: (key: NodeKey) => void;
+}) {
+  if (!headings.length) {
+    return (
+      <p className="text-muted-foreground px-2 py-1 text-xs">
+        Headings in this note appear here.
+      </p>
+    );
+  }
+
+  return (
+    <SidebarMenu aria-label="Outline">
+      {withDepths(headings).map(({ heading, depth }) => (
+        <SidebarMenuItem key={heading.key}>
+          <SidebarMenuButton
+            size="sm"
+            title={heading.text}
+            onClick={() => onSelect(heading.key)}
+          >
+            <span
+              className={cn(
+                DEPTH_INDENTS[depth],
+                HEADING_COLORS[heading.level - 1],
+              )}
+            >
+              {heading.text}
+            </span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  );
+}
+
+/**
  * VS Code style outline of a markdown buffer's headings on the right of the
  * window, indented by nesting and colored like the editor's headings. It has
  * its own sidebar provider, so it opens independently of the left sidebar;
@@ -84,32 +127,7 @@ export function OutlineSidebar({
         </div>
         <SidebarContent>
           <div className="p-2">
-            {headings.length ? (
-              <SidebarMenu aria-label="Outline">
-                {withDepths(headings).map(({ heading, depth }) => (
-                  <SidebarMenuItem key={heading.key}>
-                    <SidebarMenuButton
-                      size="sm"
-                      title={heading.text}
-                      onClick={() => onSelect(heading.key)}
-                    >
-                      <span
-                        className={cn(
-                          DEPTH_INDENTS[depth],
-                          HEADING_COLORS[heading.level - 1],
-                        )}
-                      >
-                        {heading.text}
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            ) : (
-              <p className="text-muted-foreground px-2 py-1 text-xs">
-                Headings in this note appear here.
-              </p>
-            )}
+            <OutlineMenu headings={headings} onSelect={onSelect} />
           </div>
         </SidebarContent>
         <SidebarResizeRail

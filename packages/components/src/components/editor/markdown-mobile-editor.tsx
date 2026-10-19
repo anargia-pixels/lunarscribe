@@ -10,8 +10,16 @@ import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
+import { OutlineMenu } from "@lunarscribe/components/sidebar/outline-sidebar";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Separator } from "@lunarscribe/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@lunarscribe/components/ui/sheet";
+import { SidebarProvider } from "@lunarscribe/components/ui/sidebar";
 import { Toggle } from "@lunarscribe/components/ui/toggle";
 import {
   type EditorState,
@@ -26,6 +34,10 @@ import { createMarkdownConfig } from "./markdown-config";
 import { CheckListReorderPlugin } from "./plugins/check-list-reorder-plugin";
 import { CodeHighlightPlugin } from "./plugins/code-highlight-plugin";
 import { EditorContextMenuPlugin } from "./plugins/editor-context-menu-plugin";
+import {
+  HeadingOutlinePlugin,
+  type Outline,
+} from "./plugins/heading-outline-plugin";
 import { MarkdownShortcutPlugin } from "./plugins/markdown-shortcut-plugin";
 import { MARKDOWN_TRANSFORMERS } from "./plugins/markdown-transformers";
 import { MathPlugin } from "./plugins/math-plugin";
@@ -200,19 +212,62 @@ function ScrollCaretIntoViewPlugin() {
   return null;
 }
 
+/** The outline in a sheet from the left; picking a heading closes it and jumps there. */
+function OutlineSheetPlugin({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [outline, setOutline] = useState<Outline | null>(null);
+
+  return (
+    <>
+      <HeadingOutlinePlugin onChange={setOutline} />
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="left">
+          <SheetHeader>
+            <SheetTitle>Outline</SheetTitle>
+          </SheetHeader>
+          {/* The outline menu is a sidebar menu, which reads a sidebar provider. */}
+          <SidebarProvider
+            keyboardShortcut={null}
+            className="min-h-0 flex-1 overflow-y-auto"
+          >
+            <div className="w-full px-2">
+              <OutlineMenu
+                headings={outline?.headings ?? []}
+                onSelect={(key) => {
+                  onOpenChange(false);
+                  outline?.goToHeading(key);
+                }}
+              />
+            </div>
+          </SidebarProvider>
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
 /**
  * Touch-first variant of the WYSIWYG markdown editor for phones and tablets. It uses
  * the platform's own caret, selection handles and scrolling, which the desktop
  * editor replaces, and docks a touch toolbar under the document. Loads `markdown`
  * once on mount (remount via `key` to load a different buffer) and reports markdown
- * on every content change.
+ * on every content change. The app owns whether the outline sheet is open.
  */
 export function MarkdownMobileEditor({
   markdown,
   onChange,
+  isOutlineOpen,
+  onOutlineOpenChange,
 }: {
   markdown: string;
   onChange: (markdown: string) => void;
+  isOutlineOpen: boolean;
+  onOutlineOpenChange: (open: boolean) => void;
 }) {
   const initialConfig = createMarkdownConfig(markdown);
 
@@ -265,6 +320,10 @@ export function MarkdownMobileEditor({
       <LinkPlugin />
       <MarkdownShortcutPlugin />
       <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
+      <OutlineSheetPlugin
+        open={isOutlineOpen}
+        onOpenChange={onOutlineOpenChange}
+      />
     </LexicalComposer>
   );
 }

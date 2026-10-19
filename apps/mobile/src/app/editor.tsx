@@ -1,6 +1,6 @@
 import { Redirect, useRouter } from "expo-router";
 import { Typography, useThemeColor } from "heroui-native";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronLeft, PanelLeft } from "lucide-react-native";
 import { useEffect } from "react";
 import { View } from "react-native";
 
@@ -11,6 +11,7 @@ import { PressableButton } from "@/components/pressable-button";
 import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
 import { syncFiles } from "@/lib/sync/sync-service";
 import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+import { useEditorHostStore } from "@/stores/editor-host-store";
 import { useSyncStore } from "@/stores/sync-store";
 
 /** Editor screen for the active buffer. */
@@ -27,6 +28,8 @@ export default function EditorScreen() {
     }
 
     return () => {
+      // The editor page outlives this screen, so its outline must not stay open.
+      useEditorHostStore.setState({ isOutlineOpen: false });
       useBufferStore
         .getState()
         .flushBuffer(bufferId)
@@ -66,6 +69,17 @@ export default function EditorScreen() {
         >
           <ChevronLeft size={20} color={foreground} />
         </PressableButton>
+        {buffer.kind === "markdown" && (
+          <PressableButton
+            variant="ghost"
+            size="sm"
+            isIconOnly
+            accessibilityLabel="Show outline"
+            onPress={() => useEditorHostStore.setState({ isOutlineOpen: true })}
+          >
+            <PanelLeft size={20} color={foreground} />
+          </PressableButton>
+        )}
         <Typography
           type="body-sm"
           align="center"

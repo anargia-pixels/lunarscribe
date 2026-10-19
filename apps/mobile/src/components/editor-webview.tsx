@@ -40,9 +40,9 @@ function openBuffer(buffer: TextBuffer): OpenedBuffer {
  * props still arrive through Expo as `$$props`.
  */
 function createPageStartScript(
-  props: Omit<EditorDomProps, "onChange" | "dom">,
+  props: Omit<EditorDomProps, "onChange" | "onOutlineOpenChange" | "dom">,
 ) {
-  const initialProps = { names: ["onChange"], props };
+  const initialProps = { names: ["onChange", "onOutlineOpenChange"], props };
 
   return [
     `document.documentElement.classList.add(${JSON.stringify(props.theme)});`,
@@ -69,6 +69,7 @@ export function EditorWebView({
   const theme = useAppearanceStore((state) => state.theme);
   const palette = useColorPalette();
   const setContent = useBufferStore((state) => state.setContent);
+  const isOutlineOpen = useEditorHostStore((state) => state.isOutlineOpen);
   const buffer = useActiveBuffer();
   const activeBuffer = buffer?.kind === kind ? buffer : undefined;
 
@@ -88,6 +89,7 @@ export function EditorWebView({
       theme,
       palette,
       isShown,
+      isOutlineOpen,
     }),
   );
 
@@ -102,6 +104,12 @@ export function EditorWebView({
     [openedId, setContent],
   );
 
+  const handleOutlineOpenChange = useCallback(
+    async (open: boolean) =>
+      useEditorHostStore.setState({ isOutlineOpen: open }),
+    [],
+  );
+
   const EditorDom = kind === "drawing" ? DrawingDom : MarkdownDom;
 
   return useMemo(
@@ -113,6 +121,8 @@ export function EditorWebView({
         palette={palette}
         isShown={isShown}
         onChange={handleChange}
+        isOutlineOpen={isOutlineOpen}
+        onOutlineOpenChange={handleOutlineOpenChange}
         dom={{
           useExpoDOMWebView: false,
           injectedJavaScriptBeforeContentLoaded: pageStartScript,
@@ -137,6 +147,8 @@ export function EditorWebView({
       palette,
       isShown,
       handleChange,
+      isOutlineOpen,
+      handleOutlineOpenChange,
       pageStartScript,
     ],
   );

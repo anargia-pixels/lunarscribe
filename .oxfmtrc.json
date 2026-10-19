@@ -26,6 +26,7 @@
     "**/.zed",
     "**/.vscode",
     "**/routeTree.gen.ts",
+    "**/uniwind-types.d.ts",
     "**/src-tauri",
     "**/.nuxt",
     "bts.jsonc",

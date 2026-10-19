@@ -43,7 +43,14 @@ export function HeadingOutlinePlugin({
 
     update();
 
-    const unregister = editor.registerUpdateListener(update);
+    // Selection-only updates cannot change the headings.
+    const unregister = editor.registerUpdateListener(
+      ({ dirtyElements, dirtyLeaves }) => {
+        if (dirtyElements.size || dirtyLeaves.size) {
+          update();
+        }
+      },
+    );
 
     return () => {
       unregister();

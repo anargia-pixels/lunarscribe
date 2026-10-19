@@ -342,6 +342,29 @@
   }
 }
 
+/* Off-screen blocks skip layout and paint, so opening a long buffer or resizing
+   the editor costs only what the viewport shows. `auto` keeps each block's last
+   rendered height for the scrollbar. Lexical's block cursor is a zero-height
+   block whose glyph overflows it, so it stays unclipped. Print renders all. */
+@media screen {
+  [data-markdown-editor] > :not([data-lexical-cursor]) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 1.75rem;
+    /* Paint containment clips overflow; leave room for focus rings. */
+    overflow-clip-margin: 0.5rem;
+  }
+
+  /* Each block now holds its children's margins, so the outer list items stop
+     adding to the list's own margins as they did when the margins collapsed. */
+  [data-markdown-editor] > :is(ul, ol) > li:first-child {
+    margin-top: 0;
+  }
+
+  [data-markdown-editor] > :is(ul, ol) > li:last-child {
+    margin-bottom: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

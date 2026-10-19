@@ -51,7 +51,10 @@ export function MermaidPreview({
         if (mountedRef.current) {
           mountedRef.current.update(code);
         } else {
-          mountedRef.current = mount(element, code, { zoom: interactive });
+          mountedRef.current = mount(element, code, {
+            zoom: interactive,
+            watch: false,
+          });
         }
 
         delete element.dataset.mermaidError;
@@ -77,21 +80,84 @@ export function MermaidPreview({
     // definitions from flashing errors.
     const timeoutId = window.setTimeout(renderDiagram, 150);
 
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [code, interactive]);
+
+  // Pele's own watcher redraws a diagram synchronously on every width change,
+  // which during a window or sidebar resize means every diagram on every frame.
+  // Instead redraw once the width settles, and only near the viewport; an
+  // off-screen diagram redraws when it scrolls into view.
+  useEffect(() => {
+    const element = ref.current;
+
+    if (!element) {
+      return;
+    }
+
+    let width = element.clientWidth;
+    let isVisible = false;
+    let pending: (() => void) | null = null;
+    let timeoutId: number | undefined;
+
+    const redraw = (draw: () => void) => {
+      if (isVisible) {
+        pending = null;
+        draw();
+      } else {
+        pending = draw;
+      }
+    };
+
+    const fit = () => mountedRef.current?.fit();
+    const refresh = () => mountedRef.current?.refresh();
+
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      const nextWidth = entry?.contentRect.width ?? width;
+
+      if (nextWidth === width) {
+        return;
+      }
+
+      width = nextWidth;
+      window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(
+        () => redraw(pending === refresh ? refresh : fit),
+        150,
+      );
+    });
+
+    const intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry?.isIntersecting ?? false;
+
+        if (isVisible && pending) {
+          redraw(pending);
+        }
+      },
+      { rootMargin: "50%" },
+    );
+
     // Pele measures labels with the buffer font, so measure again when the
     // appearance styles change it.
-    const observer = new MutationObserver(() => mountedRef.current?.refresh());
+    const styleObserver = new MutationObserver(() => redraw(refresh));
 
-    observer.observe(document.documentElement, {
+    resizeObserver.observe(element);
+    intersectionObserver.observe(element);
+    styleObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["style"],
     });
 
     return () => {
-      isCancelled = true;
       window.clearTimeout(timeoutId);
-      observer.disconnect();
+      resizeObserver.disconnect();
+      intersectionObserver.disconnect();
+      styleObserver.disconnect();
     };
-  }, [code, interactive]);
+  }, []);
 
   useEffect(() => () => mountedRef.current?.destroy(), []);
 

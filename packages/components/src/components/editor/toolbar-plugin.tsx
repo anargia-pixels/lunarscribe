@@ -212,12 +212,19 @@ export function useToolbarState(editor: LexicalEditor) {
           editorState.read(() => {
             const selection = $getSelection();
 
-            setActiveFormats(
-              $isRangeSelection(selection)
-                ? TEXT_FORMATS.flatMap(({ format }) =>
-                    selection.hasFormat(format) ? [format] : [],
-                  )
-                : [],
+            const formats = $isRangeSelection(selection)
+              ? TEXT_FORMATS.flatMap(({ format }) =>
+                  selection.hasFormat(format) ? [format] : [],
+                )
+              : [];
+
+            // Keep the previous array while the formats match, so typing does
+            // not re-render the toolbar and the context menu on every keystroke.
+            setActiveFormats((previous) =>
+              previous.length === formats.length &&
+              previous.every((format, index) => format === formats[index])
+                ? previous
+                : formats,
             );
           });
         }),

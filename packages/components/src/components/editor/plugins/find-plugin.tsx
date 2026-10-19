@@ -96,14 +96,17 @@ export function FindPlugin() {
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Matches are only shown while open, so a closed panel ignores edits.
   const subscribe = useCallback(
     (onChange: () => void) =>
-      editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
-        if (dirtyElements.size || dirtyLeaves.size) {
-          onChange();
-        }
-      }),
-    [editor],
+      open
+        ? editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
+            if (dirtyElements.size || dirtyLeaves.size) {
+              onChange();
+            }
+          })
+        : () => {},
+    [editor, open],
   );
 
   const getSnapshot = useCallback(() => editor.getEditorState(), [editor]);

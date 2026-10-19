@@ -14,11 +14,12 @@ import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
 import { PanelRightIcon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 
 import { EditorFileDropZone } from "@/components/editor-file-drop-zone";
 import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
 import { useAppearanceStore } from "@/stores/appearance-store";
-import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+import { useBufferStore } from "@/stores/buffer-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSyncStore } from "@/stores/sync-store";
 
@@ -74,7 +75,25 @@ function syncMessage(isSyncing: boolean, hasSyncedSuccessfully: boolean) {
 
 /** Editor page for the active buffer. */
 export default function Page() {
-  const buffer = useActiveBuffer();
+  // Typing only changes the content, which the mounted editor already owns, so
+  // the page leaves it out and re-renders only when the buffer itself changes.
+  const buffer = useBufferStore(
+    useShallow((state) => {
+      const active = state.buffers.find(({ id }) => id === state.activeId);
+
+      return active
+        ? {
+            id: active.id,
+            title: active.title,
+            kind: active.kind,
+            syncRevision: active.syncRevision,
+            fileName: active.fileName,
+            externalPath: active.externalPath,
+          }
+        : null;
+    }),
+  );
+
   const setContent = useBufferStore((state) => state.setContent);
   const theme = useAppearanceStore((state) => state.theme);
   const setOutline = useSidebarStore((state) => state.setOutline);
@@ -122,6 +141,11 @@ export default function Page() {
     buffer.fileName ?? `${buffer.title}${BUFFER_EXTENSIONS[buffer.kind]}`;
 
   const filePath = buffer.externalPath ?? `lunarscribe / ${fileName}`;
+
+  // Editors read the content once on mount; the key remounts them for a new one.
+  const content =
+    useBufferStore.getState().buffers.find(({ id }) => id === buffer.id)
+      ?.content ?? "";
 
   return (
     <div className="flex h-svh flex-col">
@@ -187,7 +211,7 @@ export default function Page() {
       {buffer.kind === "drawing" ? (
         <LazyDrawingEditor
           key={`${buffer.id}:${buffer.syncRevision}`}
-          scene={buffer.content}
+          scene={content}
           theme={theme}
           onChange={(scene) => setContent(buffer.id, scene)}
         />
@@ -195,7 +219,7 @@ export default function Page() {
         <EditorFileDropZone>
           <MarkdownEditor
             key={`${buffer.id}:${buffer.syncRevision}`}
-            markdown={buffer.content}
+            markdown={content}
             onChange={(markdown) => setContent(buffer.id, markdown)}
             showToolbar={showEditorToolbar}
             onOutlineChange={setOutline}

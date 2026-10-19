@@ -1,0 +1,9 @@
+/* A toggle sits beside its heading's first line through CSS anchor positioning,
+   so reflowing the buffer moves it without measuring. The button's
+   `transition-all` would animate that move, so only its colors fade. */
+[data-heading-toggle] {
+  position-anchor: var(--toggle-anchor);
+  top: calc(anchor(top) + var(--toggle-offset));
+  left: anchor(left);
+  transition-property: color, background-color, border-color, box-shadow;
+}

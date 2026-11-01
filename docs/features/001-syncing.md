@@ -13,8 +13,9 @@ works.
 Google Drive and Dropbox are marked **WIP**. You can connect one provider at a time. Use
 the same account on each device.
 
-Sync includes saved files with the `.md`, `.markdown`, `.txt`, or `.draw` extension. It
-does not include unsaved buffers, external files, or files in subfolders.
+Sync includes saved files with the `.md`, `.markdown`, `.txt`, or `.draw` extension,
+including files in folders. Each provider keeps the same folders. Empty folders do not
+sync. Sync does not include unsaved buffers or external files.
 
 ## Connect a provider
 
@@ -27,6 +28,10 @@ creates it. Google Drive keeps it in your Drive. Dropbox keeps it in the Dropbox
 folder. If Google Drive has more than one folder with this name, Connect fails. Keep one
 folder, then connect again.
 
+Earlier versions stored every Google Drive file at the top of the folder, with a name such
+as `work/plan.md`. The next sync moves those files into matching folders. Google Drive
+only shows the app the folders it created, so a folder you make in Drive does not sync.
+
 Sync starts right after you connect.
 
 ## Sync your files
@@ -34,11 +39,12 @@ Sync starts right after you connect.
 Sync runs when the app opens and every five minutes while it is open. A scheduled run is
 skipped when sync is busy or sign-in is required.
 
-| Action                                              | Result                                               |
-| --------------------------------------------------- | ---------------------------------------------------- |
-| Select **Sync now**                                 | Download and upload changes to saved files.          |
-| Press `Ctrl+S` (Linux) or `Cmd+S` (macOS)           | Save the active buffer, then upload its file.        |
-| Select **Force changes to remote** in a file's menu | Replace that file's remote copy with the local copy. |
+| Action                                                | Result                                               |
+| ----------------------------------------------------- | ---------------------------------------------------- |
+| Select **Sync now**                                   | Download and upload changes to saved files.          |
+| Press `Ctrl+S` (Linux) or `Cmd+S` (macOS)             | Save the active buffer, then upload its file.        |
+| Select **Force changes to remote** in a file's menu   | Replace that file's remote copy with the local copy. |
+| Select **Force changes from remote** in a file's menu | Replace that file's local copy with the remote copy. |
 
 Automatic local saves still run after two seconds without edits. A failed sync never
 undoes a local save.
@@ -82,8 +88,14 @@ Right-click a saved file in the sidebar, or open its ellipsis menu. Select **For
 to remote**. The app saves any pending edits, then replaces the remote copy with the local
 copy. It creates the remote file if it is missing. Other remote files do not change.
 
-The action is unavailable for external files, while sync is busy, or when sign-in is
-required.
+## Force changes from remote
+
+Select **Force changes from remote** in a saved file's menu. The app replaces the local
+copy with the remote copy and discards unsaved edits in the open buffer. If the remote has
+no copy, the app deletes the local file. Other files do not change.
+
+Both force actions are unavailable for external files, while sync is busy, or when sign-in
+is required.
 
 ## Resolve a sync problem
 
@@ -91,7 +103,8 @@ A **Sync conflict** toast shows the file name and the reason. The app keeps both
 Google Drive and Dropbox keep syncing the other files. GitHub stops until you resolve the
 conflict.
 
-To keep the local copy, select **Force changes to remote** for the file.
+To keep the local copy, select **Force changes to remote** for the file. To keep the
+remote copy, select **Force changes from remote**.
 
 To keep both versions:
 

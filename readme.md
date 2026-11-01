@@ -64,12 +64,15 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
   support file associations and `lunarscribe://open?path=...` links. Lunarscribe saves
   changes to the original file. When another program, such as an AI agent, changes an open
   file, the editor reloads it; if you have unsaved edits, they are kept instead.
-- **Sidebar:** The sidebar has Notes, Drawings, and External files sections. Each section
-  shows its file count and has separate scroll controls. The app keeps the sidebar
-  visibility and section settings between app starts. File actions are Rename, Copy path,
-  Delete for saved files, and Remove for external entries. **Force changes to remote**
-  replaces a saved file's remote copy with the local copy for any connected provider.
-  Delete requires confirmation.
+- **Sidebar:** The sidebar has Lunarscribe and External files tabs. The Lunarscribe tab
+  groups saved notes and drawings into folders that expand and collapse. Drag a file onto
+  a folder to move it there, or use **Move to** in its menu. The app keeps the sidebar
+  visibility, tab, and open folders between app starts. File actions are Rename, Copy
+  path, Delete for saved files, and Remove for external entries. **Force changes to
+  remote** replaces a saved file's remote copy with the local copy, and **Force changes
+  from remote** replaces the local copy with the remote one. Delete requires confirmation.
+- **Section links:** Ctrl+click (⌘+click on macOS) a `#heading` link to jump to that
+  heading. Back, from a mouse button or touchpad swipe, returns to where you were reading.
 - **Search:** Find shows matching text in the active buffer. It has controls for case
   matching, whole-word matching, and the next and previous matches. The fff search finds
   saved files by name or text. Results show highlighted matches and line previews.

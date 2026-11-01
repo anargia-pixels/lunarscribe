@@ -99,6 +99,33 @@ function createWindow() {
     return { action: "deny" };
   });
 
+  // Section links push history entries; mouse Back/Forward buttons (app commands on Linux)
+  // and trackpad swipes (macOS) step through them. History steps never leave the page.
+  const navigate = (direction: "back" | "forward") => {
+    const history = window.webContents.navigationHistory;
+
+    if (direction === "back" && history.canGoBack()) {
+      history.goBack();
+    } else if (direction === "forward" && history.canGoForward()) {
+      history.goForward();
+    }
+  };
+
+  window.on("app-command", (_event, command) => {
+    if (command === "browser-backward") {
+      navigate("back");
+    } else if (command === "browser-forward") {
+      navigate("forward");
+    }
+  });
+  window.on("swipe", (_event, direction) => {
+    if (direction === "right") {
+      navigate("back");
+    } else if (direction === "left") {
+      navigate("forward");
+    }
+  });
+
   // Any page this window navigates to inherits the preload bridge, so keep the editor loaded.
   window.webContents.on("will-navigate", (event) => event.preventDefault());
 

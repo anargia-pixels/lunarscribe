@@ -11,6 +11,7 @@ import { AppOutlineSidebar } from "@/components/app-outline-sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useFileWatcher } from "@/components/use-file-watcher";
+import { useMouseNavigation } from "@/components/use-mouse-navigation";
 import { useOutlineShortcut } from "@/components/use-outline-shortcut";
 import { useSaveShortcut } from "@/components/use-save-shortcut";
 import { useSync } from "@/components/use-sync";
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   };
 
   useFileWatcher();
+  useMouseNavigation();
   useOutlineShortcut();
   useSaveShortcut();
   useSync();

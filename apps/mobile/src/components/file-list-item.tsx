@@ -1,9 +1,9 @@
+import { baseNameOf } from "@lunarscribe/utils/saved-paths";
 import { ListGroup, Menu, useThemeColor } from "heroui-native";
-import { Ellipsis, FileText, PenTool } from "lucide-react-native";
+import { Ellipsis } from "lucide-react-native";
 
 import { PressableButton } from "@/components/pressable-button";
 import { PressableListItem } from "@/components/pressable-list-item";
-import { kindOf, stemOf } from "@/lib/editor-files";
 
 /** One saved file: press to open it, or use its menu to rename, move, delete or force-sync it. */
 export function FileListItem({
@@ -32,19 +32,12 @@ export function FileListItem({
 
   return (
     <PressableListItem onPress={onOpen} accessibilityLabel={`Open ${name}`}>
-      <ListGroup.ItemPrefix>
-        {kindOf(name) === "drawing" ? (
-          <PenTool size={18} color={foreground} />
-        ) : (
-          <FileText size={18} color={foreground} />
-        )}
-      </ListGroup.ItemPrefix>
       <ListGroup.ItemContent>
         <ListGroup.ItemTitle
           numberOfLines={1}
           className={isActive ? "text-accent" : undefined}
         >
-          {stemOf(name)}
+          {baseNameOf(name)}
         </ListGroup.ItemTitle>
         {description !== undefined && (
           <ListGroup.ItemDescription numberOfLines={1}>

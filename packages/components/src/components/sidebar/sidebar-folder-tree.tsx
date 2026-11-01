@@ -143,7 +143,9 @@ function SidebarFolderItem({
           >
             <ChevronRight className="text-muted-foreground transition-transform duration-200 in-data-panel-open:rotate-90 motion-reduce:transition-none" />
             {isOpen ? <FolderOpen /> : <Folder />}
-            <span>{folder.name}</span>
+            <span className="group-hover/menu-item:font-semibold">
+              {folder.name}
+            </span>
           </ContextMenuTrigger>
           {folder.fileCount > 0 && (
             <SidebarMenuBadge>{folder.fileCount}</SidebarMenuBadge>

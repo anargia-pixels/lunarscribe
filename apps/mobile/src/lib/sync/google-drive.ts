@@ -1,4 +1,11 @@
 import { mapConcurrent } from "@lunarscribe/utils/map-concurrent";
+import { baseNameOf, folderOf } from "@lunarscribe/utils/saved-paths";
+import {
+  createDriveTree,
+  DRIVE_FOLDER_TYPE,
+  driveQueryString,
+} from "@lunarscribe/utils/sync/google-drive-tree";
+import type { DriveTreeFile } from "@lunarscribe/utils/sync/google-drive-tree";
 import {
   jsonArray,
   jsonField,
@@ -135,6 +142,57 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
 
   /** Keep remote IDs and revisions in the snapshot used for each write. */
   function createProvider(folderId: string): FileSyncProvider {
+    const tree = createDriveTree(folderId, {
+      list,
+      async createFolder(title, parentId) {
+        const created = parseJson(
+          await (
+            await request(`${API}?fields=id`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title,
+                mimeType: DRIVE_FOLDER_TYPE,
+                parents: [{ id: parentId }],
+              }),
+            })
+          ).text(),
+        );
+
+        return jsonString(created, "id");
+      },
+      // Keeps the modification time, so the move alone never reads as an edit.
+      async move(file, fromId, toId, title) {
+        const parameters = new URLSearchParams({
+          addParents: toId,
+          removeParents: fromId,
+          setModifiedDate: "true",
+          fields: "etag",
+        });
+
+        const moved = parseJson(
+          await (
+            await request(
+              `${API}/${encodeURIComponent(file.id)}?${parameters}`,
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  "If-Match": file.etag,
+                },
+                body: JSON.stringify({
+                  title,
+                  modifiedDate: new Date(file.modifiedAt).toISOString(),
+                }),
+              },
+            )
+          ).text(),
+        );
+
+        return { ...file, title, etag: jsonString(moved, "etag") };
+      },
+    });
+
     async function upload(
       name: string,
       content: string,
@@ -150,7 +208,10 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
 
       const metadata = id
         ? modification
-        : { title: name, parents: [{ id: folderId }] };
+        : {
+            title: baseNameOf(name),
+            parents: [{ id: await tree.folderId(folderOf(name)) }],
+          };
 
       const headers = new Headers({
         "Content-Type": `multipart/related; boundary=${boundary}`,
@@ -190,26 +251,24 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
       /** Verify downloaded bytes before acknowledging a remote version. */
       async read(name) {
         const files: RemoteFiles = new Map();
-        const downloads: DriveFile[] = [];
+        const downloads: DriveTreeFile<DriveFile>[] = [];
 
-        for (const file of await list(
-          `'${folderId}' in parents and trashed = false`,
-        )) {
+        for (const file of await tree.list()) {
           if (
-            !isSavedFileName(file.title) ||
-            (name !== null && file.title !== name)
+            !isSavedFileName(file.path) ||
+            (name !== null && file.path !== name)
           ) {
             continue;
           }
 
-          if (files.has(file.title)) {
+          if (files.has(file.path)) {
             throw new Error(
-              `Google Drive contains multiple versions of ${JSON.stringify(file.title)}. Both copies were preserved; resolve the duplicate before syncing.`,
+              `Google Drive contains multiple versions of ${JSON.stringify(file.path)}. Both copies were preserved; resolve the duplicate before syncing.`,
             );
           }
 
           // Reserve the name so a duplicate is caught before any download.
-          files.set(file.title, {
+          files.set(file.path, {
             content: "",
             revision: file.etag,
             modifiedAt: file.modifiedAt,
@@ -236,11 +295,11 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
             (await contentHash(content)) !== file.sha256Checksum
           ) {
             throw new Error(
-              `Google Drive could not verify ${JSON.stringify(file.title)} against the sync snapshot. The local and remote files were preserved; retry sync.`,
+              `Google Drive could not verify ${JSON.stringify(file.path)} against the sync snapshot. The local and remote files were preserved; retry sync.`,
             );
           }
 
-          files.set(file.title, {
+          files.set(file.path, {
             id: file.id,
             content,
             revision: file.etag,
@@ -284,17 +343,13 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
         });
       },
       async forceWrite(name, content, modifiedAt) {
-        const escapedName = name.replaceAll(/['\\]/gu, "\\$&");
+        const parentId = await tree.folderId(folderOf(name));
 
         const files = await list(
-          `'${folderId}' in parents and title = '${escapedName}' and trashed = false`,
+          `${driveQueryString(parentId)} in parents and title = ${driveQueryString(baseNameOf(name))} and trashed = false`,
         );
 
-        if (
-          files.some(
-            (file) => file.mimeType === "application/vnd.google-apps.folder",
-          )
-        ) {
+        if (files.some((file) => file.mimeType === DRIVE_FOLDER_TYPE)) {
           throw new Error(
             "Google Drive has a folder at this path. Rename it before replacing the remote copy.",
           );

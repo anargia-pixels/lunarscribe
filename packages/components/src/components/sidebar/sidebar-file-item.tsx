@@ -20,11 +20,9 @@ import {
   Download,
   Ellipsis,
   FileDown,
-  FileText,
   Folder,
   FolderInput,
   Pencil,
-  PenTool,
   Trash2,
   X,
 } from "lucide-react";
@@ -51,7 +49,6 @@ export function SidebarFileItem({
   title,
   accessedLabel,
   isExternal,
-  isDrawing = false,
   dragPath,
   canExport,
   menu,
@@ -75,8 +72,6 @@ export function SidebarFileItem({
   title: string;
   accessedLabel?: string;
   isExternal: boolean;
-  /** Shows the drawing icon in place of the text file icon. */
-  isDrawing?: boolean;
   /** Makes the item draggable onto folders; the saved file's path. */
   dragPath?: string;
   canExport: boolean;
@@ -118,7 +113,6 @@ export function SidebarFileItem({
           onClick={onOpen}
           {...(dragPath === undefined ? {} : savedFileDragProps(dragPath))}
         >
-          {isDrawing ? <PenTool /> : <FileText />}
           <span>{label}</span>
         </SidebarMenuButton>
         {accessedLabel && <SidebarMenuBadge>{accessedLabel}</SidebarMenuBadge>}

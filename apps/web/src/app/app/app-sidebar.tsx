@@ -353,7 +353,7 @@ export function AppSidebar() {
       <SidebarFileItem
         key={key}
         name={target.name}
-        label={target.kind === "external" ? target.name : stemOf(target.name)}
+        label={baseNameOf(target.name)}
         title={target.name}
         accessedLabel={
           accessedMs === undefined
@@ -361,7 +361,6 @@ export function AppSidebar() {
             : formatTimeAgo(accessedMs, nowMs)
         }
         isExternal={target.kind === "external"}
-        isDrawing={kindOf(target.name) === "drawing"}
         dragPath={target.kind === "saved" ? target.name : undefined}
         canExport={isTextFile(target.name)}
         isActive={isActive}

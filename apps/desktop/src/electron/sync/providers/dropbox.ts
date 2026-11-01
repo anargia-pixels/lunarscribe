@@ -156,7 +156,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
 
         let response = await rpc(
           "files/list_folder",
-          JSON.stringify({ path: BACKUP_FOLDER_PATH, recursive: false }),
+          JSON.stringify({ path: BACKUP_FOLDER_PATH, recursive: true }),
         );
 
         while (true) {
@@ -164,7 +164,10 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
           const page = parseJson(await response.text());
 
           for (const file of jsonArray(page, "entries")) {
-            const entryName = jsonString(file, "name");
+            // Saved files in folders are named by their path inside the backup folder.
+            const entryName = jsonString(file, "path_display").slice(
+              BACKUP_FOLDER_PATH.length + 1,
+            );
 
             if (
               !isSavedFileName(entryName) ||

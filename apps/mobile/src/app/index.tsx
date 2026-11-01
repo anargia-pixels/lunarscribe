@@ -1,10 +1,17 @@
-import { FILE_SECTIONS } from "@lunarscribe/utils/sidebar-sections";
+import {
+  allFolders,
+  baseNameOf,
+  buildSavedTree,
+  folderOf,
+  isInFolder,
+} from "@lunarscribe/utils/saved-paths";
+import type { SavedTreeNode } from "@lunarscribe/utils/saved-paths";
 import { useRouter } from "expo-router";
 import {
   ListGroup,
+  Menu,
   SearchField,
   Separator,
-  Tabs,
   Typography,
   useThemeColor,
 } from "heroui-native";
@@ -15,41 +22,48 @@ import Animated from "react-native-reanimated";
 
 import { DarkmodeToggle } from "@/components/darkmode-toggle";
 import { DeleteFileDialog } from "@/components/delete-file-dialog";
+import { DeleteFolderDialog } from "@/components/delete-folder-dialog";
 import { FileErrorAlert } from "@/components/file-error-alert";
 import { FileListItem } from "@/components/file-list-item";
+import { FolderListItem } from "@/components/folder-list-item";
+import { FolderNameDialog } from "@/components/folder-name-dialog";
+import { MoveFileDialog } from "@/components/move-file-dialog";
 import { PressableButton } from "@/components/pressable-button";
 import { RenameFileDialog } from "@/components/rename-file-dialog";
 import { SyncAlert } from "@/components/sync-alert";
 import { type FileSearchMatch, searchFiles } from "@/lib/documents-folder";
-import { kindOf } from "@/lib/editor-files";
 import type { EditorKind } from "@/lib/editor-types";
-import { rowEntering, rowLayout, springs } from "@/lib/motion";
+import { rowEntering, rowLayout } from "@/lib/motion";
 import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";
 
-type FileDialogState = { kind: "rename" | "delete"; name: string };
+type FileDialogState =
+  | { kind: "rename" | "delete" | "move"; name: string }
+  | { kind: "new-folder"; parent: string }
+  | { kind: "rename-folder" | "delete-folder"; path: string };
 
-type FileItem = { name: string; description?: string };
-
-/** Mobile sections, one tab each: saved notes and drawings. External files are desktop-only for now. */
-const SECTIONS = FILE_SECTIONS.flatMap((section) =>
-  section.kind === "external" ? [] : [section],
-);
-
-/** The tab indicator glides to the pressed tab on the default spatial spring. */
-const TAB_INDICATOR_SPRING = {
-  type: "spring",
-  config: springs.defaultSpatial,
-} as const;
-
-const TAB_INDICATOR_ANIMATION = {
-  width: TAB_INDICATOR_SPRING,
-  height: TAB_INDICATOR_SPRING,
-  translateX: TAB_INDICATOR_SPRING,
+/** A visible row: a file or folder of the tree, `depth` folders deep, or a search match. */
+type Row = {
+  node: SavedTreeNode;
+  depth: number;
+  description?: string;
 };
 
-function isEditorKind(value: string): value is EditorKind {
-  return SECTIONS.some((section) => section.kind === value);
+/** Indents for each folder level, 1rem apart; deeper levels share the last one. */
+const INDENTS = ["pl-0", "pl-4", "pl-8", "pl-12", "pl-16", "pl-20"] as const;
+
+/** The tree's rows top to bottom, descending only into open folders. */
+function visibleRows(
+  nodes: readonly SavedTreeNode[],
+  openFolders: ReadonlySet<string>,
+  depth = 0,
+): Row[] {
+  return nodes.flatMap((node) => [
+    { node, depth },
+    ...(node.kind === "folder" && openFolders.has(node.path)
+      ? visibleRows(node.children, openFolders, depth + 1)
+      : []),
+  ]);
 }
 
 /** Searches saved files as the query changes, dropping results from older queries. */
@@ -76,26 +90,48 @@ function reportFileError(name: string, message: string) {
   useBufferStore.setState({ fileError: `${name}: ${message}` });
 }
 
-/** Saved notes and drawings; the mobile stand-in for the desktop sidebar. */
+/** Saved notes, drawings and their folders; the mobile stand-in for the desktop sidebar. */
 export default function FilesScreen() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [dialog, setDialog] = useState<FileDialogState | null>(null);
-  const [activeKind, setActiveKind] = useState<EditorKind>("markdown");
+
+  const [openFolders, setOpenFolders] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
   const foreground = useThemeColor("foreground");
 
-  const files = useBufferStore((state) => state.files);
+  const entries = useBufferStore((state) => state.entries);
   const refreshFiles = useBufferStore((state) => state.refreshFiles);
   const openFile = useBufferStore((state) => state.openFile);
   const createBuffer = useBufferStore((state) => state.createBuffer);
   const renameFile = useBufferStore((state) => state.renameFile);
   const deleteFile = useBufferStore((state) => state.deleteFile);
+  const moveFile = useBufferStore((state) => state.moveFile);
+  const createFolder = useBufferStore((state) => state.createFolder);
+  const renameFolder = useBufferStore((state) => state.renameFolder);
+  const deleteFolder = useBufferStore((state) => state.deleteFolder);
   const forceSyncFile = useBufferStore((state) => state.forceSyncFile);
   const isSyncConnected = useSyncStore((state) => state.provider !== null);
   const activeFileName = useActiveBuffer()?.fileName ?? null;
   const matches = useFileSearch(query);
 
   useEffect(refreshFiles, [refreshFiles]);
+
+  function setFolderOpen(folder: string, open: boolean) {
+    setOpenFolders((current) => {
+      const next = new Set(current);
+
+      if (open) {
+        next.add(folder);
+      } else {
+        next.delete(folder);
+      }
+
+      return next;
+    });
+  }
 
   function openInEditor(name: string) {
     openFile(name).then(
@@ -104,51 +140,67 @@ export default function FilesScreen() {
     );
   }
 
-  function createInEditor(kind: EditorKind) {
-    createBuffer(kind);
+  function createInEditor(kind: EditorKind, folder: string) {
+    createBuffer(kind, folder);
+
+    if (folder) {
+      setFolderOpen(folder, true);
+    }
+
     router.push("/editor");
   }
 
   const isSearching = query.trim() !== "";
 
-  /** The active search's matches, or every saved file, in the tab for `kind`. */
-  function itemsOf(kind: EditorKind): FileItem[] {
-    if (!isSearching) {
-      return files
-        .filter((name) => kindOf(name) === kind)
-        .map((name) => ({ name }));
-    }
-
-    return matches
-      .filter((match) => kindOf(match.name) === kind)
-      .map((match) => ({ name: match.name, description: match.lineContent }));
-  }
-
-  const renderList = (items: FileItem[]) => (
-    <ListGroup>
-      {items.map(({ name, description }, index) => (
-        <Animated.View key={name} entering={rowEntering} layout={rowLayout}>
-          {index > 0 && <Separator className="mx-4" />}
-          <FileListItem
-            name={name}
-            description={description}
-            isActive={name === activeFileName}
-            onOpen={() => openInEditor(name)}
-            onRename={() => setDialog({ kind: "rename", name })}
-            onDelete={() => setDialog({ kind: "delete", name })}
-            onForceSync={
-              isSyncConnected
-                ? () =>
-                    forceSyncFile(name).catch((error) =>
-                      reportFileError(name, String(error)),
-                    )
-                : undefined
-            }
-          />
-        </Animated.View>
-      ))}
-    </ListGroup>
+  const tree = buildSavedTree(entries, (first, second) =>
+    first.localeCompare(second),
   );
+
+  // Search results are flat; each names its folder unless a matching line says more.
+  const rows: Row[] = isSearching
+    ? matches.map((match) => ({
+        node: { kind: "file", path: match.name, name: baseNameOf(match.name) },
+        depth: 0,
+        description: match.lineContent ?? (folderOf(match.name) || undefined),
+      }))
+    : visibleRows(tree, openFolders);
+
+  const renderRow = ({ node, description }: Row) =>
+    node.kind === "folder" ? (
+      <FolderListItem
+        name={node.name}
+        fileCount={node.fileCount}
+        isOpen={openFolders.has(node.path)}
+        onToggle={() => setFolderOpen(node.path, !openFolders.has(node.path))}
+        onNewNote={() => createInEditor("markdown", node.path)}
+        onNewDrawing={() => createInEditor("drawing", node.path)}
+        onNewFolder={() => setDialog({ kind: "new-folder", parent: node.path })}
+        onRename={() => setDialog({ kind: "rename-folder", path: node.path })}
+        onDelete={() => setDialog({ kind: "delete-folder", path: node.path })}
+      />
+    ) : (
+      <FileListItem
+        name={node.path}
+        description={description}
+        isActive={node.path === activeFileName}
+        onOpen={() => openInEditor(node.path)}
+        onRename={() => setDialog({ kind: "rename", name: node.path })}
+        onMove={
+          isSearching
+            ? undefined
+            : () => setDialog({ kind: "move", name: node.path })
+        }
+        onDelete={() => setDialog({ kind: "delete", name: node.path })}
+        onForceSync={
+          isSyncConnected
+            ? () =>
+                forceSyncFile(node.path).catch((error) =>
+                  reportFileError(node.path, String(error)),
+                )
+            : undefined
+        }
+      />
+    );
 
   return (
     <View className="bg-background pt-safe pb-safe flex-1">
@@ -156,17 +208,34 @@ export default function FilesScreen() {
         <Typography.Heading type="h5" className="font-logo text-accent flex-1">
           Lunarscribe
         </Typography.Heading>
-        <PressableButton
-          variant="ghost"
-          size="sm"
-          isIconOnly
-          accessibilityLabel={
-            activeKind === "drawing" ? "New drawing" : "New note"
-          }
-          onPress={() => createInEditor(activeKind)}
-        >
-          <Plus size={20} color={foreground} />
-        </PressableButton>
+        <Menu>
+          <Menu.Trigger asChild>
+            <PressableButton
+              variant="ghost"
+              size="sm"
+              isIconOnly
+              accessibilityLabel="New note, drawing or folder"
+            >
+              <Plus size={20} color={foreground} />
+            </PressableButton>
+          </Menu.Trigger>
+          <Menu.Portal>
+            <Menu.Overlay />
+            <Menu.Content presentation="popover" width={180}>
+              <Menu.Item onPress={() => createInEditor("markdown", "")}>
+                <Menu.ItemTitle>New note</Menu.ItemTitle>
+              </Menu.Item>
+              <Menu.Item onPress={() => createInEditor("drawing", "")}>
+                <Menu.ItemTitle>New drawing</Menu.ItemTitle>
+              </Menu.Item>
+              <Menu.Item
+                onPress={() => setDialog({ kind: "new-folder", parent: "" })}
+              >
+                <Menu.ItemTitle>New folder</Menu.ItemTitle>
+              </Menu.Item>
+            </Menu.Content>
+          </Menu.Portal>
+        </Menu>
         <DarkmodeToggle />
         <PressableButton
           variant="ghost"
@@ -189,60 +258,34 @@ export default function FilesScreen() {
       </View>
       <FileErrorAlert />
       <SyncAlert />
-      <Tabs
-        value={activeKind}
-        onValueChange={(value) => {
-          if (isEditorKind(value)) {
-            setActiveKind(value);
-          }
-        }}
-        className="flex-1 gap-3"
-      >
-        {/* Tabs, in the desktop tabs' colors */}
-        <Tabs.List className="bg-surface-secondary mx-4">
-          <Tabs.Indicator
-            animation={TAB_INDICATOR_ANIMATION}
-            className="bg-background dark:border-surface-tertiary dark:bg-surface-tertiary/30 rounded-tab-indicator dark:border"
-          />
-          {SECTIONS.map((section) => (
-            <Tabs.Trigger
-              key={section.section}
-              value={section.kind}
-              className="flex-1"
-            >
-              <Tabs.Label className="text-sm">{`${section.label} · ${itemsOf(section.kind).length}`}</Tabs.Label>
-            </Tabs.Trigger>
-          ))}
-        </Tabs.List>
-        {SECTIONS.map((section) => {
-          const items = itemsOf(section.kind);
-
-          return (
-            <Tabs.Content
-              key={section.section}
-              value={section.kind}
-              className="flex-1"
-            >
-              <ScrollView contentContainerClassName="gap-2 px-4 pb-8">
-                {items.length > 0 ? (
-                  renderList(items)
-                ) : (
-                  <Typography
-                    type="body-sm"
-                    color="muted"
-                    align="center"
-                    className="py-8"
-                  >
-                    {isSearching
-                      ? `No ${section.label.toLowerCase()} match.`
-                      : `No ${section.label.toLowerCase()} yet. Press + to create one.`}
-                  </Typography>
-                )}
-              </ScrollView>
-            </Tabs.Content>
-          );
-        })}
-      </Tabs>
+      <ScrollView contentContainerClassName="gap-2 px-4 pb-8">
+        {rows.length > 0 ? (
+          <ListGroup>
+            {rows.map((row, index) => (
+              <Animated.View
+                key={`${row.node.kind}:${row.node.path}`}
+                entering={rowEntering}
+                layout={rowLayout}
+                className={INDENTS[Math.min(row.depth, INDENTS.length - 1)]}
+              >
+                {index > 0 && <Separator className="mx-4" />}
+                {renderRow(row)}
+              </Animated.View>
+            ))}
+          </ListGroup>
+        ) : (
+          <Typography
+            type="body-sm"
+            color="muted"
+            align="center"
+            className="py-8"
+          >
+            {isSearching
+              ? "No saved files match."
+              : "No saved files yet. Press + to create a note, drawing or folder."}
+          </Typography>
+        )}
+      </ScrollView>
       {dialog?.kind === "rename" && (
         <RenameFileDialog
           key={dialog.name}
@@ -257,6 +300,63 @@ export default function FilesScreen() {
           name={dialog.name}
           onClose={() => setDialog(null)}
           onDelete={() => deleteFile(dialog.name)}
+        />
+      )}
+      {dialog?.kind === "move" && (
+        <MoveFileDialog
+          key={dialog.name}
+          name={dialog.name}
+          folders={allFolders(entries)}
+          onClose={() => setDialog(null)}
+          onMove={async (folder) => {
+            await moveFile(dialog.name, folder);
+
+            if (folder) {
+              setFolderOpen(folder, true);
+            }
+          }}
+        />
+      )}
+      {dialog?.kind === "new-folder" && (
+        <FolderNameDialog
+          key={`new:${dialog.parent}`}
+          title="New folder"
+          description={
+            dialog.parent
+              ? `Inside ${baseNameOf(dialog.parent)}`
+              : "In lunarscribe"
+          }
+          confirmLabel="Create"
+          onClose={() => setDialog(null)}
+          onConfirm={async (name) => {
+            await createFolder(dialog.parent, name);
+
+            if (dialog.parent) {
+              setFolderOpen(dialog.parent, true);
+            }
+          }}
+        />
+      )}
+      {dialog?.kind === "rename-folder" && (
+        <FolderNameDialog
+          key={`rename:${dialog.path}`}
+          title="Rename folder"
+          description={baseNameOf(dialog.path)}
+          confirmLabel="Rename"
+          initialName={baseNameOf(dialog.path)}
+          onClose={() => setDialog(null)}
+          onConfirm={(name) => renameFolder(dialog.path, name)}
+        />
+      )}
+      {dialog?.kind === "delete-folder" && (
+        <DeleteFolderDialog
+          key={dialog.path}
+          name={baseNameOf(dialog.path)}
+          fileCount={
+            entries.files.filter((name) => isInFolder(name, dialog.path)).length
+          }
+          onClose={() => setDialog(null)}
+          onDelete={() => deleteFolder(dialog.path)}
         />
       )}
     </View>

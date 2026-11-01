@@ -1,3 +1,4 @@
+import { baseNameOf, isSafeSavedPath } from "@lunarscribe/utils/saved-paths";
 import type { RemoteChange, RemoteFiles } from "@lunarscribe/utils/sync/types";
 
 import type { SavedFileRecord } from "@/lib/browser-database";
@@ -22,12 +23,7 @@ export type SyncPlan = {
 
 /** Accept supported flat names, the same names saved files use. */
 export function isSavedFileName(name: string) {
-  return (
-    !name.includes("/") &&
-    !name.includes("\\") &&
-    !name.includes("\0") &&
-    getFileExtension(name) !== null
-  );
+  return isSafeSavedPath(name) && getFileExtension(baseNameOf(name)) !== null;
 }
 
 /** Hash saved text so cloud sync can detect changes on each side. */

@@ -82,6 +82,7 @@ export function createBufferFileWrites(store: StoreApi<BufferStore>) {
 
     const fileName = await window.lunarscribe.saveFile(
       buffer.fileName,
+      buffer.folder,
       buffer.title,
       getFileExtension(buffer.fileName ?? "") ?? BUFFER_EXTENSIONS[buffer.kind],
       buffer.content,

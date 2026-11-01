@@ -1,15 +1,16 @@
 import { createHash } from "node:crypto";
 import {
   lstat,
+  mkdir,
   readFile,
-  readdir,
   rename,
   rm,
   utimes,
   writeFile,
 } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { dirname, join } from "node:path";
 
+import { baseNameOf, isSafeSavedPath } from "@lunarscribe/utils/saved-paths";
 import type { RemoteChange, RemoteFiles } from "@lunarscribe/utils/sync/types";
 
 import { getFileExtension } from "../../lib/editor-files";
@@ -18,6 +19,7 @@ import type {
   SyncConflict,
   SyncedFileChange,
 } from "../../lib/sync";
+import { listSavedEntries } from "../saved-path";
 
 // Sync comparisons
 export type LocalSyncFiles = {
@@ -33,13 +35,9 @@ export type SyncPlan = {
   acknowledged: SyncBaseline;
 };
 
-/** Accept supported names directly inside the Lunarscribe documents folder. */
+/** Accept supported files inside the Lunarscribe documents folder or its folders. */
 export function isSavedFileName(name: string) {
-  return (
-    name === basename(name) &&
-    !name.includes("\0") &&
-    getFileExtension(name) !== null
-  );
+  return isSafeSavedPath(name) && getFileExtension(baseNameOf(name)) !== null;
 }
 
 /** Hash saved text so cloud sync can detect changes on each side. */
@@ -195,11 +193,7 @@ export async function readLocalSyncFiles(
   const modifiedTimes = new Map<string, number>();
   const blockedNames = new Set<string>();
 
-  for (const name of await readdir(folder)) {
-    if (!getFileExtension(name)) {
-      continue;
-    }
-
+  for (const name of (await listSavedEntries(folder)).files) {
     const path = join(folder, name);
 
     const metadata = await lstat(path);
@@ -277,6 +271,7 @@ export async function applySyncPulls(
       const temporaryPath = join(folder, `.sync-${crypto.randomUUID()}`);
 
       try {
+        await mkdir(dirname(path), { recursive: true });
         await writeFile(temporaryPath, change.content, {
           flag: "wx",
           mode: 0o600,

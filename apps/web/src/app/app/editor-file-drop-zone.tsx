@@ -20,8 +20,18 @@ async function readDroppedFiles(
   return { handles, files: handles.length ? [] : files };
 }
 
-/** Opens dropped text files while keeping file drops out of Lexical. */
-export function EditorFileDropZone({ children }: { children: ReactNode }) {
+/**
+ * Opens dropped text files in the markdown editor, whichever editor is shown, keeping file
+ * drops out of Lexical. Over a drawing (`isDrawing`), only drops holding a text file are
+ * taken, so Excalidraw still receives the images and libraries it opens itself.
+ */
+export function EditorFileDropZone({
+  isDrawing = false,
+  children,
+}: {
+  isDrawing?: boolean;
+  children: ReactNode;
+}) {
   const [isDragging, setIsDragging] = useState(false);
   const dragDepth = useRef(0);
 
@@ -51,6 +61,15 @@ export function EditorFileDropZone({ children }: { children: ReactNode }) {
       return false;
     }
 
+    // Chromium hides OS file names until the drop, so a drawing lets drags pass until then.
+    const hasTextFile = Array.from(event.dataTransfer.files).some((file) =>
+      isTextFile(file.name),
+    );
+
+    if (isDrawing && !(event.type === "drop" && hasTextFile)) {
+      return false;
+    }
+
     event.preventDefault();
     event.stopPropagation();
 
@@ -59,7 +78,9 @@ export function EditorFileDropZone({ children }: { children: ReactNode }) {
 
   return (
     <section
-      aria-label="Text file drop area"
+      aria-label={
+        isDrawing ? "Drawing and text file drop area" : "Text file drop area"
+      }
       className="relative flex min-h-0 flex-1 flex-col"
       onDragEnterCapture={(event) => {
         if (captureFileDrag(event)) {

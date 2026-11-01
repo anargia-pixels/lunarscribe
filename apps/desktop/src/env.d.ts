@@ -53,7 +53,10 @@ interface Window {
       title: string,
     ) => Promise<import("./lib/editor-files").ExternalFile>;
     onExternalFilesOpened: (listener: (paths: string[]) => void) => () => void;
-    listFiles: () => Promise<string[]>;
+    /** Saved files and folders, named by their paths inside the documents folder. */
+    listFiles: () => Promise<
+      import("@lunarscribe/utils/saved-paths").SavedEntries
+    >;
     searchFiles: (
       query: string,
       isContentSearch: boolean,
@@ -63,19 +66,32 @@ interface Window {
     exportPdf: (title: string, html: string) => Promise<string | null>;
     exportDocx: (title: string, bytes: Uint8Array) => Promise<string | null>;
     /**
-     * Writes `<title><extension>`, removing `previousName` if the
-     * title changed. Never overwrites another file: on a clash it uses `<title>_N<extension>`.
-     * Returns the name saved under.
+     * Writes `<title><extension>` in the folder of `previousName`, or in `folder` for a new
+     * file, removing `previousName` if the title changed. Never overwrites another file: on
+     * a clash it uses `<title>_N<extension>`. Returns the name saved under.
      */
     saveFile: (
       previousName: string | null,
+      folder: string,
       title: string,
       extension: import("./lib/editor-files").FileExtension,
       content: string,
       expectedContent: string | null,
     ) => Promise<string>;
+    /** Moves a saved file into `folder` (`""` for the top level); returns its new name. */
+    moveFile: (name: string, folder: string) => Promise<string>;
     deleteFile: (name: string) => Promise<void>;
-    onFilesChanged: (listener: (files: string[]) => void) => () => void;
+    /** Creates a folder named `name` inside `parent`; returns its path. */
+    createFolder: (parent: string, name: string) => Promise<string>;
+    /** Renames a folder in place; returns its new path. */
+    renameFolder: (path: string, name: string) => Promise<string>;
+    /** Deletes a folder and everything inside it. */
+    deleteFolder: (path: string) => Promise<void>;
+    onFilesChanged: (
+      listener: (
+        entries: import("@lunarscribe/utils/saved-paths").SavedEntries,
+      ) => void,
+    ) => () => void;
     /** Replaces the files the file watcher follows. */
     watchFiles: (files: import("./lib/editor-files").WatchedFile[]) => void;
     onWatchedFileChanged: (

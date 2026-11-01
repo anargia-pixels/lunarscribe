@@ -72,6 +72,7 @@ export function createBufferFileWrites(store: StoreApi<BufferStore>) {
 
     const fileName = await saveFile(
       buffer.fileName,
+      buffer.folder,
       buffer.title,
       getFileExtension(buffer.fileName ?? "") ?? BUFFER_EXTENSIONS[buffer.kind],
       buffer.content,

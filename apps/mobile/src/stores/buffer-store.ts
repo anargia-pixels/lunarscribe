@@ -1,5 +1,11 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+import {
+  folderOf,
+  isInFolder,
+  replaceFolder,
+} from "@lunarscribe/utils/saved-paths";
+import type { SavedEntries } from "@lunarscribe/utils/saved-paths";
 import { Debouncer } from "@tanstack/pacer/debouncer";
 import { AppState } from "react-native";
 import { create } from "zustand";
@@ -28,6 +34,8 @@ export type TextBuffer = {
   syncRevision: number;
   /** Saved file in the documents folder, or null until the first save. */
   fileName: string | null;
+  /** Folder a new buffer is first saved in, `""` for the top level; a saved file keeps its own. */
+  folder: string;
   /** Content as last saved or loaded, so sync can tell which buffers have pending edits. */
   savedContent: string | null;
 };
@@ -35,19 +43,27 @@ export type TextBuffer = {
 type BufferStore = {
   buffers: TextBuffer[];
   activeId: string | null;
-  /** Saved file names in the documents folder. */
-  files: string[];
+  /** Saved files and folders in the documents folder, named by their paths. */
+  entries: SavedEntries;
   /** The last failed file operation, shown until dismissed. */
   fileError: string | null;
   clearFileError: () => void;
   refreshFiles: () => void;
   setContent: (id: string, content: string) => void;
-  createBuffer: (kind: EditorKind) => void;
+  /** Starts an untitled buffer that saves into `folder`, `""` for the top level. */
+  createBuffer: (kind: EditorKind, folder?: string) => void;
   openFile: (name: string) => Promise<void>;
   /** Writes pending edits now instead of waiting for the save timer. */
   flushBuffer: (id: string) => Promise<void>;
   renameFile: (name: string, title: string) => Promise<void>;
   deleteFile: (name: string) => Promise<void>;
+  /** Moves a saved file into `folder`, after writing pending edits. */
+  moveFile: (name: string, folder: string) => Promise<void>;
+  createFolder: (parent: string, name: string) => Promise<void>;
+  /** Renames a folder and repoints open buffers inside it. */
+  renameFolder: (path: string, name: string) => Promise<void>;
+  /** Deletes a folder with everything inside and closes buffers it held. */
+  deleteFolder: (path: string) => Promise<void>;
   /** Overwrites the remote copy with the saved file, after writing pending edits. */
   forceSyncFile: (name: string) => Promise<void>;
   /**
@@ -130,6 +146,7 @@ async function writeBuffer(id: string, mode: "automatic" | "manual") {
 
   const fileName = await documentsFolder.saveFile(
     buffer.fileName,
+    buffer.folder,
     buffer.title,
     getFileExtension(buffer.fileName ?? "") ?? BUFFER_EXTENSIONS[buffer.kind],
     buffer.content,
@@ -171,13 +188,13 @@ function discardSaveTimer(id: string) {
 export const useBufferStore = create<BufferStore>()((set, get) => ({
   buffers: [],
   activeId: null,
-  files: [],
+  entries: { files: [], folders: [] },
   fileError: null,
   clearFileError: () => set({ fileError: null }),
 
   refreshFiles: () => {
     try {
-      set({ files: documentsFolder.listFiles() });
+      set({ entries: documentsFolder.listEntries() });
     } catch (error) {
       reportFileError(error, "The saved file list could not be loaded.");
     }
@@ -188,7 +205,7 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
     scheduleSave(id);
   },
 
-  createBuffer: (kind) => {
+  createBuffer: (kind, folder = "") => {
     // An empty, never-saved buffer is reused instead of stacking up more untitled ones.
     const blank = get().buffers.find(
       (buffer) =>
@@ -198,13 +215,14 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
     );
 
     if (blank) {
+      updateBuffer(blank.id, () => ({ folder }));
       set({ activeId: blank.id });
 
       return;
     }
 
     const taken = new Set([
-      ...get().files.map(stemOf),
+      ...get().entries.files.map(stemOf),
       ...get().buffers.map((buffer) => buffer.title),
     ]);
 
@@ -219,6 +237,7 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
       kind,
       content: "",
       fileName: null,
+      folder,
       savedContent: null,
     });
   },
@@ -239,6 +258,7 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
       kind: kindOf(name),
       content,
       fileName: name,
+      folder: folderOf(name),
       savedContent: content,
     });
   },
@@ -263,6 +283,7 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
 
       await documentsFolder.saveFile(
         name,
+        folderOf(name),
         title,
         getFileExtension(name) ?? BUFFER_EXTENSIONS[kindOf(name)],
         content,
@@ -302,6 +323,89 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
     };
 
     await (open ? queueBufferWrite(open.id, remove) : remove());
+  },
+
+  moveFile: async (name, folder) => {
+    const open = findBuffer((buffer) => buffer.fileName === name);
+
+    if (!open) {
+      await documentsFolder.moveFile(name, folder);
+      get().refreshFiles();
+
+      return;
+    }
+
+    saveDebouncers.get(open.id)?.cancel();
+    await queueBufferWrite(open.id, async () => {
+      await writeBuffer(open.id, "automatic");
+
+      const current =
+        findBuffer((buffer) => buffer.id === open.id)?.fileName ?? name;
+
+      const moved = await documentsFolder.moveFile(current, folder);
+
+      updateBuffer(open.id, () => ({ fileName: moved, folder }));
+    });
+    get().refreshFiles();
+  },
+
+  createFolder: async (parent, name) => {
+    await documentsFolder.createFolder(parent, name);
+    get().refreshFiles();
+  },
+
+  renameFolder: async (path, name) => {
+    const inside = get().buffers.filter(
+      (buffer) => buffer.fileName !== null && isInFolder(buffer.fileName, path),
+    );
+
+    // Write pending edits first, so no later save looks for a file under the old path.
+    for (const buffer of inside) {
+      await get().flushBuffer(buffer.id);
+    }
+
+    const renamed = await documentsFolder.renameFolder(path, name);
+
+    set((state) => ({
+      buffers: state.buffers.map((buffer) => {
+        if (buffer.fileName !== null && isInFolder(buffer.fileName, path)) {
+          const fileName = replaceFolder(buffer.fileName, path, renamed);
+
+          return { ...buffer, fileName, folder: folderOf(fileName) };
+        }
+
+        return buffer.fileName === null && isInFolder(buffer.folder, path)
+          ? { ...buffer, folder: replaceFolder(buffer.folder, path, renamed) }
+          : buffer;
+      }),
+    }));
+    get().refreshFiles();
+  },
+
+  deleteFolder: async (path) => {
+    const inside = get().buffers.filter(
+      (buffer) => buffer.fileName !== null && isInFolder(buffer.fileName, path),
+    );
+
+    for (const buffer of inside) {
+      discardSaveTimer(buffer.id);
+    }
+
+    await documentsFolder.deleteFolder(path);
+
+    for (const buffer of inside) {
+      closeBuffer(buffer.id);
+    }
+
+    // New buffers meant for the folder save at the top level instead.
+    set((state) => ({
+      buffers: state.buffers.map((buffer) =>
+        buffer.fileName === null && isInFolder(buffer.folder, path)
+          ? { ...buffer, folder: "" }
+          : buffer,
+      ),
+    }));
+    get().refreshFiles();
   },
 
   forceSyncFile: async (name) => {

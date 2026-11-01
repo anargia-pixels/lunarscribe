@@ -1,3 +1,4 @@
+import type { SavedEntries } from "@lunarscribe/utils/saved-paths";
 import { contextBridge, ipcRenderer, webFrame, webUtils } from "electron";
 
 import type {
@@ -88,7 +89,7 @@ contextBridge.exposeInMainWorld("lunarscribe", {
       ipcRenderer.send("external-files:paused");
     };
   },
-  listFiles: () => ipcRenderer.invoke("files:list"),
+  listFiles: (): Promise<SavedEntries> => ipcRenderer.invoke("files:list"),
   searchFiles: (
     query: string,
     isContentSearch: boolean,
@@ -103,6 +104,7 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     ipcRenderer.invoke("files:export-docx", title, bytes),
   saveFile: (
     previousName: string | null,
+    folder: string,
     title: string,
     extension: FileExtension,
     content: string,
@@ -111,15 +113,26 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     ipcRenderer.invoke(
       "files:save",
       previousName,
+      folder,
       title,
       extension,
       content,
       expectedContent,
     ),
+  moveFile: (name: string, folder: string): Promise<string> =>
+    ipcRenderer.invoke("files:move", name, folder),
   deleteFile: (name: string) => ipcRenderer.invoke("files:delete", name),
-  onFilesChanged: (listener: (files: string[]) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, files: string[]) =>
-      listener(files);
+  createFolder: (parent: string, name: string): Promise<string> =>
+    ipcRenderer.invoke("folders:create", parent, name),
+  renameFolder: (path: string, name: string): Promise<string> =>
+    ipcRenderer.invoke("folders:rename", path, name),
+  deleteFolder: (path: string): Promise<void> =>
+    ipcRenderer.invoke("folders:delete", path),
+  onFilesChanged: (listener: (entries: SavedEntries) => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      entries: SavedEntries,
+    ) => listener(entries);
 
     ipcRenderer.on("files:changed", handler);
 

@@ -21,21 +21,31 @@ type SidebarStore = {
   open: boolean;
   width: number;
   section: SidebarSection;
+  /** Paths of the expanded folders in the Lunarscribe tab. */
+  openFolders: string[];
   setOpen: (open: boolean) => void;
   setWidth: (width: number) => void;
   setSection: (section: SidebarSection) => void;
+  setFolderOpen: (folder: string, open: boolean) => void;
 };
 
-/** Sidebar visibility, width and selected section tab, remembered across launches. */
+/** Sidebar visibility, width, selected section tab and expanded folders, remembered across launches. */
 export const useSidebarStore = create<SidebarStore>()(
   persist(
     (set) => ({
       open: true,
       width: SIDEBAR_DEFAULT_WIDTH,
-      section: "notes",
+      section: "lunarscribe",
+      openFolders: [],
       setOpen: (open) => set({ open }),
       setWidth: (width) => set({ width: clampWidth(width) }),
       setSection: (section) => set({ section }),
+      setFolderOpen: (folder, open) =>
+        set((state) => ({
+          openFolders: open
+            ? [...new Set([...state.openFolders, folder])]
+            : state.openFolders.filter((candidate) => candidate !== folder),
+        })),
     }),
     {
       name: "lunarscribe-sidebar",
@@ -50,9 +60,15 @@ export const useSidebarStore = create<SidebarStore>()(
 
         const width = "width" in persisted ? Number(persisted.width) : null;
 
+        const openFolders =
+          "openFolders" in persisted && Array.isArray(persisted.openFolders)
+            ? persisted.openFolders.map(String)
+            : current.openFolders;
+
         return {
           ...current,
           open: "open" in persisted ? persisted.open !== false : current.open,
+          openFolders,
           width:
             width !== null && Number.isFinite(width)
               ? clampWidth(width)

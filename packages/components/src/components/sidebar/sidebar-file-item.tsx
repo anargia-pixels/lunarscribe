@@ -3,6 +3,9 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@lunarscribe/components/ui/context-menu";
 import {
@@ -17,15 +20,24 @@ import {
   Download,
   Ellipsis,
   FileDown,
+  FileText,
+  Folder,
+  FolderInput,
   Pencil,
+  PenTool,
   Trash2,
   X,
 } from "lucide-react";
 import { useRef } from "react";
 
+import { savedFileDragProps } from "./saved-file-drag";
+
 import "./sidebar-file-item.css";
 
 export type FileMenuState = { key: string; anchor: HTMLElement | null };
+
+/** A folder a saved file can move to; `folder` is its path, `""` for the top level. */
+export type FileMoveTarget = { folder: string; label: string };
 
 /**
  * One sidebar entry with a menu shared by right-click and its action button. Menu items
@@ -39,6 +51,8 @@ export function SidebarFileItem({
   title,
   accessedLabel,
   isExternal,
+  isDrawing = false,
+  dragPath,
   canExport,
   menu,
   onMenuChange,
@@ -46,6 +60,8 @@ export function SidebarFileItem({
   onOpen,
   onRename,
   onCopyPath,
+  moveTargets,
+  onMove,
   onDownload,
   onExportPdf,
   onExportDocx,
@@ -59,6 +75,10 @@ export function SidebarFileItem({
   title: string;
   accessedLabel?: string;
   isExternal: boolean;
+  /** Shows the drawing icon in place of the text file icon. */
+  isDrawing?: boolean;
+  /** Makes the item draggable onto folders; the saved file's path. */
+  dragPath?: string;
   canExport: boolean;
   menu: FileMenuState | null;
   onMenuChange: (open: boolean, anchor: HTMLElement | null) => void;
@@ -66,6 +86,9 @@ export function SidebarFileItem({
   onOpen: () => void;
   onRename: () => void;
   onCopyPath?: () => void;
+  /** The folders offered under Move to, leaving out the file's own folder. */
+  moveTargets?: readonly FileMoveTarget[];
+  onMove?: (folder: string) => void;
   onDownload?: () => void;
   onExportPdf: () => void;
   onExportDocx: () => void;
@@ -93,7 +116,9 @@ export function SidebarFileItem({
           isActive={isActive}
           title={title}
           onClick={onOpen}
+          {...(dragPath === undefined ? {} : savedFileDragProps(dragPath))}
         >
+          {isDrawing ? <PenTool /> : <FileText />}
           <span>{label}</span>
         </SidebarMenuButton>
         {accessedLabel && <SidebarMenuBadge>{accessedLabel}</SidebarMenuBadge>}
@@ -124,6 +149,25 @@ export function SidebarFileItem({
             <Copy />
             Copy path
           </ContextMenuItem>
+        )}
+        {onMove && moveTargets && moveTargets.length > 0 && (
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>
+              <FolderInput />
+              Move to
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              {moveTargets.map((target) => (
+                <ContextMenuItem
+                  key={target.folder}
+                  onClick={() => onMove(target.folder)}
+                >
+                  <Folder />
+                  {target.label}
+                </ContextMenuItem>
+              ))}
+            </ContextMenuSubContent>
+          </ContextMenuSub>
         )}
         {onDownload && (
           <ContextMenuItem onClick={onDownload}>

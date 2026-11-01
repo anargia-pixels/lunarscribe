@@ -1,5 +1,10 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+import {
+  folderOf,
+  isInFolder,
+  replaceFolder,
+} from "@lunarscribe/utils/saved-paths";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -43,6 +48,8 @@ export type TextBuffer = {
   syncRevision: number;
   /** Saved file in browser storage, or null until the first save. */
   fileName: string | null;
+  /** Folder a new buffer is first saved in, `""` for the top level; a saved file keeps its own. */
+  folder: string;
   /** ID of the external file this buffer edits; edits save back to that file. */
   externalId: string | null;
 };
@@ -69,8 +76,19 @@ export type BufferStore = {
     handles: FileSystemFileHandle[],
     files: File[],
   ) => Promise<void>;
-  createBuffer: (kind: BufferKind, fileNames: string[]) => void;
+  /** Starts an untitled buffer that saves into `folder`, `""` for the top level. */
+  createBuffer: (
+    kind: BufferKind,
+    fileNames: string[],
+    folder?: string,
+  ) => void;
   deleteFile: (name: string) => Promise<void>;
+  /** Moves a saved file into `folder`, after writing pending edits. */
+  moveFile: (name: string, folder: string) => Promise<void>;
+  /** Renames a folder and repoints open buffers inside it; returns its new path. */
+  renameFolder: (path: string, name: string) => Promise<string>;
+  /** Deletes a folder with everything inside and closes buffers it held. */
+  deleteFolder: (path: string) => Promise<void>;
   renameFile: (target: FileTarget, title: string) => Promise<void>;
   removeExternalFile: (
     target: Extract<FileTarget, { kind: "external" }>,
@@ -129,6 +147,29 @@ function moveSavedAccess(fromName: string, toName: string) {
     );
 }
 
+/** Keeps the access times of files in a renamed folder under their new names. */
+function moveFolderAccess(fromFolder: string, toFolder: string) {
+  const savedPrefix = fileKey({ kind: "saved", name: "" });
+
+  for (const key of Object.keys(useFileAccessStore.getState().accessedAt)) {
+    const name = key.slice(savedPrefix.length);
+
+    if (key.startsWith(savedPrefix) && isInFolder(name, fromFolder)) {
+      moveSavedAccess(name, replaceFolder(name, fromFolder, toFolder));
+    }
+  }
+}
+
+/** Open buffers whose saved file sits inside `folder`. */
+function buffersInFolder(folder: string) {
+  return useBufferStore
+    .getState()
+    .buffers.filter(
+      (buffer) =>
+        buffer.fileName !== null && isInFolder(buffer.fileName, folder),
+    );
+}
+
 /** A welcome buffer that no file holds, reused when the shown file is deleted. */
 function createWelcomeBuffer(): TextBuffer {
   return {
@@ -139,6 +180,7 @@ function createWelcomeBuffer(): TextBuffer {
     savedContent: null,
     syncRevision: 0,
     fileName: null,
+    folder: "",
     externalId: null,
   };
 }
@@ -168,6 +210,7 @@ const FILE_OPERATION_POLICIES = {
   delete: { save: "keep", close: true },
   remove: { save: "flush", close: true },
   forceSync: { save: "flush", close: false },
+  move: { save: "flush", close: false },
 } as const;
 
 type FileOperationPolicy =
@@ -389,7 +432,7 @@ export const useBufferStore = create<BufferStore>()(
           set({ fileError: failed.length ? failed.join("\n") : null });
         }),
 
-      createBuffer: (kind, fileNames) => {
+      createBuffer: (kind, fileNames, folder = "") => {
         // An empty, never-saved buffer is reused instead of stacking up more untitled ones.
         const blank = get().buffers.find(
           (buffer) =>
@@ -400,7 +443,12 @@ export const useBufferStore = create<BufferStore>()(
         );
 
         if (blank) {
-          set({ activeId: blank.id });
+          set((state) => ({
+            buffers: state.buffers.map((buffer) =>
+              buffer.id === blank.id ? { ...buffer, folder } : buffer,
+            ),
+            activeId: blank.id,
+          }));
 
           return;
         }
@@ -424,6 +472,7 @@ export const useBufferStore = create<BufferStore>()(
           savedContent: null,
           syncRevision: 0,
           fileName: null,
+          folder,
           externalId: null,
         };
 
@@ -442,6 +491,102 @@ export const useBufferStore = create<BufferStore>()(
             await savedFiles.deleteFile(buffer?.fileName ?? name);
           },
         ),
+
+      moveFile: (name, folder) =>
+        applyFileOperation(
+          { kind: "saved", name },
+          FILE_OPERATION_POLICIES.move,
+          async (buffer) => {
+            const current = buffer
+              ? (get().buffers.find((candidate) => candidate.id === buffer.id)
+                  ?.fileName ?? name)
+              : name;
+
+            const moved = await savedFiles.moveFile(current, folder);
+
+            if (buffer) {
+              set((state) => ({
+                buffers: state.buffers.map((candidate) =>
+                  candidate.id === buffer.id
+                    ? { ...candidate, fileName: moved, folder }
+                    : candidate,
+                ),
+              }));
+            }
+
+            moveSavedAccess(current, moved);
+          },
+        ),
+
+      renameFolder: (path, name) =>
+        queueOperation(`folder:${path}`, async () => {
+          await bufferRestored;
+
+          // Write pending edits first, so no later save looks for a file under the old path.
+          for (const buffer of buffersInFolder(path)) {
+            if (
+              buffer.content !== buffer.savedContent ||
+              buffer.title !== stemOf(buffer.fileName ?? "")
+            ) {
+              await bufferFileWrites.saveBufferNow(buffer.id);
+            }
+          }
+
+          const renamed = await savedFiles.renameFolder(path, name);
+
+          if (renamed === path) {
+            return path;
+          }
+
+          set((state) => ({
+            buffers: state.buffers.map((buffer) => {
+              if (
+                buffer.fileName !== null &&
+                isInFolder(buffer.fileName, path)
+              ) {
+                const fileName = replaceFolder(buffer.fileName, path, renamed);
+
+                return { ...buffer, fileName, folder: folderOf(fileName) };
+              }
+
+              return buffer.fileName === null && isInFolder(buffer.folder, path)
+                ? {
+                    ...buffer,
+                    folder: replaceFolder(buffer.folder, path, renamed),
+                  }
+                : buffer;
+            }),
+          }));
+          moveFolderAccess(path, renamed);
+
+          return renamed;
+        }),
+
+      deleteFolder: (path) =>
+        queueOperation(`folder:${path}`, async () => {
+          await bufferRestored;
+
+          const inside = buffersInFolder(path);
+
+          for (const buffer of inside) {
+            bufferFileWrites.discardSaveTimer(buffer.id);
+          }
+
+          await savedFiles.deleteFolder(path);
+
+          for (const buffer of inside) {
+            closeFileBuffer(buffer);
+          }
+
+          // New buffers meant for the folder save at the top level instead.
+          set((state) => ({
+            buffers: state.buffers.map((buffer) =>
+              buffer.fileName === null && isInFolder(buffer.folder, path)
+                ? { ...buffer, folder: "" }
+                : buffer,
+            ),
+          }));
+        }),
 
       renameFile: (target, rawTitle) =>
         applyFileOperation(
@@ -467,6 +612,7 @@ export const useBufferStore = create<BufferStore>()(
 
               const name = await savedFiles.saveFile(
                 target.name,
+                folderOf(target.name),
                 title,
                 getFileExtension(target.name) ??
                   BUFFER_EXTENSIONS[kindOf(target.name)],
@@ -547,6 +693,7 @@ async function openSavedFile(name: string) {
     savedContent: content,
     syncRevision: 0,
     fileName: name,
+    folder: folderOf(name),
     externalId: null,
   };
 
@@ -591,6 +738,7 @@ function selectExternalFile(file: OpenedExternalFile) {
       savedContent: file.markdown,
       syncRevision: 0,
       fileName: null,
+      folder: "",
       externalId: file.id,
     };
 
@@ -637,6 +785,7 @@ async function importTextFile(file: File) {
 
   const name = await savedFiles.saveFile(
     null,
+    "",
     toBufferTitle(stemOf(file.name)),
     BUFFER_EXTENSIONS.markdown,
     markdown,

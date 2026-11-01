@@ -1,11 +1,11 @@
 import { unwatchFile, watchFile } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { basename, join } from "node:path";
 
 import { BrowserWindow, ipcMain } from "electron";
 
 import type { WatchedFile, WatchedFileChange } from "../lib/editor-files";
 import { isOpenedPath } from "./external-files";
+import { resolveSavedPath } from "./saved-path";
 
 /**
  * Sends an open buffer's markdown to the renderer when another program, such
@@ -36,8 +36,7 @@ export function registerFileWatcher(folder: string) {
 
     for (const file of files) {
       if (file.kind === "saved") {
-        // basename keeps renderer-supplied names inside the folder.
-        next.set(join(folder, basename(file.name)), file);
+        next.set(resolveSavedPath(folder, file.name), file);
       } else if (isOpenedPath(file.path)) {
         next.set(file.path, file);
       }

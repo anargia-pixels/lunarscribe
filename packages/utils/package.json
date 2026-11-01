@@ -11,6 +11,7 @@
     "./map-concurrent": "./src/map-concurrent.ts",
     "./operation-queue": "./src/operation-queue.ts",
     "./redact-email": "./src/redact-email.ts",
+    "./saved-paths": "./src/saved-paths.ts",
     "./sidebar-sections": "./src/sidebar-sections.ts",
     "./sync/json": "./src/sync/json.ts",
     "./sync/types": "./src/sync/types.ts"

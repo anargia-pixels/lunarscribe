@@ -1,3 +1,5 @@
+import { baseNameOf } from "@lunarscribe/utils/saved-paths";
+
 /** Text extensions accepted by the markdown editor. */
 const TEXT_EXTENSIONS = [".md", ".markdown", ".txt"] as const;
 
@@ -56,7 +58,9 @@ export function fileKey(target: FileTarget) {
 /** Default file extensions for new buffers. */
 export const BUFFER_EXTENSIONS = { markdown: ".md", drawing: ".draw" } as const;
 
-/** A file's name without its extension, which is its buffer title. */
+/** A file's name without its folders or extension, which is its buffer title. */
 export function stemOf(fileName: string) {
-  return fileName.slice(0, fileName.lastIndexOf("."));
+  const name = baseNameOf(fileName);
+
+  return name.slice(0, name.lastIndexOf("."));
 }

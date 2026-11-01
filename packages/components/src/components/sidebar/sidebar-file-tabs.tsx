@@ -6,7 +6,7 @@ import {
   TabsList,
 } from "@lunarscribe/components/ui/tabs";
 import type { SidebarSection } from "@lunarscribe/utils/sidebar-sections";
-import { FileText, FolderOpen, PenTool } from "lucide-react";
+import { FolderOpen, NotebookPen } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -14,10 +14,9 @@ import type { ReactNode } from "react";
 /** Tab list width, in CSS px, below which the labels give way to icons (17rem). */
 const ICON_MODE_WIDTH = 272;
 
-/** Tab icons, matching the header's new note, new drawing and open buttons. */
+/** Tab icons; external files match the header's open button. */
 export const FILE_SECTION_ICONS: Record<SidebarSection, LucideIcon> = {
-  notes: FileText,
-  drawings: PenTool,
+  lunarscribe: NotebookPen,
   "external-files": FolderOpen,
 };
 
@@ -29,11 +28,13 @@ export type SidebarFileTab = {
   /** Replaces `shortLabel` when the sidebar is too narrow for the labels. */
   icon: LucideIcon;
   count: number;
+  /** Shown instead of `content`; a tab with only empty folders is not empty. */
+  emptyMessage: string | null;
   content: ReactNode;
 };
 
 /**
- * One tab per file kind; only the selected tab's files show, scrolling below the tabs.
+ * One tab per sidebar section; only the selected tab's files show, scrolling below the tabs.
  * Below 17rem the tabs swap their labels for icons, keeping the full label as the tooltip.
  */
 export function SidebarFileTabs({
@@ -99,12 +100,12 @@ export function SidebarFileTabs({
             aria-label={tab.label}
             className="min-h-0 flex-1 [&>[data-slot=scroll-area-viewport]]:overscroll-contain"
           >
-            {tab.count > 0 ? (
+            {tab.emptyMessage === null ? (
               // Matches the tab list's inset so items line up with it.
               <div className="px-2">{tab.content}</div>
             ) : (
               <p className="text-muted-foreground px-4 py-8 text-center text-sm">
-                {`No ${tab.label.toLowerCase()} yet.`}
+                {tab.emptyMessage}
               </p>
             )}
           </ScrollArea>

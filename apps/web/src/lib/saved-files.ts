@@ -1,4 +1,14 @@
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+import {
+  allFolders,
+  baseNameOf,
+  folderOf,
+  isInFolder,
+  joinSavedPath,
+  replaceFolder,
+  toFolderName,
+} from "@lunarscribe/utils/saved-paths";
+import type { SavedEntries } from "@lunarscribe/utils/saved-paths";
 
 import {
   deleteRecord,
@@ -11,12 +21,13 @@ import type { SavedFileRecord } from "@/lib/browser-database";
 import {
   getFileExtension,
   INVALID_FILE_TITLE_CHARACTERS,
+  stemOf,
 } from "@/lib/editor-files";
 import type { FileExtension } from "@/lib/editor-files";
 
 /**
- * Saved buffers live in IndexedDB as `<title><extension>` records, standing in for the
- * desktop app's Documents/lunarscribe folder. Other tabs learn about changes through a
+ * Saved buffers live in IndexedDB as `<folder>/<title><extension>` records, standing in
+ * for the desktop app's Documents/lunarscribe folder; folder records keep empty folders. Other tabs learn about changes through a
  * broadcast channel, the way the desktop app watches the folder.
  */
 
@@ -24,7 +35,7 @@ const queueFileOperation = createOperationQueue();
 
 const QUEUE_KEY = "saved-files";
 
-const listeners = new Set<(files: string[]) => void>();
+const listeners = new Set<(entries: SavedEntries) => void>();
 
 const channel = new BroadcastChannel("lunarscribe-saved-files");
 
@@ -34,18 +45,32 @@ async function readRecords() {
   );
 }
 
-export async function listFiles() {
-  return (await readRecords())
+async function readFolderNames() {
+  return (
+    await withStore("folders", "readonly", (store) =>
+      getAllRecords<"folders">(store),
+    )
+  ).map((record) => record.name);
+}
+
+/** Saved files and folders, named by their paths. */
+export async function listFiles(): Promise<SavedEntries> {
+  const files = (await readRecords())
     .map((record) => record.name)
     .filter((name) => getFileExtension(name) !== null)
     .sort((left, right) => left.localeCompare(right));
+
+  return {
+    files,
+    folders: allFolders({ files, folders: await readFolderNames() }),
+  };
 }
 
 async function emitFilesChanged() {
-  const files = await listFiles();
+  const entries = await listFiles();
 
   for (const listener of listeners) {
-    listener(files);
+    listener(entries);
   }
 }
 
@@ -57,7 +82,7 @@ async function notifyFilesChanged() {
 
 channel.addEventListener("message", () => void emitFilesChanged());
 
-export function onFilesChanged(listener: (files: string[]) => void) {
+export function onFilesChanged(listener: (entries: SavedEntries) => void) {
   listeners.add(listener);
 
   return () => {
@@ -88,12 +113,36 @@ export function readAllFiles() {
   return queueFileOperation(QUEUE_KEY, readRecords);
 }
 
+/** `<stem><extension>` in `folder`, or `<stem>_1<extension>`, ... when another file has it. */
+async function availableName(
+  store: IDBObjectStore,
+  folder: string,
+  stem: string,
+  extension: string,
+  previousName: string | null,
+) {
+  let candidate = joinSavedPath(folder, `${stem}${extension}`);
+
+  // Never overwrite another file: take `<stem>_1`, `<stem>_2`, ... instead.
+  for (
+    let suffix = 1;
+    candidate !== previousName && (await getRecord<"files">(store, candidate));
+    suffix += 1
+  ) {
+    candidate = joinSavedPath(folder, `${stem}_${suffix}${extension}`);
+  }
+
+  return candidate;
+}
+
 /**
- * Writes `<title><extension>`, removing `previousName` if the title changed. Never
- * overwrites another file: on a clash it uses `<title>_N<extension>`. Returns the name saved under.
+ * Writes `<title><extension>` in the folder of `previousName`, or in `folder` for a new
+ * file, removing `previousName` if the title changed. Never overwrites another file: on a
+ * clash it uses `<title>_N<extension>`. Returns the name saved under.
  */
 export function saveFile(
   previousName: string | null,
+  folder: string,
   title: string,
   extension: FileExtension,
   content: string,
@@ -121,17 +170,13 @@ export function saveFile(
         title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_") ||
         "untitled";
 
-      let candidate = `${stem}${extension}`;
-
-      // Never overwrite another file: take `<stem>_1`, `<stem>_2`, ... instead.
-      for (
-        let suffix = 1;
-        candidate !== previousName &&
-        (await getRecord<"files">(store, candidate));
-        suffix += 1
-      ) {
-        candidate = `${stem}_${suffix}${extension}`;
-      }
+      const candidate = await availableName(
+        store,
+        previousName === null ? folder : folderOf(previousName),
+        stem,
+        extension,
+        previousName,
+      );
 
       await putRecord<"files">(store, {
         name: candidate,
@@ -149,6 +194,128 @@ export function saveFile(
     await notifyFilesChanged();
 
     return name;
+  });
+}
+
+/** Moves a saved file into `folder` (`""` for the top level); returns its new name. */
+export function moveFile(name: string, folder: string) {
+  return queueFileOperation(QUEUE_KEY, async () => {
+    if (folderOf(name) === folder) {
+      return name;
+    }
+
+    const moved = await withStore("files", "readwrite", async (store) => {
+      const record = await getRecord<"files">(store, name);
+
+      if (!record) {
+        throw new Error(`The saved file "${name}" no longer exists.`);
+      }
+
+      const candidate = await availableName(
+        store,
+        folder,
+        stemOf(name),
+        getFileExtension(name) ?? "",
+        null,
+      );
+
+      await putRecord<"files">(store, { ...record, name: candidate });
+      await deleteRecord(store, name);
+
+      return candidate;
+    });
+
+    await notifyFilesChanged();
+
+    return moved;
+  });
+}
+
+/** A folder path no file or folder uses yet, so creating or renaming never merges two. */
+async function assertNewFolder(path: string) {
+  const { files, folders } = await listFiles();
+
+  if (folders.includes(path) || files.some((name) => isInFolder(name, path))) {
+    throw new Error(`A file or folder named “${baseNameOf(path)}” exists.`);
+  }
+}
+
+/** Creates a folder named `input` inside `parent`; returns its path. */
+export function createFolder(parent: string, input: string) {
+  return queueFileOperation(QUEUE_KEY, async () => {
+    const path = joinSavedPath(parent, toFolderName(input));
+
+    await assertNewFolder(path);
+    await withStore("folders", "readwrite", (store) =>
+      putRecord<"folders">(store, { name: path }),
+    );
+    await notifyFilesChanged();
+
+    return path;
+  });
+}
+
+/** Renames a folder with everything inside it; returns its new path. */
+export function renameFolder(path: string, input: string) {
+  return queueFileOperation(QUEUE_KEY, async () => {
+    const renamed = joinSavedPath(folderOf(path), toFolderName(input));
+
+    if (renamed === path) {
+      return path;
+    }
+
+    await assertNewFolder(renamed);
+
+    // Folder records first, so a failure leaves files where they were.
+    await withStore("folders", "readwrite", async (store) => {
+      for (const record of await getAllRecords<"folders">(store)) {
+        if (isInFolder(record.name, path)) {
+          await deleteRecord(store, record.name);
+          await putRecord<"folders">(store, {
+            name: replaceFolder(record.name, path, renamed),
+          });
+        }
+      }
+
+      // A folder known only from its files' paths gets a record of its own.
+      await putRecord<"folders">(store, { name: renamed });
+    });
+    await withStore("files", "readwrite", async (store) => {
+      for (const record of await getAllRecords<"files">(store)) {
+        if (isInFolder(record.name, path)) {
+          await putRecord<"files">(store, {
+            ...record,
+            name: replaceFolder(record.name, path, renamed),
+          });
+          await deleteRecord(store, record.name);
+        }
+      }
+    });
+
+    await notifyFilesChanged();
+
+    return renamed;
+  });
+}
+
+/** Deletes a folder and everything inside it. */
+export function deleteFolder(path: string) {
+  return queueFileOperation(QUEUE_KEY, async () => {
+    await withStore("files", "readwrite", async (store) => {
+      for (const record of await getAllRecords<"files">(store)) {
+        if (isInFolder(record.name, path)) {
+          await deleteRecord(store, record.name);
+        }
+      }
+    });
+    await withStore("folders", "readwrite", async (store) => {
+      for (const record of await getAllRecords<"folders">(store)) {
+        if (isInFolder(record.name, path)) {
+          await deleteRecord(store, record.name);
+        }
+      }
+    });
+    await notifyFilesChanged();
   });
 }
 

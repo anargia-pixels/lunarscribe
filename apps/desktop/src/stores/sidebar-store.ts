@@ -22,6 +22,8 @@ type SidebarStore = {
   open: boolean;
   width: number;
   section: SidebarSection;
+  /** Paths of the expanded folders in the Lunarscribe tab. */
+  openFolders: string[];
   outlineOpen: boolean;
   outlineWidth: number;
   /** The markdown editor's headings; null while no markdown editor is shown. */
@@ -29,6 +31,7 @@ type SidebarStore = {
   setOpen: (open: boolean) => void;
   setWidth: (width: number) => void;
   setSection: (section: SidebarSection) => void;
+  setFolderOpen: (folder: string, open: boolean) => void;
   setOutlineOpen: (outlineOpen: boolean) => void;
   setOutlineWidth: (outlineWidth: number) => void;
   toggleOutline: () => void;
@@ -36,7 +39,7 @@ type SidebarStore = {
 };
 
 /**
- * Sidebar visibility, width and selected section tab, and outline sidebar visibility and width,
+ * Sidebar visibility, width, selected section tab and expanded folders, and outline sidebar visibility and width,
  * remembered across launches, plus the outline of the shown markdown buffer.
  */
 export const useSidebarStore = create<SidebarStore>()(
@@ -44,13 +47,20 @@ export const useSidebarStore = create<SidebarStore>()(
     (set) => ({
       open: true,
       width: SIDEBAR_DEFAULT_WIDTH,
-      section: "notes",
+      section: "lunarscribe",
+      openFolders: [],
       outlineOpen: true,
       outlineWidth: SIDEBAR_DEFAULT_WIDTH,
       outline: null,
       setOpen: (open) => set({ open }),
       setWidth: (width) => set({ width: clampWidth(width) }),
       setSection: (section) => set({ section }),
+      setFolderOpen: (folder, open) =>
+        set((state) => ({
+          openFolders: open
+            ? [...new Set([...state.openFolders, folder])]
+            : state.openFolders.filter((candidate) => candidate !== folder),
+        })),
       setOutlineOpen: (outlineOpen) => set({ outlineOpen }),
       setOutlineWidth: (outlineWidth) =>
         set({ outlineWidth: clampWidth(outlineWidth) }),
@@ -61,10 +71,18 @@ export const useSidebarStore = create<SidebarStore>()(
     {
       name: "lunarscribe-sidebar",
       // The outline belongs to the mounted editor, so it is never saved.
-      partialize: ({ open, width, section, outlineOpen, outlineWidth }) => ({
+      partialize: ({
         open,
         width,
         section,
+        openFolders,
+        outlineOpen,
+        outlineWidth,
+      }) => ({
+        open,
+        width,
+        section,
+        openFolders,
         outlineOpen,
         outlineWidth,
       }),
@@ -79,12 +97,18 @@ export const useSidebarStore = create<SidebarStore>()(
 
         const width = "width" in persisted ? Number(persisted.width) : null;
 
+        const openFolders =
+          "openFolders" in persisted && Array.isArray(persisted.openFolders)
+            ? persisted.openFolders.map(String)
+            : current.openFolders;
+
         const outlineWidth =
           "outlineWidth" in persisted ? Number(persisted.outlineWidth) : null;
 
         return {
           ...current,
           open: "open" in persisted ? persisted.open !== false : current.open,
+          openFolders,
           outlineOpen:
             "outlineOpen" in persisted
               ? persisted.outlineOpen !== false

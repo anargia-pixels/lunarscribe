@@ -170,12 +170,14 @@ export default function EditorPage() {
         </Alert>
       )}
       {buffer.kind === "drawing" ? (
-        <LazyDrawingEditor
-          key={`${buffer.id}:${buffer.syncRevision}`}
-          scene={buffer.content}
-          theme={theme}
-          onChange={(scene) => setContent(buffer.id, scene)}
-        />
+        <EditorFileDropZone isDrawing>
+          <LazyDrawingEditor
+            key={`${buffer.id}:${buffer.syncRevision}`}
+            scene={buffer.content}
+            theme={theme}
+            onChange={(scene) => setContent(buffer.id, scene)}
+          />
+        </EditorFileDropZone>
       ) : (
         <EditorFileDropZone>
           <MarkdownEditor

@@ -200,7 +200,7 @@ export async function disconnectGithub(folder: string) {
 }
 
 // Saved-file commits
-/** Reject symlinks, nested paths, and files outside the saved-writing scope. */
+/** Reject symlinks, hidden paths, and files outside the saved-writing scope. */
 async function validateTree(git: GitCommand, tree: string) {
   for (const entry of (await git("ls-tree", "-r", "-z", tree)).split("\0")) {
     if (!entry) continue;
@@ -252,7 +252,7 @@ async function commitSavedFiles(
   for (const candidate of names) {
     if (!isSavedFileName(candidate) || local.blockedNames.has(candidate)) {
       throw new Error(
-        `GitHub cannot sync the path ${JSON.stringify(candidate)}. Saved writing must be a regular file directly inside the documents folder.`,
+        `GitHub cannot sync the path ${JSON.stringify(candidate)}. Saved writing must be a regular file inside the documents folder.`,
       );
     }
   }
@@ -349,7 +349,7 @@ async function changedNames(
 ) {
   const output =
     before === null
-      ? await git("ls-tree", "--name-only", "-z", after)
+      ? await git("ls-tree", "-r", "--name-only", "-z", after)
       : await git("diff", "--no-renames", "--name-only", "-z", before, after);
 
   return output.split("\0").filter(Boolean);

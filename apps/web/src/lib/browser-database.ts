@@ -5,6 +5,9 @@ export type SavedFileRecord = {
   modifiedAt: number;
 };
 
+/** A saved folder, kept so empty folders survive; files name their folders in their paths. */
+export type SavedFolderRecord = { name: string };
+
 /** An external file the browser granted access to; the handle survives reloads. */
 export type ExternalFileRecord = {
   id: string;
@@ -12,16 +15,17 @@ export type ExternalFileRecord = {
   handle: FileSystemFileHandle;
 };
 
-type StoreName = "files" | "external-files";
+type StoreName = "files" | "folders" | "external-files";
 
 type StoreRecords = {
   files: SavedFileRecord;
+  folders: SavedFolderRecord;
   "external-files": ExternalFileRecord;
 };
 
 const DATABASE_NAME = "lunarscribe";
 
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 let database: Promise<IDBDatabase> | null = null;
 
@@ -29,9 +33,15 @@ function openDatabase() {
   database ??= new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
 
-    request.addEventListener("upgradeneeded", () => {
-      request.result.createObjectStore("files", { keyPath: "name" });
-      request.result.createObjectStore("external-files", { keyPath: "id" });
+    request.addEventListener("upgradeneeded", (event) => {
+      if (event.oldVersion < 1) {
+        request.result.createObjectStore("files", { keyPath: "name" });
+        request.result.createObjectStore("external-files", { keyPath: "id" });
+      }
+
+      if (event.oldVersion < 2) {
+        request.result.createObjectStore("folders", { keyPath: "name" });
+      }
     });
     request.addEventListener("success", () => resolve(request.result));
     request.addEventListener("error", () =>

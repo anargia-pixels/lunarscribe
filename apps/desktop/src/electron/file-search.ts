@@ -1,12 +1,11 @@
-import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { FileFinder, GrepCursor } from "@ff-labs/fff-node";
 import { app, ipcMain } from "electron";
 
-import { getFileExtension } from "../lib/editor-files";
 import type { FileSearchMatch } from "../lib/editor-files";
+import { listSavedEntries } from "./saved-path";
 
 const MAX_RESULTS = 10;
 
@@ -144,15 +143,8 @@ export function registerFileSearch(folder: string) {
       });
 
       const fileFinder = await finderReady;
-      const entries = await readdir(folder, { withFileTypes: true });
-      const savedNames = new Set<string>();
-
-      for (const entry of entries) {
-        // Saved files are flat; exclude subfolders and symlinks to external files.
-        if (entry.isFile() && getFileExtension(entry.name) !== null) {
-          savedNames.add(entry.name);
-        }
-      }
+      // Paths relative to the folder, the same form fff reports.
+      const savedNames = new Set((await listSavedEntries(folder)).files);
 
       const searchQuery = query.trim();
 

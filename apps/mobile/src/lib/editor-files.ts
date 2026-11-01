@@ -1,3 +1,5 @@
+import { baseNameOf } from "@lunarscribe/utils/saved-paths";
+
 import type { EditorKind } from "@/lib/editor-types";
 
 /** Default file extensions for new buffers. */
@@ -32,9 +34,11 @@ export function kindOf(fileName: string): EditorKind {
     : "markdown";
 }
 
-/** A file's name without its extension, which is its buffer title. */
+/** A file's name without its folders or extension, which is its buffer title. */
 export function stemOf(fileName: string) {
-  return fileName.slice(0, fileName.lastIndexOf("."));
+  const name = baseNameOf(fileName);
+
+  return name.slice(0, name.lastIndexOf("."));
 }
 
 /** Buffer titles are snake_case: lowercase, with whitespace and slashes turned into `_`. */

@@ -10,6 +10,7 @@ import {
   Download,
   FilePlus,
   FolderOpen,
+  FolderPlus,
   Loader2,
   PenTool,
   RotateCw,
@@ -74,6 +75,7 @@ export function AppSidebarHeader({
   onNewNote,
   onOpenFile,
   onNewDrawing,
+  onNewFolder,
   renderSettings,
   onSearch,
   onToggleTheme,
@@ -84,6 +86,7 @@ export function AppSidebarHeader({
   onNewNote: () => void;
   onOpenFile?: () => void;
   onNewDrawing: () => void;
+  onNewFolder: () => void;
   renderSettings: (trigger: ReactNode) => ReactNode;
   onSearch: () => void;
   onToggleTheme: (origin: ThemeRevealOrigin) => void;
@@ -137,6 +140,16 @@ export function AppSidebarHeader({
                 onClick={onNewDrawing}
               >
                 <PenTool />
+              </Button>
+            </Hint>
+            <Hint label="New folder" side="bottom">
+              <Button
+                variant="fluid"
+                size="icon-sm"
+                aria-label="New folder"
+                onClick={onNewFolder}
+              >
+                <FolderPlus />
               </Button>
             </Hint>
             {renderSettings(

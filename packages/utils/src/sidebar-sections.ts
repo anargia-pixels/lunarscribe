@@ -1,11 +1,10 @@
-/** The sidebar's section labels, short tab labels and the kinds of files each section contains. */
+/** The sidebar's tabs: saved files in the lunarscribe folder, and tracked external files. */
 export const FILE_SECTIONS = [
-  { section: "notes", label: "Notes", shortLabel: "Notes", kind: "markdown" },
   {
-    section: "drawings",
-    label: "Drawings",
-    shortLabel: "Drawings",
-    kind: "drawing",
+    section: "lunarscribe",
+    label: "Lunarscribe",
+    shortLabel: "Lunarscribe",
+    kind: "saved",
   },
   {
     section: "external-files",

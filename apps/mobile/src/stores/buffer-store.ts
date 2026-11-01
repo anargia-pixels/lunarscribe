@@ -19,7 +19,7 @@ import {
   toBufferTitle,
 } from "@/lib/editor-files";
 import type { EditorKind } from "@/lib/editor-types";
-import { forceSyncFile } from "@/lib/sync/sync-service";
+import { forcePullFile, forceSyncFile } from "@/lib/sync/sync-service";
 import type { SyncedFileChange } from "@/lib/sync/sync-types";
 
 // Types
@@ -66,6 +66,8 @@ type BufferStore = {
   deleteFolder: (path: string) => Promise<void>;
   /** Overwrites the remote copy with the saved file, after writing pending edits. */
   forceSyncFile: (name: string) => Promise<void>;
+  /** Replaces the saved file and its buffer with the remote copy, discarding pending edits. */
+  forcePullFile: (name: string) => Promise<void>;
   /**
    * Reloads buffers whose files sync pulled. Returns the names it skipped because their
    * buffers have pending edits.
@@ -424,6 +426,42 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
         findBuffer((buffer) => buffer.id === open.id)?.fileName ?? name,
       );
     });
+  },
+
+  forcePullFile: async (name) => {
+    const open = findBuffer((buffer) => buffer.fileName === name);
+
+    if (!open) {
+      await forcePullFile(name);
+      get().refreshFiles();
+
+      return;
+    }
+
+    // Hold the write queue, so no pending edit is saved over the pulled copy.
+    discardSaveTimer(open.id);
+    await queueBufferWrite(open.id, async () => {
+      const change = await forcePullFile(
+        findBuffer((buffer) => buffer.id === open.id)?.fileName ?? name,
+      );
+
+      const content = change.after;
+
+      if (content === null) {
+        closeBuffer(open.id);
+
+        return;
+      }
+
+      discardSaveTimer(open.id);
+      updateBuffer(open.id, (current) => ({
+        title: stemOf(change.name),
+        content,
+        savedContent: content,
+        syncRevision: current.syncRevision + 1,
+      }));
+    });
+    get().refreshFiles();
   },
 
   applySyncedFiles: (changes) => {

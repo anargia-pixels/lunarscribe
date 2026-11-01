@@ -265,24 +265,7 @@ export async function applySyncPulls(
       continue;
     }
 
-    if (change.content === null) {
-      await rm(path, { force: true });
-    } else {
-      const temporaryPath = join(folder, `.sync-${crypto.randomUUID()}`);
-
-      try {
-        await mkdir(dirname(path), { recursive: true });
-        await writeFile(temporaryPath, change.content, {
-          flag: "wx",
-          mode: 0o600,
-        });
-        const modifiedAt = new Date(change.modifiedAt);
-        await utimes(temporaryPath, modifiedAt, modifiedAt);
-        await rename(temporaryPath, path);
-      } finally {
-        await rm(temporaryPath, { force: true });
-      }
-    }
+    await writeSavedFile(folder, change);
 
     const applied = { name: change.name, before, after: change.content };
     changes.push(applied);
@@ -291,6 +274,45 @@ export async function applySyncPulls(
   }
 
   return changes;
+}
+
+/** Write a pulled file through a temporary copy, or remove it when its content is null. */
+export async function writeSavedFile(folder: string, change: RemoteChange) {
+  const path = join(folder, change.name);
+
+  if (change.content === null) {
+    await rm(path, { force: true });
+
+    return;
+  }
+
+  const temporaryPath = join(folder, `.sync-${crypto.randomUUID()}`);
+
+  try {
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(temporaryPath, change.content, {
+      flag: "wx",
+      mode: 0o600,
+    });
+    const modifiedAt = new Date(change.modifiedAt);
+    await utimes(temporaryPath, modifiedAt, modifiedAt);
+    await rename(temporaryPath, path);
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
+}
+
+/** The saved file's text, or null when it does not exist. */
+export async function readSavedFile(folder: string, name: string) {
+  try {
+    return await readFile(join(folder, name), "utf8");
+  } catch (cause) {
+    if (cause instanceof Error && "code" in cause && cause.code === "ENOENT") {
+      return null;
+    }
+
+    throw cause;
+  }
 }
 
 /** Return disk changes so clean buffers can reload after a Git merge. */

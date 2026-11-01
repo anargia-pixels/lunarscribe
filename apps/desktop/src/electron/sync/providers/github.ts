@@ -1,5 +1,12 @@
 import { execFile } from "node:child_process";
-import { lstat, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
@@ -518,6 +525,47 @@ export async function forceWriteGithub(
 
       return;
     }
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+}
+
+/** The remote copy of one file, or null when the remote has none; local history is untouched. */
+export async function readGithubFile(
+  folder: string,
+  account: string,
+  name: string,
+  queue: ReturnType<typeof createOperationQueue>,
+) {
+  const temporary = await mkdtemp(join(tmpdir(), "lunarscribe-pull-"));
+
+  try {
+    const git = createGitCommand(folder, account, join(temporary, "index"));
+    await queue(folder, () => initializeRepository(folder, account, git));
+    const { remote } = await fetchGithubRemote(folder, account, git);
+
+    if (!remote) {
+      return null;
+    }
+
+    const entry = await git("ls-tree", remote, "--", name);
+
+    if (!entry) {
+      return null;
+    }
+
+    if (!/^100(?:644|755) blob /u.test(entry)) {
+      throw new Error(
+        "GitHub has a folder or link at this path, so it cannot replace the local copy.",
+      );
+    }
+
+    // Check out through a private index: command output loses trailing newlines.
+    const exported = join(temporary, "files");
+    await git("read-tree", remote);
+    await git("checkout-index", `--prefix=${exported}/`, "--", name);
+
+    return await readFile(join(exported, name), "utf8");
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

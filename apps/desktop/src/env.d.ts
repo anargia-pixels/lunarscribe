@@ -19,6 +19,10 @@ interface Window {
       name: string | null,
     ) => Promise<import("./lib/sync").SyncResult>;
     forceSyncFile: (name: string) => Promise<import("./lib/sync").SyncResult>;
+    /** Replaces the saved file with the remote copy and returns the change. */
+    forcePullFile: (
+      name: string,
+    ) => Promise<import("./lib/sync").SyncedFileChange>;
     cancelSyncSignIn: () => void;
     protectSyncFiles: (names: string[]) => void;
     /** Starts the one sync that runs when the app opens; later calls do nothing. */

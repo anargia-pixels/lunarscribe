@@ -15,6 +15,7 @@ import {
   SidebarMenuItem,
 } from "@lunarscribe/components/ui/sidebar";
 import {
+  CloudDownload,
   CloudUpload,
   Copy,
   Download,
@@ -65,6 +66,7 @@ export function SidebarFileItem({
   isExporting,
   canForceSync,
   onForceSync,
+  onForcePull,
   onDelete,
 }: {
   name: string;
@@ -90,6 +92,8 @@ export function SidebarFileItem({
   isExporting: boolean;
   canForceSync: boolean;
   onForceSync?: () => void;
+  /** Replaces the local copy with the remote one; shares `canForceSync`. */
+  onForcePull?: () => void;
   onDelete: () => void;
 }) {
   const isMenuOpen = menu !== null;
@@ -185,6 +189,12 @@ export function SidebarFileItem({
           <ContextMenuItem disabled={!canForceSync} onClick={onForceSync}>
             <CloudUpload />
             Force changes to remote
+          </ContextMenuItem>
+        )}
+        {onForcePull && (
+          <ContextMenuItem disabled={!canForceSync} onClick={onForcePull}>
+            <CloudDownload />
+            Force changes from remote
           </ContextMenuItem>
         )}
         <ContextMenuItem variant="destructive" onClick={onDelete}>

@@ -64,6 +64,8 @@ export type BufferStore = {
   setContent: (id: string, content: string) => void;
   saveActiveBuffer: () => Promise<string>;
   forceSyncFile: (name: string) => Promise<void>;
+  /** Replaces the saved file and its buffer with the remote copy, discarding pending edits. */
+  forcePullFile: (name: string) => Promise<void>;
   openFile: (name: string) => Promise<void>;
   openExternalFiles: (paths: string[]) => Promise<void>;
   /** Starts an untitled buffer that saves into `folder`, `""` for the top level. */
@@ -200,6 +202,7 @@ const FILE_OPERATION_POLICIES = {
   delete: { save: "keep", close: true },
   remove: { save: "flush", close: true },
   forceSync: { save: "flush", close: false },
+  forcePull: { save: "keep", close: false },
   move: { save: "flush", close: false },
 } as const;
 
@@ -419,6 +422,47 @@ export const useBufferStore = create<BufferStore>()(
               : null;
 
             await window.lunarscribe.forceSyncFile(current?.fileName ?? name);
+          },
+        ),
+
+      forcePullFile: (name) =>
+        applyFileOperation(
+          { kind: "saved", name },
+          FILE_OPERATION_POLICIES.forcePull,
+          async (buffer) => {
+            const current = buffer
+              ? get().buffers.find((candidate) => candidate.id === buffer.id)
+              : null;
+
+            const change = await window.lunarscribe.forcePullFile(
+              current?.fileName ?? name,
+            );
+
+            if (!current) {
+              return;
+            }
+
+            if (change.after === null) {
+              closeFileBuffer(current);
+
+              return;
+            }
+
+            const content = change.after;
+            bufferFileWrites.discardSaveTimer(current.id);
+            set((state) => ({
+              buffers: state.buffers.map((candidate) =>
+                candidate.id === current.id
+                  ? {
+                      ...candidate,
+                      title: stemOf(change.name),
+                      content,
+                      savedContent: content,
+                      syncRevision: candidate.syncRevision + 1,
+                    }
+                  : candidate,
+              ),
+            }));
           },
         ),
 

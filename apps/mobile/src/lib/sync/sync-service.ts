@@ -3,6 +3,7 @@ import type { FileSyncProvider } from "@lunarscribe/utils/sync/types";
 import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
 import { AppState } from "react-native";
 
+import { applySyncedFile } from "@/lib/documents-folder";
 import { createDropboxApi } from "@/lib/sync/dropbox";
 import {
   applySyncPulls,
@@ -238,6 +239,50 @@ export function forceSyncFile(name: string) {
     settings.baseline[name] = await contentHash(local.content);
 
     return finishSync({ conflicts: [], pushed: 1, pulled: 0 });
+  });
+}
+
+/** Replaces the saved file with the remote copy, or removes it when the remote has none. */
+export function forcePullFile(name: string) {
+  return runSyncOperation(async (): Promise<SyncedFileChange> => {
+    assertSavedFileName(name);
+
+    const remote = (await createCloudProvider().read(name)).get(name) ?? null;
+
+    if (remote?.blocked) {
+      throw new Error(
+        "The remote copy is not a regular saved file, so it cannot replace the local copy.",
+      );
+    }
+
+    const before =
+      (await readLocalSyncFiles(settings.pulledTimes)).get(name) ?? null;
+
+    const fileTime = await applySyncedFile(
+      name,
+      before,
+      remote?.content ?? null,
+    );
+
+    if (fileTime === null) {
+      throw new Error("The saved file changed while pulling. Retry.");
+    }
+
+    if (remote) {
+      settings.baseline[name] = await contentHash(remote.content);
+      settings.pulledTimes[name] = { fileTime, modifiedAt: remote.modifiedAt };
+    } else {
+      delete settings.baseline[name];
+      delete settings.pulledTimes[name];
+    }
+
+    await finishSync({ conflicts: [], pushed: 0, pulled: 1 });
+
+    return {
+      name,
+      before: before?.content ?? null,
+      after: remote?.content ?? null,
+    };
   });
 }
 

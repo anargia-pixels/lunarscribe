@@ -104,6 +104,7 @@ export function AppSidebar() {
   const renameFolder = useBufferStore((state) => state.renameFolder);
   const deleteFolder = useBufferStore((state) => state.deleteFolder);
   const forceSyncFile = useBufferStore((state) => state.forceSyncFile);
+  const forcePullFile = useBufferStore((state) => state.forcePullFile);
 
   const removeExternalFile = useBufferStore(
     (state) => state.removeExternalFile,
@@ -264,7 +265,11 @@ export function AppSidebar() {
     }
   }
 
-  async function forceSyncTarget(target: FileTarget) {
+  /** Overwrites the remote copy with the local one, or the local copy with the remote one. */
+  async function forceSyncTarget(
+    target: FileTarget,
+    direction: "push" | "pull",
+  ) {
     if (target.kind !== "saved" || isForcingSync) {
       return;
     }
@@ -274,15 +279,27 @@ export function AppSidebar() {
     try {
       await runFileAction(
         async () => {
-          await forceSyncFile(target.name);
+          if (direction === "push") {
+            await forceSyncFile(target.name);
+          } else {
+            await forcePullFile(target.name);
+          }
+
           toast.add({
             type: "success",
-            title: "Remote copy replaced",
+            title:
+              direction === "push"
+                ? "Remote copy replaced"
+                : "Local copy replaced",
             description: <code>{target.name}</code>,
           });
         },
-        "Unable to force changes to remote",
-        "The remote copy could not be replaced.",
+        direction === "push"
+          ? "Unable to force changes to remote"
+          : "Unable to force changes from remote",
+        direction === "push"
+          ? "The remote copy could not be replaced."
+          : "The local copy could not be replaced.",
       );
     } finally {
       setIsForcingSync(false);
@@ -391,7 +408,12 @@ export function AppSidebar() {
         canForceSync={canForceSync && !isForcingSync}
         onForceSync={
           target.kind === "saved"
-            ? () => void forceSyncTarget(target)
+            ? () => void forceSyncTarget(target, "push")
+            : undefined
+        }
+        onForcePull={
+          target.kind === "saved"
+            ? () => void forceSyncTarget(target, "pull")
             : undefined
         }
         onDelete={() => deleteTarget(target)}

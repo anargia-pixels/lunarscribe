@@ -113,6 +113,7 @@ export default function FilesScreen() {
   const renameFolder = useBufferStore((state) => state.renameFolder);
   const deleteFolder = useBufferStore((state) => state.deleteFolder);
   const forceSyncFile = useBufferStore((state) => state.forceSyncFile);
+  const forcePullFile = useBufferStore((state) => state.forcePullFile);
   const isSyncConnected = useSyncStore((state) => state.provider !== null);
   const activeFileName = useActiveBuffer()?.fileName ?? null;
   const matches = useFileSearch(query);
@@ -195,6 +196,14 @@ export default function FilesScreen() {
           isSyncConnected
             ? () =>
                 forceSyncFile(node.path).catch((error) =>
+                  reportFileError(node.path, String(error)),
+                )
+            : undefined
+        }
+        onForcePull={
+          isSyncConnected
+            ? () =>
+                forcePullFile(node.path).catch((error) =>
                   reportFileError(node.path, String(error)),
                 )
             : undefined

@@ -15,6 +15,7 @@ export function FileListItem({
   onMove,
   onDelete,
   onForceSync,
+  onForcePull,
 }: {
   name: string;
   /** A matching line, shown under the title in search results. */
@@ -27,6 +28,8 @@ export function FileListItem({
   onDelete: () => void;
   /** Overwrites the remote copy; absent while sync is off. */
   onForceSync?: () => void;
+  /** Replaces the local copy with the remote one; absent while sync is off. */
+  onForcePull?: () => void;
 }) {
   const foreground = useThemeColor("foreground");
 
@@ -71,6 +74,11 @@ export function FileListItem({
               {onForceSync && (
                 <Menu.Item onPress={onForceSync}>
                   <Menu.ItemTitle>Force changes to remote</Menu.ItemTitle>
+                </Menu.Item>
+              )}
+              {onForcePull && (
+                <Menu.Item onPress={onForcePull}>
+                  <Menu.ItemTitle>Force changes from remote</Menu.ItemTitle>
                 </Menu.Item>
               )}
               <Menu.Item variant="danger" onPress={onDelete}>

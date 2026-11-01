@@ -6,8 +6,14 @@ import type { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import type { FileSyncProvider } from "@lunarscribe/utils/sync/types";
 import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
 import { app, BrowserWindow, ipcMain } from "electron";
+import type { WebContents } from "electron";
 
-import type { SyncProvider, SyncResult, SyncStatus } from "../../lib/sync";
+import type {
+  SyncProvider,
+  SyncResult,
+  SyncStatus,
+  SyncedFileChange,
+} from "../../lib/sync";
 import { SYNC_PROVIDERS } from "../../lib/sync";
 import { refreshTokens, revokeTokens, signIn } from "./auth/oauth";
 import type { OAuthProvider } from "./auth/oauth";
@@ -17,12 +23,15 @@ import {
   isSavedFileName,
   planSync,
   readLocalSyncFiles,
+  readSavedFile,
+  writeSavedFile,
 } from "./files";
 import { createDropboxApi } from "./providers/dropbox";
 import {
   connectGithub,
   disconnectGithub,
   forceWriteGithub,
+  readGithubFile,
   syncGithub,
 } from "./providers/github";
 import { createGoogleDriveApi } from "./providers/google-drive";
@@ -32,10 +41,12 @@ import { createEmptySettings, createSyncSettings } from "./settings";
 // Background schedule
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
-/** Send public sync state and file changes to every open window. */
-function broadcast<T>(channel: string, payload: T) {
+/** Send public sync state and file changes to every open window, or all but `except`. */
+function broadcast<T>(channel: string, payload: T, except?: WebContents) {
   for (const window of BrowserWindow.getAllWindows()) {
-    window.webContents.send(channel, payload);
+    if (window.webContents !== except) {
+      window.webContents.send(channel, payload);
+    }
   }
 }
 
@@ -277,6 +288,70 @@ export function registerSync(
       broadcast("sync:result", result);
 
       return result;
+    }),
+  );
+  // Replace one local file with the remote copy, or remove it when the remote has none.
+  ipcMain.handle("sync:force-pull", (event, name: string) =>
+    runSyncOperation(async (): Promise<SyncedFileChange> => {
+      if (!isSavedFileName(name)) {
+        throw new Error("Only saved markdown and drawings can be synced.");
+      }
+
+      let remote: { content: string; modifiedAt: number } | null;
+
+      if (settings.provider === "github" && settings.account) {
+        const content = await readGithubFile(
+          folder,
+          settings.account,
+          name,
+          queue,
+        );
+
+        remote = content === null ? null : { content, modifiedAt: Date.now() };
+      } else {
+        const file = (await createCloudProvider().read(name)).get(name);
+
+        if (file?.blocked) {
+          throw new Error(
+            "The remote copy is not a regular saved file, so it cannot replace the local copy.",
+          );
+        }
+
+        remote = file ?? null;
+      }
+
+      const change = await queue(folder, async () => {
+        const before = await readSavedFile(folder, name);
+
+        await writeSavedFile(
+          folder,
+          remote ? { name, ...remote } : { name, content: null },
+        );
+
+        return { name, before, after: remote?.content ?? null };
+      });
+
+      if (settings.provider !== "github") {
+        if (remote) {
+          Object.defineProperty(settings.baseline, name, {
+            value: contentHash(remote.content),
+            enumerable: true,
+            configurable: true,
+            writable: true,
+          });
+        } else {
+          delete settings.baseline[name];
+        }
+      }
+
+      const result = { conflicts: [], pushed: 0, pulled: 1 };
+      settings.lastSyncedAt = new Date().toISOString();
+      await persistence.save(settings);
+      // The requesting window applies the change itself, discarding pending edits.
+      broadcast("sync:files", [change], event.sender);
+      broadcast("sync:result", result);
+
+      return change;
     }),
   );
   ipcMain.handle("sync:connect", async (_event, selected: SyncProvider) => {

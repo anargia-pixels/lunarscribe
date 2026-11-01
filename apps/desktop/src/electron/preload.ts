@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     ipcRenderer.invoke("sync:run", name),
   forceSyncFile: (name: string): Promise<SyncResult> =>
     ipcRenderer.invoke("sync:force", name),
+  forcePullFile: (name: string): Promise<SyncedFileChange> =>
+    ipcRenderer.invoke("sync:force-pull", name),
   startupSync: () => ipcRenderer.send("sync:startup"),
   cancelSyncSignIn: () => ipcRenderer.send("sync:cancel"),
   protectSyncFiles: (names: string[]) =>

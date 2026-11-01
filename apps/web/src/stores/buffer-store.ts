@@ -26,7 +26,7 @@ import {
 } from "@/lib/external-files";
 import type { OpenedExternalFile } from "@/lib/external-files";
 import * as savedFiles from "@/lib/saved-files";
-import { forceSyncFile } from "@/lib/sync/sync-service";
+import { forcePullFile, forceSyncFile } from "@/lib/sync/sync-service";
 import type { SyncedFileChange } from "@/lib/sync/sync-types";
 import { useFileAccessStore } from "@/stores/file-access-store";
 import { createBufferFileWrites } from "@/stores/file-writes";
@@ -69,6 +69,8 @@ export type BufferStore = {
   setContent: (id: string, content: string) => void;
   saveActiveBuffer: () => Promise<string>;
   forceSyncFile: (name: string) => Promise<void>;
+  /** Replaces the saved file and its buffer with the remote copy, discarding pending edits. */
+  forcePullFile: (name: string) => Promise<void>;
   openFile: (name: string) => Promise<void>;
   openExternalFile: (id: string) => Promise<void>;
   /** Opens picked, dropped, or launched files; without file access they become saved notes. */
@@ -210,6 +212,7 @@ const FILE_OPERATION_POLICIES = {
   delete: { save: "keep", close: true },
   remove: { save: "flush", close: true },
   forceSync: { save: "flush", close: false },
+  forcePull: { save: "keep", close: false },
   move: { save: "flush", close: false },
 } as const;
 
@@ -388,6 +391,45 @@ export const useBufferStore = create<BufferStore>()(
               : null;
 
             await forceSyncFile(current?.fileName ?? name);
+          },
+        ),
+
+      forcePullFile: (name) =>
+        applyFileOperation(
+          { kind: "saved", name },
+          FILE_OPERATION_POLICIES.forcePull,
+          async (buffer) => {
+            const current = buffer
+              ? get().buffers.find((candidate) => candidate.id === buffer.id)
+              : null;
+
+            const change = await forcePullFile(current?.fileName ?? name);
+
+            if (!current) {
+              return;
+            }
+
+            if (change.after === null) {
+              closeFileBuffer(current);
+
+              return;
+            }
+
+            const content = change.after;
+            bufferFileWrites.discardSaveTimer(current.id);
+            set((state) => ({
+              buffers: state.buffers.map((candidate) =>
+                candidate.id === current.id
+                  ? {
+                      ...candidate,
+                      title: stemOf(change.name),
+                      content,
+                      savedContent: content,
+                      syncRevision: candidate.syncRevision + 1,
+                    }
+                  : candidate,
+              ),
+            }));
           },
         ),
 

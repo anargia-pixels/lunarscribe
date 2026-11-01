@@ -2,6 +2,7 @@ import { errorMessage } from "@lunarscribe/utils/error-message";
 import type { FileSyncProvider } from "@lunarscribe/utils/sync/types";
 import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
 
+import { applySyncedFile } from "@/lib/saved-files";
 import { createDropboxApi } from "@/lib/sync/dropbox";
 import {
   applySyncPulls,
@@ -324,6 +325,62 @@ export function forceSyncFile(name: string) {
     });
 
     return finishSync({ conflicts: [], pushed: 1, pulled: 0 });
+  });
+}
+
+/**
+ * Replaces the saved file with the remote copy, or removes it when the remote has none.
+ * Other tabs get the change; this tab's buffers apply the returned change themselves.
+ */
+export function forcePullFile(name: string) {
+  return runSyncOperation(async (): Promise<SyncedFileChange> => {
+    assertSavedFileName(name);
+
+    const remote = (await createCloudProvider().read(name)).get(name) ?? null;
+
+    if (remote?.blocked) {
+      throw new Error(
+        "The remote copy is not a regular saved file, so it cannot replace the local copy.",
+      );
+    }
+
+    const before = (await readLocalSyncFiles()).get(name) ?? null;
+
+    const isApplied = await applySyncedFile(
+      name,
+      before,
+      remote?.content ?? null,
+      remote?.modifiedAt ?? 0,
+    );
+
+    if (!isApplied) {
+      throw new Error("The saved file changed while pulling. Retry.");
+    }
+
+    if (remote) {
+      Object.defineProperty(settings.baseline, name, {
+        value: await contentHash(remote.content),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    } else {
+      delete settings.baseline[name];
+    }
+
+    const change = {
+      name,
+      before: before?.content ?? null,
+      after: remote?.content ?? null,
+    };
+
+    channel.postMessage({
+      type: "files",
+      changes: [change],
+    } satisfies TabMessage);
+    finishSync({ conflicts: [], pushed: 0, pulled: 1 });
+
+    return change;
   });
 }
 

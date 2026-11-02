@@ -66,7 +66,7 @@ In scope:
 - The update server on Cloudflare Workers (`workers.dev` subdomain, free plan).
 - File storage on GitHub releases.
 - Changes to `.github/workflows/release.yml` for the three tag types.
-- Changes to `docs/002-release-guide.md`, `GLOSSARY.md` and `privacy-policy.md`.
+- Changes to `RELEASE.md`, `GLOSSARY.md` and `privacy-policy.md`.
 
 Out of scope:
 
@@ -796,7 +796,7 @@ older release has no effect on devices that already have the newer update.
 To roll back:
 
 1. Revert the bad commit on `main`.
-2. Bump the version in the three version files, as `docs/002-release-guide.md` describes.
+2. Bump the version in the three version files, as `RELEASE.md` describes.
 3. Push a new `+mobile-ota` tag.
 
 To stop new downloads at once (pause):
@@ -814,9 +814,9 @@ runtime does not change `paused`.
 
 ## Docs changes
 
-- `docs/002-release-guide.md`: add the `+mobile-ota` row to the release type table. Add
-  the rollback and pause steps. State that a `+mobile-ota` release fails when the native
-  code changed since the last `+mobile` release.
+- `RELEASE.md`: add the `+mobile-ota` row to the release type table. Add the rollback and
+  pause steps. State that a `+mobile-ota` release fails when the native code changed since
+  the last `+mobile` release.
 - `GLOSSARY.md`: add the terms from [Terms](#terms).
 - `privacy-policy.md`: the summary says "Lunarscribe has no server". Change it to say that
   the mobile app asks the update server for new app code on each launch. The request

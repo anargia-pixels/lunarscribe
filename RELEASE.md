@@ -6,10 +6,10 @@ after the version tag is pushed. A push to `main` alone does not start a release
 
 ## 1. Select the version
 
-Read [AGENTS.md](../AGENTS.md), [GLOSSARY.md](../GLOSSARY.md), the
-[desktop package](../apps/desktop/package.json), the
-[mobile package](../apps/mobile/package.json), and the
-[release workflow](../.github/workflows/release.yml). Check `git status` and preserve
+Read [AGENTS.md](AGENTS.md), [GLOSSARY.md](GLOSSARY.md), the
+[desktop package](apps/desktop/package.json), the
+[mobile package](apps/mobile/package.json), and the
+[release workflow](.github/workflows/release.yml). Check `git status` and preserve
 unrelated changes. Fetch tags and list the released versions:
 
 ```sh
@@ -153,7 +153,7 @@ draft and use everyday language.
 
 The curl installer downloads the latest release by default. Its update replaces the
 application folder and preserves the user data folder. Users update with the install
-command in the [README](../readme.md).
+command in the [README](readme.md).
 
 This step is complete when the run passes, all expected assets are published, and the
 release notes match the prepared draft. Report the version, release URL, and workflow

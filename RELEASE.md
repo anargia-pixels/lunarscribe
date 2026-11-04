@@ -85,7 +85,10 @@ The app release version belongs to `apps/desktop/package.json` and
 versions do not need to change for an app release.
 
 GitHub Actions runs the checks again, builds the project, and packages Linux x86_64 and
-macOS Apple Silicon. For a `+mobile` tag, it also builds the Android APK. Use this
+macOS Apple Silicon. For a `+mobile` tag, it also builds the Android APK. Each package job
+publishes its asset to the GitHub release as soon as it finishes, so a slow or failed
+platform does not hold back the others; `.github/scripts/publish-asset.sh` creates the
+release on the first upload and keeps `sha256sums.txt` listing every asset. Use this
 automated build for a release. A local package build is only needed when the user requests
 it or when diagnosing a packaging failure.
 
@@ -134,9 +137,10 @@ gh run watch RUN_ID --exit-status
 gh release view "$release_tag"
 ```
 
-Replace `RUN_ID` with the selected run ID. Confirm that both build jobs and the publish
-job pass. For a `+mobile` tag, also confirm that the Android job passes. For a desktop
-tag, the workflow skips the Android job. Confirm that the release contains:
+Replace `RUN_ID` with the selected run ID. Confirm that the check job and both build jobs
+pass. For a `+mobile` tag, also confirm that the Android job passes. For a desktop tag,
+the workflow skips the Android job. The release appears after the first build finishes and
+gains each asset as its job finishes. Confirm that the release contains:
 
 - `lunarscribe-linux-x64.zip`
 - `lunarscribe-macos-arm64.dmg`
@@ -144,16 +148,19 @@ tag, the workflow skips the Android job. Confirm that the release contains:
 - `install.sh`
 - `lunarscribe-android-arm64.apk`, for a `+mobile` tag only
 
-After the workflow succeeds, apply the prepared notes directly to the GitHub release with
-`gh release edit "$release_tag" --notes "<release notes>"`, replacing the placeholder with
-the full draft and preserving its Markdown and line breaks. The workflow publishes the
-assets without changing existing release notes; a new release starts with empty notes. Run
-`gh release view "$release_tag"` again and confirm that the published notes match the
-draft and use everyday language.
+Once the release exists, even while a build is still running, apply the prepared notes
+directly to it with `gh release edit "$release_tag" --notes "<release notes>"`, replacing
+the placeholder with the full draft and preserving its Markdown and line breaks. The
+workflow publishes the assets without changing existing release notes; a new release
+starts with empty notes. Run `gh release view "$release_tag"` again and confirm that the
+published notes match the draft and use everyday language.
 
 The curl installer downloads the latest release by default. Its update replaces the
 application folder and preserves the user data folder. Users update with the install
 command in the [README](readme.md).
+
+If one build fails, the release keeps the assets of the builds that passed. Rerun the
+failed job with `gh run rerun RUN_ID --failed`; it adds its asset to the same release.
 
 This step is complete when the run passes, all expected assets are published, and the
 release notes match the prepared draft. Report the version, release URL, and workflow
@@ -172,8 +179,8 @@ gh workflow run release.yml --ref "$release_tag" -f tag="$release_tag"
 Set `release_tag` to the existing tag first. That tag must contain a workflow with
 `workflow_dispatch` support. The `--ref` selects the code to build; the `tag` input
 selects the release to update. Keep them equal when rebuilding the same release. A
-`+mobile` tag rebuilds the Android APK too. The publish job replaces existing assets with
-the same names and preserves the release notes already on GitHub. If the user requests
+`+mobile` tag rebuilds the Android APK too. Each build replaces the existing asset with
+the same name and preserves the release notes already on GitHub. If the user requests
 changes to those notes, apply them directly with `gh release edit --notes` after the
 rebuild succeeds.
 

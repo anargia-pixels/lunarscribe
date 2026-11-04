@@ -12,7 +12,8 @@ on:
         type: string
 
 # A tag such as v0.13.22 releases the desktop app. A tag such as v0.13.22+mobile
-# also builds and publishes the Android APK.
+# also builds and publishes the Android APK. Each build publishes its own asset as soon
+# as it finishes, so a slow or failed platform does not hold back the others.
 env:
   RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
@@ -43,6 +44,7 @@ jobs:
       - run: bun run check-types --filter=desktop...
 
   build:
+    needs: check
     strategy:
       fail-fast: false
       matrix:
@@ -50,11 +52,13 @@ jobs:
           - runner: ubuntu-24.04
             script: package:linux
             asset: lunarscribe-linux-x64.zip
-          - runner: macos-15
+          - runner: macos-latest
             script: package:macos:arm64
             asset: lunarscribe-macos-arm64.dmg
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -72,16 +76,20 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
       - run: bun run ${{ matrix.script }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.asset }}
-          path: apps/desktop/dist/${{ matrix.asset }}
-          if-no-files-found: error
+      - name: Publish the asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run:
+          .github/scripts/publish-asset.sh "apps/desktop/dist/${{ matrix.asset
+          }}"
 
   android:
+    needs: check
     if: endsWith(inputs.tag || github.ref_name, '+mobile')
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    permissions:
+      contents: write
     env:
       ASSET: lunarscribe-android-arm64.apk
     steps:
@@ -122,44 +130,7 @@ jobs:
       - run:
           mv apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           "$ASSET"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.ASSET }}
-          path: ${{ env.ASSET }}
-          if-no-files-found: error
-
-  publish:
-    needs: [check, build, android]
-    # Publish when the Android job passed, or when a desktop-only tag skipped it.
-    if: >
-      !cancelled() && needs.check.result == 'success' && needs.build.result ==
-      'success' && contains(fromJSON('["success", "skipped"]'),
-      needs.android.result)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          path: release
-          merge-multiple: true
-      - name: Create checksums
-        working-directory: release
-        run: sha256sum lunarscribe-* > sha256sums.txt
-      - name: Publish the release
+      - name: Publish the asset
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" release/* install.sh --clobber
-          else
-            gh release create "$RELEASE_TAG" release/* install.sh \
-              --verify-tag --title "Lunarscribe $RELEASE_TAG" --notes ""
-          fi
-          old_asset=$(gh release view "$RELEASE_TAG" --json assets \
-            --jq '.assets[] | select(.name == "lunarscribe-linux-x86_64.AppImage") | .name')
-          if [ -n "$old_asset" ]; then
-            gh release delete-asset "$RELEASE_TAG" "$old_asset" --yes
-          fi
+        run: .github/scripts/publish-asset.sh "$ASSET"

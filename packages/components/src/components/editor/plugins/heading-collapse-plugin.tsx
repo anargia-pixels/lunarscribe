@@ -1,3 +1,6 @@
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+
 import "./heading-collapse-plugin.css";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $isHeadingNode } from "@lexical/rich-text";
@@ -12,7 +15,6 @@ import {
   type LexicalNode,
   type NodeKey,
 } from "lexical";
-import { ChevronDown } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 type Toggle = { key: NodeKey; offset: number; collapsed: boolean };
@@ -287,7 +289,9 @@ export function HeadingCollapsePlugin() {
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => toggle(key)}
       >
-        <ChevronDown
+        <HugeiconsIcon
+          icon={ArrowDown01Icon}
+          strokeWidth={2}
           className={cn(
             "transition-transform duration-200",
             collapsed && "-rotate-90",

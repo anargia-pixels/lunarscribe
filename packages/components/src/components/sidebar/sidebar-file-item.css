@@ -3,6 +3,21 @@
   line-height: 1;
 }
 
+/* The label truncates, so its overflow is hidden; room for descenders keeps "g" and "y" whole. */
+:is([data-sidebar-file-item], [data-sidebar-folder-row])
+  [data-slot="sidebar-menu-button"]
+  > span:last-child {
+  margin-block: -0.15em;
+  padding-block: 0.15em;
+}
+
+/* A quiet marker for external files, smaller than the button's 1rem icons. */
+[data-sidebar-file-item] [data-external-file-icon] {
+  width: 0.75rem;
+  height: 0.75rem;
+  opacity: 0.6;
+}
+
 /* The access time (a folder's file count) keeps clear of the label, then gives way to the action button. */
 :is([data-sidebar-file-item], [data-sidebar-folder-row]):has(
     [data-slot="sidebar-menu-badge"]

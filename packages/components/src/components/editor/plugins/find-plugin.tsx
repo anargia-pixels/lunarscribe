@@ -1,3 +1,11 @@
+import {
+  ArrowDown02Icon,
+  ArrowUp02Icon,
+  Cancel01Icon,
+  CaseSensitiveIcon,
+  WholeWordIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Hint } from "@lunarscribe/components/hint/hint";
 import { Button } from "@lunarscribe/components/ui/button";
@@ -18,7 +26,6 @@ import {
   type LexicalEditor,
   SKIP_DOM_SELECTION_TAG,
 } from "lexical";
-import { ArrowDown, ArrowUp, CaseSensitive, WholeWord, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -292,7 +299,7 @@ export function FindPlugin() {
                       updateSearch(query, pressed, wholeWord)
                     }
                   >
-                    <CaseSensitive />
+                    <HugeiconsIcon icon={CaseSensitiveIcon} strokeWidth={2} />
                   </Toggle>
                 </Hint>
                 <Hint label="Match whole word">
@@ -304,7 +311,7 @@ export function FindPlugin() {
                       updateSearch(query, matchCase, pressed)
                     }
                   >
-                    <WholeWord />
+                    <HugeiconsIcon icon={WholeWordIcon} strokeWidth={2} />
                   </Toggle>
                 </Hint>
                 <output
@@ -325,7 +332,7 @@ export function FindPlugin() {
                     disabled={!matches.length}
                     onClick={() => navigate(-1)}
                   >
-                    <ArrowUp />
+                    <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} />
                   </Button>
                 </Hint>
                 <Hint label="Next match (Enter)">
@@ -336,7 +343,7 @@ export function FindPlugin() {
                     disabled={!matches.length}
                     onClick={() => navigate(1)}
                   >
-                    <ArrowDown />
+                    <HugeiconsIcon icon={ArrowDown02Icon} strokeWidth={2} />
                   </Button>
                 </Hint>
                 <Hint label="Close find (Esc)">
@@ -346,7 +353,7 @@ export function FindPlugin() {
                     aria-label="Close find"
                     onClick={close}
                   >
-                    <X />
+                    <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
                   </Button>
                 </Hint>
               </div>

@@ -1,6 +1,7 @@
+import { Moon02Icon, Sun03Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Hint } from "@lunarscribe/components/hint/hint";
 import { Button } from "@lunarscribe/components/ui/button";
-import { Moon, Sun } from "lucide-react";
 import { useEffect } from "react";
 
 /** Where the dark mode toggle was pressed; the incoming theme is revealed from this point. */
@@ -44,8 +45,16 @@ export function DarkModeToggle({
         aria-label="Toggle theme"
         onClick={(event) => onToggle({ x: event.clientX, y: event.clientY })}
       >
-        <Sun className="scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-        <Moon className="absolute scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+        <HugeiconsIcon
+          icon={Sun03Icon}
+          strokeWidth={2}
+          className="scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90"
+        />
+        <HugeiconsIcon
+          icon={Moon02Icon}
+          strokeWidth={2}
+          className="absolute scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0"
+        />
       </Button>
     </Hint>
   );

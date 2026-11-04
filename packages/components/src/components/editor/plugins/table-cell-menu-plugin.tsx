@@ -1,3 +1,5 @@
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $deleteTableColumnAtSelection,
@@ -34,7 +36,6 @@ import {
   type NodeKey,
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
-import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const ACTIONS = [
@@ -274,7 +275,7 @@ export function TableCellMenuPlugin() {
             />
           }
         >
-          <ChevronDown />
+          <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} />
         </DropdownMenuTrigger>
         <DropdownMenuContent
           finalFocus={() => editor.getRootElement() ?? false}

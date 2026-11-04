@@ -1,3 +1,9 @@
+import {
+  ArrowDown01Icon,
+  Redo02Icon,
+  Undo02Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { $convertToMarkdownString } from "@lexical/markdown";
 import { CheckListPlugin } from "@lexical/react/LexicalCheckListPlugin";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
@@ -27,7 +33,6 @@ import {
   REDO_COMMAND,
   UNDO_COMMAND,
 } from "lexical";
-import { ChevronDown, Redo2, Undo2 } from "lucide-react";
 import { type MouseEvent, useEffect, useState } from "react";
 
 import { createMarkdownConfig } from "./markdown-config";
@@ -99,7 +104,7 @@ function MobileToolbarPlugin() {
             onMouseDown={keepEditorFocus}
             onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
           >
-            <Undo2 />
+            <HugeiconsIcon icon={Undo02Icon} strokeWidth={2} />
           </Button>
           <Button
             variant="ghost"
@@ -109,7 +114,7 @@ function MobileToolbarPlugin() {
             onMouseDown={keepEditorFocus}
             onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
           >
-            <Redo2 />
+            <HugeiconsIcon icon={Redo02Icon} strokeWidth={2} />
           </Button>
           <ToolbarSeparator />
           <div className="hidden @2xl:contents">
@@ -124,7 +129,7 @@ function MobileToolbarPlugin() {
                   editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
                 }
               >
-                <Icon />
+                <HugeiconsIcon icon={Icon} strokeWidth={2} />
               </Toggle>
             ))}
           </div>
@@ -150,7 +155,7 @@ function MobileToolbarPlugin() {
                 onMouseDown={keepEditorFocus}
                 onClick={() => apply(editor)}
               >
-                <Icon />
+                <HugeiconsIcon icon={Icon} strokeWidth={2} />
               </Button>
             ))}
           </div>
@@ -174,7 +179,7 @@ function MobileToolbarPlugin() {
           className="mx-1 shrink-0"
           onClick={() => editor.blur()}
         >
-          <ChevronDown />
+          <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} />
         </Button>
       )}
     </div>

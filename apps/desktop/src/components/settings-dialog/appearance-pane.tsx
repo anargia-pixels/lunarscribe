@@ -1,3 +1,5 @@
+import { RotateLeft01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { HighlightColorPicker } from "@lunarscribe/components/settings-dialog/highlight-color-picker";
 import { SettingsPane } from "@lunarscribe/components/settings-dialog/settings-pane";
 import {
@@ -15,7 +17,6 @@ import {
   SelectValue,
 } from "@lunarscribe/components/ui/select";
 import { Switch } from "@lunarscribe/components/ui/switch";
-import { RotateCcw } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { FontSettings } from "@/components/settings-dialog/font-settings";
@@ -229,7 +230,7 @@ export function AppearancePane() {
         disabled={lightColorTheme === null && darkColorTheme === null}
         onClick={resetColorThemes}
       >
-        <RotateCcw />
+        <HugeiconsIcon icon={RotateLeft01Icon} strokeWidth={2} />
         Reset to defaults
       </Button>
       <FontSettings />

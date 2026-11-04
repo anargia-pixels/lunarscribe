@@ -1,3 +1,5 @@
+import { TextSearchIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useAsyncAction } from "@lunarscribe/components/hooks/use-async-action";
 import { Alert, AlertDescription } from "@lunarscribe/components/ui/alert";
 import { Button } from "@lunarscribe/components/ui/button";
@@ -19,11 +21,62 @@ import {
 import { Kbd, KbdGroup } from "@lunarscribe/components/ui/kbd";
 import { Toggle } from "@lunarscribe/components/ui/toggle";
 import { errorMessage } from "@lunarscribe/utils/error-message";
-import { FileText, PenTool, TextSearch } from "lucide-react";
+import { baseNameOf } from "@lunarscribe/utils/saved-paths";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { SearchHighlight } from "./search-highlight";
 import type { SearchMatchRange } from "./search-highlight";
+
+/** Most matches the dialog lists. */
+const MAX_RESULTS = 10;
+
+/** Tier of matches that only fit loosely; they keep the backend's ranking. */
+const FUZZY_TIER = 2;
+
+/**
+ * How closely a file-name match fits `query`; lower is better. A file name containing it
+ * beats a path containing it, which beats a fuzzy match. Content matches all tie.
+ */
+function matchTier(name: string, query: string, isContentSearch: boolean) {
+  const needle = query.trim().toLowerCase();
+
+  if (isContentSearch || !needle) {
+    return 0;
+  }
+
+  if (baseNameOf(name).toLowerCase().includes(needle)) {
+    return 0;
+  }
+
+  return name.toLowerCase().includes(needle) ? 1 : FUZZY_TIER;
+}
+
+/** Closer matches first; within a tier, except the fuzzy one, the most recently opened. */
+function rankMatches(
+  matches: FileSearchMatch[],
+  query: string,
+  isContentSearch: boolean,
+  lastOpenedAt: (name: string) => number | undefined,
+) {
+  const openedAt = (match: FileSearchMatch) => lastOpenedAt(match.name) ?? 0;
+
+  return matches
+    .map((match) => ({
+      match,
+      tier: matchTier(match.name, query, isContentSearch),
+    }))
+    .toSorted((first, second) => {
+      if (first.tier !== second.tier) {
+        return first.tier - second.tier;
+      }
+
+      return first.tier === FUZZY_TIER
+        ? 0
+        : openedAt(second.match) - openedAt(first.match);
+    })
+    .slice(0, MAX_RESULTS)
+    .map(({ match }) => match);
+}
 
 /** A saved file returned by file-name or content search. */
 export type FileSearchMatch = {
@@ -43,7 +96,9 @@ type FileSearchState = {
 
 /**
  * Searches saved files and opens the picked match. Each app supplies its search backend,
- * a subscription to saved file changes, and the copy describing where files are searched.
+ * a subscription to saved file changes, when each file was last opened, and the copy
+ * describing where files are searched. Closer name matches list first; within a tier the
+ * most recently opened come first, except fuzzy matches, which keep the backend's ranking.
  */
 export function FileSearchDialog({
   open,
@@ -51,7 +106,7 @@ export function FileSearchDialog({
   searchFiles,
   onFilesChanged,
   onOpenFile,
-  isDrawing,
+  lastOpenedAt,
   scopeDescription,
   scopeLabel,
 }: {
@@ -63,7 +118,8 @@ export function FileSearchDialog({
   ) => Promise<FileSearchMatch[]>;
   onFilesChanged: (listener: () => void) => () => void;
   onOpenFile: (name: string) => Promise<void>;
-  isDrawing: (name: string) => boolean;
+  /** Epoch milliseconds the saved file was last opened, if ever. */
+  lastOpenedAt: (name: string) => number | undefined;
   scopeDescription: string;
   scopeLabel: string;
 }) {
@@ -80,7 +136,15 @@ export function FileSearchDialog({
     search.isContentSearch !== isContentSearch ||
     search.revision !== revision;
 
-  const matches = search?.matches ?? [];
+  const matches = search
+    ? rankMatches(
+        search.matches,
+        search.query,
+        search.isContentSearch,
+        lastOpenedAt,
+      )
+    : [];
+
   const searchError = isSearching ? null : search.error;
 
   let emptyMessage = "No matching files";
@@ -175,7 +239,7 @@ export function FileSearchDialog({
                 }
               }}
             >
-              <TextSearch />
+              <HugeiconsIcon icon={TextSearchIcon} strokeWidth={2} />
               Content
             </Toggle>
           </div>
@@ -218,7 +282,6 @@ export function FileSearchDialog({
                     });
                   }}
                 >
-                  {isDrawing(match.name) ? <PenTool /> : <FileText />}
                   <div className="min-w-0 flex-1">
                     <div className="truncate">
                       <SearchHighlight

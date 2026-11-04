@@ -1,3 +1,5 @@
+import { SidebarRightIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type {
   DrawingEditor,
   DrawingEditorProps,
@@ -12,7 +14,6 @@ import {
 import { Button } from "@lunarscribe/components/ui/button";
 import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
-import { PanelRightIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 
@@ -192,7 +193,7 @@ export default function Page() {
                 className="absolute right-3 hidden md:inline-flex"
                 onClick={toggleOutline}
               >
-                <PanelRightIcon />
+                <HugeiconsIcon icon={SidebarRightIcon} strokeWidth={2} />
               </Button>
             </Hint>
           )}

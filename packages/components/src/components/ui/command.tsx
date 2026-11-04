@@ -1,5 +1,7 @@
 "use client";
 
+import { Search01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +15,6 @@ import {
 } from "@lunarscribe/components/ui/input-group";
 import { cn } from "@lunarscribe/utils/cn";
 import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon, CheckIcon } from "lucide-react";
 import * as React from "react";
 
 function Command({
@@ -81,7 +82,11 @@ function CommandInput({
           {...props}
         />
         <InputGroupAddon>
-          <SearchIcon className="size-4 shrink-0 opacity-50" />
+          <HugeiconsIcon
+            icon={Search01Icon}
+            strokeWidth={2}
+            className="size-4 shrink-0 opacity-50"
+          />
         </InputGroupAddon>
       </InputGroup>
     </div>
@@ -155,13 +160,17 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "group/command-item data-selected:bg-muted data-selected:text-foreground data-selected:*:[svg]:text-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "group/command-item data-selected:bg-muted data-selected:text-foreground data-selected:*:[svg]:text-foreground relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
     >
       {children}
-      <CheckIcon className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-[checked=true]/command-item:opacity-100" />
+      <HugeiconsIcon
+        icon={Tick02Icon}
+        strokeWidth={2}
+        className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-[checked=true]/command-item:opacity-100"
+      />
     </CommandPrimitive.Item>
   );
 }

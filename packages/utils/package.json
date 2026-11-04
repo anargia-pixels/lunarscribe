@@ -12,7 +12,6 @@
     "./operation-queue": "./src/operation-queue.ts",
     "./redact-email": "./src/redact-email.ts",
     "./saved-paths": "./src/saved-paths.ts",
-    "./sidebar-sections": "./src/sidebar-sections.ts",
     "./sync/google-drive-tree": "./src/sync/google-drive-tree.ts",
     "./sync/json": "./src/sync/json.ts",
     "./sync/types": "./src/sync/types.ts"

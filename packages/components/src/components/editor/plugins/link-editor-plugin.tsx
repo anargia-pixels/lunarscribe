@@ -1,3 +1,5 @@
+import { PencilEdit01Icon, Unlink01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { createDOMRange } from "@lexical/selection";
 import { mergeRegister } from "@lexical/utils";
@@ -12,7 +14,6 @@ import {
   type LexicalEditor,
   type NodeKey,
 } from "lexical";
-import { Pencil, Unlink } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
@@ -215,7 +216,7 @@ export function LinkEditorPlugin() {
                   setDraft({ ...editor.read($getLinkDraft), key: link.key })
                 }
               >
-                <Pencil />
+                <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} />
               </Button>
             </Hint>
             <Hint label="Remove link">
@@ -226,7 +227,7 @@ export function LinkEditorPlugin() {
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => editor.update($removeLink)}
               >
-                <Unlink />
+                <HugeiconsIcon icon={Unlink01Icon} strokeWidth={2} />
               </Button>
             </Hint>
           </>

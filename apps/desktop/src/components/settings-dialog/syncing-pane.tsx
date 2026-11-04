@@ -1,3 +1,5 @@
+import { RefreshIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { ConfirmationDialog } from "@lunarscribe/components/confirmation-dialog/confirmation-dialog";
 import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
 import { SettingsPane } from "@lunarscribe/components/settings-dialog/settings-pane";
@@ -19,7 +21,6 @@ import { Separator } from "@lunarscribe/components/ui/separator";
 import { Spinner } from "@lunarscribe/components/ui/spinner";
 import { toast } from "@lunarscribe/components/ui/toast";
 import { redactEmail } from "@lunarscribe/utils/redact-email";
-import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 import { SYNC_PROVIDERS } from "@/lib/sync";
@@ -208,7 +209,7 @@ export function SyncingPane() {
                   void sync();
                 }}
               >
-                <RefreshCw />
+                <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
                 {status.busy && !connectStage ? "Syncing…" : "Sync now"}
               </Button>
               <Button

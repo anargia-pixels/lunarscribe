@@ -1,4 +1,10 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
+import {
+  ArrowDown01Icon,
+  Cancel01Icon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@lunarscribe/components/ui/button";
 import {
   InputGroup,
@@ -7,7 +13,6 @@ import {
   InputGroupInput,
 } from "@lunarscribe/components/ui/input-group";
 import { cn } from "@lunarscribe/utils/cn";
-import { ChevronDownIcon, XIcon, CheckIcon } from "lucide-react";
 import * as React from "react";
 
 const Combobox = ComboboxPrimitive.Root;
@@ -28,7 +33,11 @@ function ComboboxTrigger({
       {...props}
     >
       {children}
-      <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4" />
+      <HugeiconsIcon
+        icon={ArrowDown01Icon}
+        strokeWidth={2}
+        className="text-muted-foreground pointer-events-none size-4"
+      />
     </ComboboxPrimitive.Trigger>
   );
 }
@@ -41,7 +50,11 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
       className={cn(className)}
       {...props}
     >
-      <XIcon className="pointer-events-none" />
+      <HugeiconsIcon
+        icon={Cancel01Icon}
+        strokeWidth={2}
+        className="pointer-events-none"
+      />
     </ComboboxPrimitive.Clear>
   );
 }
@@ -151,7 +164,11 @@ function ComboboxItem({
           <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
         }
       >
-        <CheckIcon className="pointer-events-none" />
+        <HugeiconsIcon
+          icon={Tick02Icon}
+          strokeWidth={2}
+          className="pointer-events-none"
+        />
       </ComboboxPrimitive.ItemIndicator>
     </ComboboxPrimitive.Item>
   );
@@ -253,7 +270,11 @@ function ComboboxChip({
           className="-ml-1 opacity-50 hover:opacity-100"
           data-slot="combobox-chip-remove"
         >
-          <XIcon className="pointer-events-none" />
+          <HugeiconsIcon
+            icon={Cancel01Icon}
+            strokeWidth={2}
+            className="pointer-events-none"
+          />
         </ComboboxPrimitive.ChipRemove>
       )}
     </ComboboxPrimitive.Chip>

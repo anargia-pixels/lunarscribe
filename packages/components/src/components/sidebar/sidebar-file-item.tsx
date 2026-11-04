@@ -1,3 +1,18 @@
+import {
+  ArrowUpRight01Icon,
+  Cancel01Icon,
+  CloudDownloadIcon,
+  CloudUploadIcon,
+  Copy01Icon,
+  Delete02Icon,
+  Download01Icon,
+  FileDownloadIcon,
+  Folder01Icon,
+  FolderTransferIcon,
+  MoreHorizontalIcon,
+  PencilEdit01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@lunarscribe/components/ui/button";
 import {
   ContextMenu,
@@ -14,19 +29,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@lunarscribe/components/ui/sidebar";
-import {
-  CloudDownload,
-  CloudUpload,
-  Copy,
-  Download,
-  Ellipsis,
-  FileDown,
-  Folder,
-  FolderInput,
-  Pencil,
-  Trash2,
-  X,
-} from "lucide-react";
 import { useRef } from "react";
 
 import { savedFileDragProps } from "./saved-file-drag";
@@ -105,9 +107,7 @@ export function SidebarFileItem({
       onOpenChange={(open) => onMenuChange(open, menu?.anchor ?? null)}
     >
       <ContextMenuTrigger
-        render={
-          <SidebarMenuItem data-sidebar-file-item className="overflow-clip" />
-        }
+        render={<SidebarMenuItem data-sidebar-file-item />}
         onContextMenu={() => onMenuChange(true, null)}
       >
         <SidebarMenuButton
@@ -117,6 +117,14 @@ export function SidebarFileItem({
           onClick={onOpen}
           {...(dragPath === undefined ? {} : savedFileDragProps(dragPath))}
         >
+          {isExternal && (
+            <HugeiconsIcon
+              icon={ArrowUpRight01Icon}
+              strokeWidth={2}
+              aria-label="External file"
+              data-external-file-icon
+            />
+          )}
           <span>{label}</span>
         </SidebarMenuButton>
         {accessedLabel && <SidebarMenuBadge>{accessedLabel}</SidebarMenuBadge>}
@@ -131,7 +139,7 @@ export function SidebarFileItem({
             onMenuChange(!isMenuOpen, event.currentTarget);
           }}
         >
-          <Ellipsis />
+          <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
         </SidebarMenuAction>
       </ContextMenuTrigger>
       <ContextMenuContent
@@ -139,19 +147,19 @@ export function SidebarFileItem({
         finalFocus={actionRef}
       >
         <ContextMenuItem onClick={onRename}>
-          <Pencil />
+          <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} />
           Rename
         </ContextMenuItem>
         {onCopyPath && (
           <ContextMenuItem onClick={onCopyPath}>
-            <Copy />
-            Copy path
+            <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
+            Copy01Icon path
           </ContextMenuItem>
         )}
         {onMove && moveTargets && moveTargets.length > 0 && (
           <ContextMenuSub>
             <ContextMenuSubTrigger>
-              <FolderInput />
+              <HugeiconsIcon icon={FolderTransferIcon} strokeWidth={2} />
               Move to
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
@@ -160,7 +168,7 @@ export function SidebarFileItem({
                   key={target.folder}
                   onClick={() => onMove(target.folder)}
                 >
-                  <Folder />
+                  <HugeiconsIcon icon={Folder01Icon} strokeWidth={2} />
                   {target.label}
                 </ContextMenuItem>
               ))}
@@ -169,36 +177,40 @@ export function SidebarFileItem({
         )}
         {onDownload && (
           <ContextMenuItem onClick={onDownload}>
-            <Download />
-            Download
+            <HugeiconsIcon icon={Download01Icon} strokeWidth={2} />
+            Download01Icon
           </ContextMenuItem>
         )}
         {canExport && (
           <>
             <ContextMenuItem disabled={isExporting} onClick={onExportPdf}>
-              <FileDown />
+              <HugeiconsIcon icon={FileDownloadIcon} strokeWidth={2} />
               Export as PDF
             </ContextMenuItem>
             <ContextMenuItem disabled={isExporting} onClick={onExportDocx}>
-              <FileDown />
+              <HugeiconsIcon icon={FileDownloadIcon} strokeWidth={2} />
               Export as DOCX
             </ContextMenuItem>
           </>
         )}
         {onForceSync && (
           <ContextMenuItem disabled={!canForceSync} onClick={onForceSync}>
-            <CloudUpload />
+            <HugeiconsIcon icon={CloudUploadIcon} strokeWidth={2} />
             Force changes to remote
           </ContextMenuItem>
         )}
         {onForcePull && (
           <ContextMenuItem disabled={!canForceSync} onClick={onForcePull}>
-            <CloudDownload />
+            <HugeiconsIcon icon={CloudDownloadIcon} strokeWidth={2} />
             Force changes from remote
           </ContextMenuItem>
         )}
         <ContextMenuItem variant="destructive" onClick={onDelete}>
-          {isExternal ? <X /> : <Trash2 />}
+          {isExternal ? (
+            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
+          ) : (
+            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+          )}
           {isExternal ? "Remove" : "Delete"}
         </ContextMenuItem>
       </ContextMenuContent>

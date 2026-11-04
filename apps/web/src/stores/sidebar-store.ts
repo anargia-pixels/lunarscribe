@@ -1,5 +1,3 @@
-import { isSidebarSection } from "@lunarscribe/utils/sidebar-sections";
-import type { SidebarSection } from "@lunarscribe/utils/sidebar-sections";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -20,26 +18,22 @@ function clampWidth(width: number) {
 type SidebarStore = {
   open: boolean;
   width: number;
-  section: SidebarSection;
-  /** Paths of the expanded folders in the Lunarscribe tab. */
+  /** Paths of the expanded folders in the sidebar. */
   openFolders: string[];
   setOpen: (open: boolean) => void;
   setWidth: (width: number) => void;
-  setSection: (section: SidebarSection) => void;
   setFolderOpen: (folder: string, open: boolean) => void;
 };
 
-/** Sidebar visibility, width, selected section tab and expanded folders, remembered across launches. */
+/** Sidebar visibility, width and expanded folders, remembered across launches. */
 export const useSidebarStore = create<SidebarStore>()(
   persist(
     (set) => ({
       open: true,
       width: SIDEBAR_DEFAULT_WIDTH,
-      section: "lunarscribe",
       openFolders: [],
       setOpen: (open) => set({ open }),
       setWidth: (width) => set({ width: clampWidth(width) }),
-      setSection: (section) => set({ section }),
       setFolderOpen: (folder, open) =>
         set((state) => ({
           openFolders: open
@@ -49,14 +43,11 @@ export const useSidebarStore = create<SidebarStore>()(
     }),
     {
       name: "lunarscribe-sidebar",
-      // Saved state may predate a field or hold an unknown section; keep defaults for those.
+      // Saved state may predate a field; keep defaults for those.
       merge: (persisted, current) => {
         if (!(persisted instanceof Object)) {
           return current;
         }
-
-        const section =
-          "section" in persisted ? String(persisted.section) : null;
 
         const width = "width" in persisted ? Number(persisted.width) : null;
 
@@ -73,10 +64,6 @@ export const useSidebarStore = create<SidebarStore>()(
             width !== null && Number.isFinite(width)
               ? clampWidth(width)
               : current.width,
-          section:
-            section !== null && isSidebarSection(section)
-              ? section
-              : current.section,
         };
       },
     },

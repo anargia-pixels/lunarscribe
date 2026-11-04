@@ -1,11 +1,11 @@
 "use client";
 
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { useFluidHover } from "@lunarscribe/components/hooks/use-fluid-hover";
 import { spring } from "@lunarscribe/components/lib/springs";
 import { cn } from "@lunarscribe/utils/cn";
 import { motion, AnimatePresence } from "framer-motion";
-import type { LucideIcon } from "lucide-react";
 import {
   useRef,
   useState,
@@ -485,7 +485,7 @@ interface TabItemProps extends ComponentPropsWithoutRef<
   /** Unique value for this tab. */
   value: string;
   /** Optional leading icon. */
-  icon?: LucideIcon;
+  icon?: IconSvgElement;
   /** Text label. */
   label: string;
   /** @internal Auto-assigned by TabsList. */
@@ -546,7 +546,8 @@ const TabItem = forwardRef<HTMLButtonElement, TabItemProps>(
         {/* Stroke 1.5 → 2 and muted → foreground on hover or selection, over
             the label's 80ms, so icon and text change together. */}
         {Icon && (
-          <Icon
+          <HugeiconsIcon
+            icon={Icon}
             size={sizes.icon}
             strokeWidth={isActive ? 2 : 1.5}
             className={cn(

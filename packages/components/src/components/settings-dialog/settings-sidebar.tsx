@@ -1,4 +1,10 @@
 import {
+  InformationCircleIcon,
+  PaintBoardIcon,
+  RefreshIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -7,7 +13,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@lunarscribe/components/ui/sidebar";
-import { Info, Palette, RefreshCw } from "lucide-react";
 
 export type SettingsSection = "appearances" | "syncing" | "about";
 
@@ -35,7 +40,7 @@ export function SettingsSidebar({
                 isActive={section === "appearances"}
                 onClick={() => onSectionChange("appearances")}
               >
-                <Palette />
+                <HugeiconsIcon icon={PaintBoardIcon} strokeWidth={2} />
                 <span>Appearances</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -44,7 +49,7 @@ export function SettingsSidebar({
                 isActive={section === "syncing"}
                 onClick={() => onSectionChange("syncing")}
               >
-                <RefreshCw />
+                <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
                 <span>Syncing</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -54,7 +59,7 @@ export function SettingsSidebar({
                   isActive={section === "about"}
                   onClick={() => onSectionChange("about")}
                 >
-                  <Info />
+                  <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} />
                   <span>About</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>

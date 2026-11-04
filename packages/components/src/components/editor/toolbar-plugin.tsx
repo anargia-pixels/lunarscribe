@@ -1,3 +1,32 @@
+import {
+  ArrowDown01Icon,
+  CheckListIcon,
+  CodeIcon,
+  CodeSquareIcon,
+  GitForkIcon,
+  Heading01Icon,
+  Heading02Icon,
+  Heading03Icon,
+  LeftToRightListBulletIcon,
+  LeftToRightListNumberIcon,
+  Link01Icon,
+  ParagraphIcon,
+  PlusSignIcon,
+  QuoteDownIcon,
+  Redo02Icon,
+  SigmaIcon,
+  SquareSigmaIcon,
+  Table01Icon,
+  TextBoldIcon,
+  TextFontIcon,
+  TextItalicIcon,
+  TextStrikethroughIcon,
+  TextSubscriptIcon,
+  TextSuperscriptIcon,
+  TextUnderlineIcon,
+  Undo02Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { $createCodeNode } from "@lexical/code";
 import {
   INSERT_CHECK_LIST_COMMAND,
@@ -41,35 +70,6 @@ import {
   type TextFormatType,
   UNDO_COMMAND,
 } from "lexical";
-import {
-  Bold,
-  ChevronDown,
-  Code,
-  GitFork,
-  Heading1,
-  Heading2,
-  Heading3,
-  Italic,
-  Link,
-  List,
-  ListChecks,
-  ListOrdered,
-  type LucideIcon,
-  Pilcrow,
-  Plus,
-  Quote,
-  Redo2,
-  Sigma,
-  SquareCode,
-  SquareSigma,
-  Strikethrough,
-  Subscript,
-  Superscript,
-  Table,
-  Type,
-  Underline,
-  Undo2,
-} from "lucide-react";
 import { type ReactElement, type ReactNode, useEffect, useState } from "react";
 
 import {
@@ -84,67 +84,76 @@ import { INSERT_MERMAID_COMMAND } from "./plugins/mermaid-plugin";
 
 type ToolbarAction = {
   label: string;
-  icon: LucideIcon;
+  icon: IconSvgElement;
   apply: (editor: LexicalEditor) => void;
 };
 
 export const TEXT_FORMATS: {
   format: TextFormatType;
   label: string;
-  icon: LucideIcon;
+  icon: IconSvgElement;
   shortcut?: string;
 }[] = [
-  { format: "bold", label: "Bold", icon: Bold, shortcut: "B" },
-  { format: "italic", label: "Italic", icon: Italic, shortcut: "I" },
-  { format: "underline", label: "Underline", icon: Underline, shortcut: "U" },
-  { format: "strikethrough", label: "Strikethrough", icon: Strikethrough },
-  { format: "superscript", label: "Superscript", icon: Superscript },
-  { format: "subscript", label: "Subscript", icon: Subscript },
-  { format: "code", label: "Inline code", icon: Code },
+  { format: "bold", label: "Bold", icon: TextBoldIcon, shortcut: "B" },
+  { format: "italic", label: "Italic", icon: TextItalicIcon, shortcut: "I" },
+  {
+    format: "underline",
+    label: "Underline",
+    icon: TextUnderlineIcon,
+    shortcut: "U",
+  },
+  {
+    format: "strikethrough",
+    label: "Strikethrough",
+    icon: TextStrikethroughIcon,
+  },
+  { format: "superscript", label: "Superscript", icon: TextSuperscriptIcon },
+  { format: "subscript", label: "Subscript", icon: TextSubscriptIcon },
+  { format: "code", label: "Inline code", icon: CodeIcon },
 ];
 
 /** Block types; lists go through commands so ListPlugin can merge siblings. */
 export const BLOCK_TYPES: ToolbarAction[] = [
   {
     label: "Paragraph",
-    icon: Pilcrow,
+    icon: ParagraphIcon,
     apply: (editor) => setBlock(editor, $createParagraphNode),
   },
   {
     label: "Heading 1",
-    icon: Heading1,
+    icon: Heading01Icon,
     apply: (editor) => setBlock(editor, () => $createHeadingNode("h1")),
   },
   {
     label: "Heading 2",
-    icon: Heading2,
+    icon: Heading02Icon,
     apply: (editor) => setBlock(editor, () => $createHeadingNode("h2")),
   },
   {
     label: "Heading 3",
-    icon: Heading3,
+    icon: Heading03Icon,
     apply: (editor) => setBlock(editor, () => $createHeadingNode("h3")),
   },
   {
     label: "Quote",
-    icon: Quote,
+    icon: QuoteDownIcon,
     apply: (editor) => setBlock(editor, $createQuoteNode),
   },
   {
     label: "Bulleted list",
-    icon: List,
+    icon: LeftToRightListBulletIcon,
     apply: (editor) =>
       editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined),
   },
   {
     label: "Numbered list",
-    icon: ListOrdered,
+    icon: LeftToRightListNumberIcon,
     apply: (editor) =>
       editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined),
   },
   {
     label: "Checkbox list",
-    icon: ListChecks,
+    icon: CheckListIcon,
     apply: (editor) =>
       editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined),
   },
@@ -154,12 +163,12 @@ export const BLOCK_TYPES: ToolbarAction[] = [
 export const INSERTS: ToolbarAction[] = [
   {
     label: "Code block",
-    icon: SquareCode,
+    icon: CodeSquareIcon,
     apply: (editor) => setBlock(editor, $createCodeNode),
   },
   {
     label: "Insert table",
-    icon: Table,
+    icon: Table01Icon,
     apply: (editor) =>
       editor.dispatchCommand(INSERT_TABLE_COMMAND, {
         rows: "3",
@@ -169,17 +178,17 @@ export const INSERTS: ToolbarAction[] = [
   },
   {
     label: "Insert inline math",
-    icon: Sigma,
+    icon: SigmaIcon,
     apply: (editor) => editor.dispatchCommand(INSERT_MATH_COMMAND, true),
   },
   {
     label: "Insert math block",
-    icon: SquareSigma,
+    icon: SquareSigmaIcon,
     apply: (editor) => editor.dispatchCommand(INSERT_MATH_COMMAND, false),
   },
   {
     label: "Insert Mermaid block",
-    icon: GitFork,
+    icon: GitForkIcon,
     apply: (editor) =>
       editor.dispatchCommand(INSERT_MERMAID_COMMAND, undefined),
   },
@@ -269,16 +278,20 @@ function ToolbarMenu({
   children,
 }: ToolbarMenuProps & {
   label: string;
-  icon: LucideIcon;
+  icon: IconSvgElement;
   children: ReactNode;
 }) {
   const [editor] = useLexicalComposerContext();
 
   const trigger = (
     <DropdownMenuTrigger render={button}>
-      <Icon data-icon="inline-start" />
+      <HugeiconsIcon icon={Icon} strokeWidth={2} data-icon="inline-start" />
       {label}
-      <ChevronDown data-icon="inline-end" />
+      <HugeiconsIcon
+        icon={ArrowDown01Icon}
+        strokeWidth={2}
+        data-icon="inline-end"
+      />
     </DropdownMenuTrigger>
   );
 
@@ -303,7 +316,7 @@ export function TextFormatMenu({
   const [editor] = useLexicalComposerContext();
 
   return (
-    <ToolbarMenu label="Format" icon={Type} {...props}>
+    <ToolbarMenu label="Format" icon={TextFontIcon} {...props}>
       {TEXT_FORMATS.map(({ format, label, icon: Icon }) => (
         <DropdownMenuCheckboxItem
           key={format}
@@ -312,7 +325,7 @@ export function TextFormatMenu({
             editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
           }
         >
-          <Icon />
+          <HugeiconsIcon icon={Icon} strokeWidth={2} />
           {label}
         </DropdownMenuCheckboxItem>
       ))}
@@ -325,10 +338,10 @@ export function InsertMenu(props: ToolbarMenuProps) {
   const [editor] = useLexicalComposerContext();
 
   return (
-    <ToolbarMenu label="Insert" icon={Plus} {...props}>
+    <ToolbarMenu label="Insert" icon={PlusSignIcon} {...props}>
       {INSERTIONS.map(({ label, icon: Icon, apply }) => (
         <DropdownMenuItem key={label} onClick={() => apply(editor)}>
-          <Icon />
+          <HugeiconsIcon icon={Icon} strokeWidth={2} />
           {label}
         </DropdownMenuItem>
       ))}
@@ -366,7 +379,7 @@ function LinkButton() {
         <PopoverTrigger
           render={<Button variant="fluid" size="icon-sm" aria-label="Link" />}
         >
-          <Link />
+          <HugeiconsIcon icon={Link01Icon} strokeWidth={2} />
         </PopoverTrigger>
       </Hint>
       <PopoverContent
@@ -416,7 +429,7 @@ export function ToolbarPlugin() {
             disabled={!canUndo}
             onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
           >
-            <Undo2 />
+            <HugeiconsIcon icon={Undo02Icon} strokeWidth={2} />
           </Button>
         </Hint>
         <Hint
@@ -430,7 +443,7 @@ export function ToolbarPlugin() {
             disabled={!canRedo}
             onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
           >
-            <Redo2 />
+            <HugeiconsIcon icon={Redo02Icon} strokeWidth={2} />
           </Button>
         </Hint>
         <ToolbarSeparator />
@@ -450,7 +463,7 @@ export function ToolbarPlugin() {
                   editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
                 }
               >
-                <Icon />
+                <HugeiconsIcon icon={Icon} strokeWidth={2} />
               </Toggle>
             </Hint>
           ))}
@@ -471,7 +484,7 @@ export function ToolbarPlugin() {
                 aria-label={label}
                 onClick={() => apply(editor)}
               >
-                <Icon />
+                <HugeiconsIcon icon={Icon} strokeWidth={2} />
               </Button>
             </Hint>
           ))}

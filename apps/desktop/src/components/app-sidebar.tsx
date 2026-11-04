@@ -12,10 +12,7 @@ import type {
   FileMenuState,
   FileMoveTarget,
 } from "@lunarscribe/components/sidebar/sidebar-file-item";
-import {
-  FILE_SECTION_ICONS,
-  SidebarFileTabs,
-} from "@lunarscribe/components/sidebar/sidebar-file-tabs";
+import { SidebarFileList } from "@lunarscribe/components/sidebar/sidebar-file-list";
 import {
   SidebarFolderTree,
   SidebarSavedFilesDropZone,
@@ -35,10 +32,6 @@ import {
   isInFolder,
 } from "@lunarscribe/utils/saved-paths";
 import type { SavedEntries } from "@lunarscribe/utils/saved-paths";
-import {
-  FILE_SECTIONS,
-  isSidebarSection,
-} from "@lunarscribe/utils/sidebar-sections";
 import { useEffect, useState } from "react";
 
 import { AboutPane } from "@/components/settings-dialog/about-pane";
@@ -51,12 +44,7 @@ import { fileKey, isTextFile } from "@/lib/editor-files";
 import { exportDocx } from "@/lib/export-docx";
 import { exportPdf } from "@/lib/export-pdf";
 import { formatTimeAgo } from "@/lib/relative-time";
-import {
-  kindOf,
-  stemOf,
-  useActiveBuffer,
-  useBufferStore,
-} from "@/stores/buffer-store";
+import { stemOf, useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
 import { useFileAccessStore } from "@/stores/file-access-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSyncStore } from "@/stores/sync-store";
@@ -68,7 +56,7 @@ type FileDialogState =
   | { kind: "rename-folder"; path: string }
   | { kind: "delete-folder"; path: string };
 
-/** Sidebar tabs for saved files, nested in their folders, and tracked external files. */
+/** The sidebar: saved files, nested in their folders, followed by tracked external files. */
 export function AppSidebar() {
   const [entries, setEntries] = useState<SavedEntries>({
     files: [],
@@ -101,8 +89,6 @@ export function AppSidebar() {
     (state) => state.removeExternalFile,
   );
 
-  const activeSection = useSidebarStore((state) => state.section);
-  const setSection = useSidebarStore((state) => state.setSection);
   const openFolders = useSidebarStore((state) => state.openFolders);
   const setFolderOpen = useSidebarStore((state) => state.setFolderOpen);
   const sidebarWidth = useSidebarStore((state) => state.width);
@@ -117,16 +103,9 @@ export function AppSidebar() {
 
   const { files } = entries;
 
-  // Most recently accessed first; files never opened here follow by name.
-  const compareAccess = (first: FileTarget, second: FileTarget) =>
-    (accessedAt[fileKey(second)] ?? 0) - (accessedAt[fileKey(first)] ?? 0) ||
-    first.name.localeCompare(second.name);
-
+  // Alphabetical, so files stay put as they are opened.
   const savedTree = buildSavedTree(entries, (first, second) =>
-    compareAccess(
-      { kind: "saved", name: first },
-      { kind: "saved", name: second },
-    ),
+    first.localeCompare(second),
   );
 
   const externalTargets: FileTarget[] = externalFiles
@@ -135,7 +114,7 @@ export function AppSidebar() {
       path: file.path,
       name: file.name,
     }))
-    .sort(compareAccess);
+    .sort((first, second) => first.name.localeCompare(second.name));
 
   const folderTargets: FileMoveTarget[] = [
     { folder: "", label: "Lunarscribe" },
@@ -300,7 +279,6 @@ export function AppSidebar() {
 
   async function createFolder(parent: string, name: string) {
     await window.lunarscribe.createFolder(parent, name);
-    setSection("lunarscribe");
 
     if (parent) {
       setFolderOpen(parent, true);
@@ -386,50 +364,10 @@ export function AppSidebar() {
     });
   }
 
-  const tabContent = {
-    lunarscribe: (
-      <SidebarSavedFilesDropZone onMoveFile={moveTarget}>
-        <SidebarMenu>
-          <SidebarFolderTree
-            nodes={savedTree}
-            openFolders={new Set(openFolders)}
-            onFolderOpenChange={setFolderOpen}
-            menu={menu}
-            onMenuChange={changeMenu}
-            onMoveFile={moveTarget}
-            actions={{
-              onNewNote: (folder) => createIn("markdown", folder),
-              onNewDrawing: (folder) => createIn("drawing", folder),
-              onNewFolder: (parent) =>
-                setDialog({ kind: "new-folder", parent }),
-              onRename: (path) => setDialog({ kind: "rename-folder", path }),
-              onDelete: (path) => setDialog({ kind: "delete-folder", path }),
-            }}
-            renderFile={(file) =>
-              renderFileItem({ kind: "saved", name: file.path })
-            }
-          />
-        </SidebarMenu>
-      </SidebarSavedFilesDropZone>
-    ),
-    "external-files": (
-      <SidebarMenu>{externalTargets.map(renderFileItem)}</SidebarMenu>
-    ),
-  };
-
-  const tabCounts = {
-    lunarscribe: files.length,
-    "external-files": externalTargets.length,
-  };
-
-  const emptyMessages = {
-    lunarscribe:
-      savedTree.length === 0
-        ? "No saved files yet. Start a note, drawing or folder above."
-        : null,
-    "external-files":
-      externalTargets.length === 0 ? "No external files yet." : null,
-  };
+  const emptyMessage =
+    savedTree.length === 0 && externalTargets.length === 0
+      ? "No saved files yet. Start a note, drawing or folder above."
+      : null;
 
   return (
     <>
@@ -454,23 +392,34 @@ export function AppSidebar() {
           update={update}
         />
         <SidebarContent className="overflow-hidden">
-          <SidebarFileTabs
-            value={activeSection}
-            onValueChange={(section) => {
-              if (isSidebarSection(section)) {
-                setSection(section);
-              }
-            }}
-            tabs={FILE_SECTIONS.map((section) => ({
-              value: section.section,
-              label: section.label,
-              shortLabel: section.shortLabel,
-              icon: FILE_SECTION_ICONS[section.section],
-              count: tabCounts[section.section],
-              emptyMessage: emptyMessages[section.section],
-              content: tabContent[section.section],
-            }))}
-          />
+          <SidebarFileList emptyMessage={emptyMessage}>
+            <SidebarSavedFilesDropZone onMoveFile={moveTarget}>
+              <SidebarMenu>
+                <SidebarFolderTree
+                  nodes={savedTree}
+                  openFolders={new Set(openFolders)}
+                  onFolderOpenChange={setFolderOpen}
+                  menu={menu}
+                  onMenuChange={changeMenu}
+                  onMoveFile={moveTarget}
+                  actions={{
+                    onNewNote: (folder) => createIn("markdown", folder),
+                    onNewDrawing: (folder) => createIn("drawing", folder),
+                    onNewFolder: (parent) =>
+                      setDialog({ kind: "new-folder", parent }),
+                    onRename: (path) =>
+                      setDialog({ kind: "rename-folder", path }),
+                    onDelete: (path) =>
+                      setDialog({ kind: "delete-folder", path }),
+                  }}
+                  renderFile={(file) =>
+                    renderFileItem({ kind: "saved", name: file.path })
+                  }
+                />
+                {externalTargets.map(renderFileItem)}
+              </SidebarMenu>
+            </SidebarSavedFilesDropZone>
+          </SidebarFileList>
         </SidebarContent>
         {dialog?.kind === "rename" && (
           <RenameFileDialog
@@ -536,7 +485,7 @@ export function AppSidebar() {
         searchFiles={window.lunarscribe.searchFiles}
         onFilesChanged={window.lunarscribe.onFilesChanged}
         onOpenFile={openFile}
-        isDrawing={(name) => kindOf(name) === "drawing"}
+        lastOpenedAt={(name) => accessedAt[fileKey({ kind: "saved", name })]}
         scopeDescription="Find up to 10 saved files in lunarscribe. Toggle Content to search inside files."
         scopeLabel="Up to 10 files in lunarscribe"
       />

@@ -109,7 +109,7 @@ export function SearchHighlight({
     return (
       <Fragment key={start}>
         {before}
-        <mark className="bg-primary/20 text-foreground rounded-sm">
+        <mark className="text-primary bg-transparent font-bold">
           {text.slice(start, end)}
         </mark>
       </Fragment>

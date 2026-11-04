@@ -2,6 +2,8 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { SidebarLeftIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { FluidHighlight } from "@lunarscribe/components/fluid-motion/fluid-motion";
 import { useIsMobile } from "@lunarscribe/components/hooks/use-mobile";
 import { Button } from "@lunarscribe/components/ui/button";
@@ -22,7 +24,6 @@ import {
 } from "@lunarscribe/components/ui/tooltip";
 import { cn } from "@lunarscribe/utils/cn";
 import { cva, type VariantProps } from "class-variance-authority";
-import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
@@ -276,7 +277,7 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <PanelLeftIcon />
+      <HugeiconsIcon icon={SidebarLeftIcon} strokeWidth={2} />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );
@@ -657,13 +658,17 @@ function SidebarMenuSkeleton({
   );
 }
 
+/**
+ * Indented on the left only, so sub rows end where top-level rows do; `mr-px` offsets the
+ * 1px nudge that centers the border under the parent's icon.
+ */
 function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
   return (
     <ul
       data-slot="sidebar-menu-sub"
       data-sidebar="menu-sub"
       className={cn(
-        "border-sidebar-border mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l px-2.5 py-0.5 group-data-[collapsible=icon]:hidden",
+        "border-sidebar-border mr-px ml-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l py-0.5 pl-2.5 group-data-[collapsible=icon]:hidden",
         className,
       )}
       {...props}

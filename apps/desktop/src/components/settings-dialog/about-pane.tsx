@@ -1,7 +1,12 @@
+import {
+  Download01Icon,
+  RefreshIcon,
+  RotateRight01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { SettingsPane } from "@lunarscribe/components/settings-dialog/settings-pane";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Spinner } from "@lunarscribe/components/ui/spinner";
-import { Download, RefreshCw, RotateCw } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { AppInfo } from "@/lib/updates";
@@ -85,7 +90,7 @@ export function AboutPane() {
           {status === "checking" ? (
             <Spinner aria-hidden="true" />
           ) : (
-            <RefreshCw />
+            <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
           )}
           Check for updates
         </Button>
@@ -97,14 +102,14 @@ export function AboutPane() {
             {status === "downloading" ? (
               <Spinner aria-hidden="true" />
             ) : (
-              <Download />
+              <HugeiconsIcon icon={Download01Icon} strokeWidth={2} />
             )}
             Update to {version}
           </Button>
         )}
         {status === "ready" && (
           <Button onClick={() => window.lunarscribe.restartApp()}>
-            <RotateCw />
+            <HugeiconsIcon icon={RotateRight01Icon} strokeWidth={2} />
             Restart to update
           </Button>
         )}

@@ -1,3 +1,20 @@
+import {
+  ClipboardPasteIcon,
+  Copy01Icon,
+  HighlighterIcon,
+  InputCursorTextIcon,
+  Link01Icon,
+  ParagraphIcon,
+  PlusSignIcon,
+  Redo02Icon,
+  ScissorIcon,
+  Table01Icon,
+  TextFontIcon,
+  TextSelectionIcon,
+  Undo02Icon,
+  Unlink01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   ContextMenu,
@@ -26,22 +43,6 @@ import {
   REDO_COMMAND,
   UNDO_COMMAND,
 } from "lexical";
-import {
-  ClipboardPaste,
-  Copy,
-  Highlighter,
-  Link,
-  Pilcrow,
-  Plus,
-  Redo2,
-  Scissors,
-  Table,
-  TextCursorInput,
-  TextSelect,
-  Type,
-  Undo2,
-  Unlink,
-} from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { $getSelectedLink, $removeLink } from "../link-form";
@@ -188,12 +189,12 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
             )
           }
         >
-          <Link />
+          <HugeiconsIcon icon={Link01Icon} strokeWidth={2} />
           {selection.isLink ? "Edit link" : "Add link"}
         </ContextMenuItem>
         {selection.isLink && (
           <ContextMenuItem onClick={() => editor.update($removeLink)}>
-            <Unlink />
+            <HugeiconsIcon icon={Unlink01Icon} strokeWidth={2} />
             Remove link
           </ContextMenuItem>
         )}
@@ -203,13 +204,13 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
             editor.dispatchCommand(FORMAT_TEXT_COMMAND, "highlight")
           }
         >
-          <Highlighter />
+          <HugeiconsIcon icon={HighlighterIcon} strokeWidth={2} />
           Highlight
         </ContextMenuCheckboxItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
           <ContextMenuSubTrigger>
-            <Type />
+            <HugeiconsIcon icon={TextFontIcon} strokeWidth={2} />
             Format
           </ContextMenuSubTrigger>
           <ContextMenuSubContent>
@@ -221,7 +222,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
                   editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
                 }
               >
-                <Icon />
+                <HugeiconsIcon icon={Icon} strokeWidth={2} />
                 {label}
                 {shortcut && (
                   <ContextMenuShortcut>
@@ -235,13 +236,13 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
         </ContextMenuSub>
         <ContextMenuSub>
           <ContextMenuSubTrigger>
-            <Pilcrow />
+            <HugeiconsIcon icon={ParagraphIcon} strokeWidth={2} />
             Paragraph
           </ContextMenuSubTrigger>
           <ContextMenuSubContent>
             {BLOCK_TYPES.map(({ label, icon: Icon, apply }) => (
               <ContextMenuItem key={label} onClick={() => apply(editor)}>
-                <Icon />
+                <HugeiconsIcon icon={Icon} strokeWidth={2} />
                 {label}
               </ContextMenuItem>
             ))}
@@ -249,13 +250,13 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
         </ContextMenuSub>
         <ContextMenuSub>
           <ContextMenuSubTrigger>
-            <Plus />
+            <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
             Insert
           </ContextMenuSubTrigger>
           <ContextMenuSubContent>
             {INSERTS.map(({ label, icon: Icon, apply }) => (
               <ContextMenuItem key={label} onClick={() => apply(editor)}>
-                <Icon />
+                <HugeiconsIcon icon={Icon} strokeWidth={2} />
                 {label}
               </ContextMenuItem>
             ))}
@@ -264,8 +265,8 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
         {cellKey !== null && (
           <ContextMenuSub>
             <ContextMenuSubTrigger>
-              <Table />
-              Table
+              <HugeiconsIcon icon={Table01Icon} strokeWidth={2} />
+              Table01Icon
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
               <TableMenuItems
@@ -280,7 +281,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
           disabled={!canUndo}
           onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
         >
-          <Undo2 />
+          <HugeiconsIcon icon={Undo02Icon} strokeWidth={2} />
           Undo
           <ContextMenuShortcut>{MODIFIER}Z</ContextMenuShortcut>
         </ContextMenuItem>
@@ -288,7 +289,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
           disabled={!canRedo}
           onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
         >
-          <Redo2 />
+          <HugeiconsIcon icon={Redo02Icon} strokeWidth={2} />
           Redo
           <ContextMenuShortcut>
             {IS_APPLE ? "⇧⌘Z" : `${MODIFIER}Y`}
@@ -301,7 +302,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
             withFocus(() => editor.dispatchCommand(CUT_COMMAND, null))
           }
         >
-          <Scissors />
+          <HugeiconsIcon icon={ScissorIcon} strokeWidth={2} />
           Cut
           <ContextMenuShortcut>{MODIFIER}X</ContextMenuShortcut>
         </ContextMenuItem>
@@ -311,17 +312,17 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
             withFocus(() => editor.dispatchCommand(COPY_COMMAND, null))
           }
         >
-          <Copy />
-          Copy
+          <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
+          Copy01Icon
           <ContextMenuShortcut>{MODIFIER}C</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onClick={() => withFocus(() => paste(editor, false))}>
-          <ClipboardPaste />
+          <HugeiconsIcon icon={ClipboardPasteIcon} strokeWidth={2} />
           Paste
           <ContextMenuShortcut>{MODIFIER}V</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onClick={() => withFocus(() => paste(editor, true))}>
-          <TextCursorInput />
+          <HugeiconsIcon icon={InputCursorTextIcon} strokeWidth={2} />
           Paste as plain
           <ContextMenuShortcut>
             {IS_APPLE ? "⇧⌘V" : `${MODIFIER}Shift+V`}
@@ -330,7 +331,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
         <ContextMenuItem
           onClick={() => withFocus(() => editor.update(() => $selectAll()))}
         >
-          <TextSelect />
+          <HugeiconsIcon icon={TextSelectionIcon} strokeWidth={2} />
           Select all
           <ContextMenuShortcut>{MODIFIER}A</ContextMenuShortcut>
         </ContextMenuItem>

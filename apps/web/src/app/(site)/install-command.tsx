@@ -1,6 +1,7 @@
+import { Copy01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@lunarscribe/components/ui/button";
 import { tryCatch } from "@lunarscribe/utils/try-catch";
-import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 
 /** The installer command split into shell tokens, colored like the editor's code blocks. */
@@ -55,7 +56,11 @@ export function InstallCommand() {
         aria-label="Copy install command"
         onClick={() => void copy()}
       >
-        {copied ? <Check /> : <Copy />}
+        {copied ? (
+          <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} />
+        ) : (
+          <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
+        )}
       </Button>
     </div>
   );

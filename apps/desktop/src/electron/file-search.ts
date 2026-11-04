@@ -7,7 +7,11 @@ import { app, ipcMain } from "electron";
 import type { FileSearchMatch } from "../lib/editor-files";
 import { listSavedEntries } from "./saved-path";
 
+/** Content matches returned per search; the dialog lists at most this many. */
 const MAX_RESULTS = 10;
+
+/** File-name results fetched per fff page. */
+const NAME_PAGE_SIZE = 100;
 
 function searchFileContent(
   fileFinder: FileFinder,
@@ -56,6 +60,7 @@ function searchFileContent(
   return matches;
 }
 
+/** Every saved file whose name matches, so the dialog can rank them by when they were opened. */
 function searchFileNames(
   fileFinder: FileFinder,
   query: string,
@@ -65,7 +70,7 @@ function searchFileNames(
 
   for (let pageIndex = 0; savedNames.size > 0; pageIndex += 1) {
     const fileResponse = fileFinder.fileSearch(query, {
-      pageSize: MAX_RESULTS,
+      pageSize: NAME_PAGE_SIZE,
       pageIndex,
     });
 
@@ -77,13 +82,9 @@ function searchFileNames(
       if (savedNames.delete(file.relativePath)) {
         matches.push({ name: file.relativePath });
       }
-
-      if (matches.length === MAX_RESULTS) {
-        return matches;
-      }
     }
 
-    if ((pageIndex + 1) * MAX_RESULTS >= fileResponse.value.totalMatched) {
+    if ((pageIndex + 1) * NAME_PAGE_SIZE >= fileResponse.value.totalMatched) {
       break;
     }
   }

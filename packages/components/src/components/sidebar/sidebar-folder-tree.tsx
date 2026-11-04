@@ -1,3 +1,15 @@
+import {
+  ArrowRight01Icon,
+  Delete02Icon,
+  FileAddIcon,
+  Folder01Icon,
+  FolderAddIcon,
+  FolderOpenIcon,
+  MoreHorizontalIcon,
+  BrushIcon,
+  PencilEdit01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { FileMenuState } from "@lunarscribe/components/sidebar/sidebar-file-item";
 import { Button } from "@lunarscribe/components/ui/button";
 import {
@@ -23,17 +35,6 @@ import type {
   SavedTreeFolder,
   SavedTreeNode,
 } from "@lunarscribe/utils/saved-paths";
-import {
-  ChevronRight,
-  Ellipsis,
-  FilePlus,
-  Folder,
-  FolderOpen,
-  FolderPlus,
-  Pencil,
-  PenTool,
-  Trash2,
-} from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 
@@ -141,8 +142,16 @@ function SidebarFolderItem({
             }
             onContextMenu={() => onMenuChange(key, true, null)}
           >
-            <ChevronRight className="text-muted-foreground transition-transform duration-200 in-data-panel-open:rotate-90 motion-reduce:transition-none" />
-            {isOpen ? <FolderOpen /> : <Folder />}
+            <HugeiconsIcon
+              icon={ArrowRight01Icon}
+              strokeWidth={2}
+              className="text-muted-foreground transition-transform duration-200 in-data-panel-open:rotate-90 motion-reduce:transition-none"
+            />
+            {isOpen ? (
+              <HugeiconsIcon icon={FolderOpenIcon} strokeWidth={2} />
+            ) : (
+              <HugeiconsIcon icon={Folder01Icon} strokeWidth={2} />
+            )}
             <span className="group-hover/menu-item:font-semibold">
               {folder.name}
             </span>
@@ -161,34 +170,34 @@ function SidebarFolderItem({
               onMenuChange(key, !isMenuOpen, event.currentTarget)
             }
           >
-            <Ellipsis />
+            <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
           </SidebarMenuAction>
           <ContextMenuContent
             anchor={folderMenu?.anchor ?? undefined}
             finalFocus={actionRef}
           >
             <ContextMenuItem onClick={() => actions.onNewNote(folder.path)}>
-              <FilePlus />
+              <HugeiconsIcon icon={FileAddIcon} strokeWidth={2} />
               New note
             </ContextMenuItem>
             <ContextMenuItem onClick={() => actions.onNewDrawing(folder.path)}>
-              <PenTool />
+              <HugeiconsIcon icon={BrushIcon} strokeWidth={2} />
               New drawing
             </ContextMenuItem>
             <ContextMenuItem onClick={() => actions.onNewFolder(folder.path)}>
-              <FolderPlus />
+              <HugeiconsIcon icon={FolderAddIcon} strokeWidth={2} />
               New folder
             </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => actions.onRename(folder.path)}>
-              <Pencil />
+              <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} />
               Rename
             </ContextMenuItem>
             <ContextMenuItem
               variant="destructive"
               onClick={() => actions.onDelete(folder.path)}
             >
-              <Trash2 />
+              <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
               Delete
             </ContextMenuItem>
           </ContextMenuContent>

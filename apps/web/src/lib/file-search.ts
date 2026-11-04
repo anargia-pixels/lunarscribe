@@ -2,6 +2,7 @@ import type { SavedFileRecord } from "@/lib/browser-database";
 import type { FileSearchMatch, SearchMatchRange } from "@/lib/editor-files";
 import { readAllFiles } from "@/lib/saved-files";
 
+/** Content matches returned per search; the dialog lists at most this many. */
 const MAX_RESULTS = 10;
 
 /**
@@ -27,12 +28,12 @@ function fuzzyScore(name: string, query: string) {
   return score;
 }
 
+/** Every saved file whose name matches, so the dialog can rank them by when they were opened. */
 function searchFileNames(files: SavedFileRecord[], query: string) {
   if (!query) {
     // Without a query, recently edited files come first.
     return files
       .toSorted((left, right) => right.modifiedAt - left.modifiedAt)
-      .slice(0, MAX_RESULTS)
       .map(({ name }): FileSearchMatch => ({ name }));
   }
 
@@ -43,7 +44,6 @@ function searchFileNames(files: SavedFileRecord[], query: string) {
       return score === null ? [] : [{ name: file.name, score }];
     })
     .toSorted((left, right) => left.score - right.score)
-    .slice(0, MAX_RESULTS)
     .map(({ name }): FileSearchMatch => ({ name }));
 }
 

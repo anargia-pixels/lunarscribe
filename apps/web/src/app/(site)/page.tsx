@@ -1,7 +1,8 @@
+import { ArrowRight02Icon, Download01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@lunarscribe/components/ui/button";
 import { cn } from "@lunarscribe/utils/cn";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Download } from "lucide-react";
 
 import { EXTERNAL_LINKS } from "@/lib/external-links";
 import { pageHead } from "@/lib/seo";
@@ -145,7 +146,11 @@ function LandingPage() {
                 render={<Link to="/app" />}
               >
                 Open web app
-                <ArrowRight data-icon="inline-end" />
+                <HugeiconsIcon
+                  icon={ArrowRight02Icon}
+                  strokeWidth={2}
+                  data-icon="inline-end"
+                />
               </Button>
               <Button
                 size="lg"
@@ -153,7 +158,11 @@ function LandingPage() {
                 nativeButton={false}
                 render={<Link to={EXTERNAL_LINKS.releases} />}
               >
-                <Download data-icon="inline-start" />
+                <HugeiconsIcon
+                  icon={Download01Icon}
+                  strokeWidth={2}
+                  data-icon="inline-start"
+                />
                 Linux ZIP and macOS DMG
               </Button>
             </div>

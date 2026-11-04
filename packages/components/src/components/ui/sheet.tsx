@@ -1,7 +1,8 @@
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@lunarscribe/components/ui/button";
 import { cn } from "@lunarscribe/utils/cn";
-import { XIcon } from "lucide-react";
 import * as React from "react";
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
@@ -67,7 +68,7 @@ function SheetContent({
               />
             }
           >
-            <XIcon />
+            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
         )}

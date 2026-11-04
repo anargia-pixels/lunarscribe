@@ -1,22 +1,24 @@
+import {
+  Download01Icon,
+  FileAddIcon,
+  FolderAddIcon,
+  FolderOpenIcon,
+  Loading03Icon,
+  BrushIcon,
+  RotateRight01Icon,
+  Search01Icon,
+  Settings01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { ThemeRevealOrigin } from "@lunarscribe/components/darkmode-toggle/darkmode-toggle";
 import { DarkModeToggle } from "@lunarscribe/components/darkmode-toggle/darkmode-toggle";
 import { FluidHighlight } from "@lunarscribe/components/fluid-motion/fluid-motion";
 import { Hint } from "@lunarscribe/components/hint/hint";
 import { Button } from "@lunarscribe/components/ui/button";
 import { DialogTrigger } from "@lunarscribe/components/ui/dialog";
+import { Separator } from "@lunarscribe/components/ui/separator";
 import { SidebarHeader } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
-import {
-  Download,
-  FilePlus,
-  FolderOpen,
-  FolderPlus,
-  Loader2,
-  PenTool,
-  RotateCw,
-  Search,
-  Settings,
-} from "lucide-react";
 import type { ReactNode } from "react";
 
 import "./app-sidebar-header.css";
@@ -39,9 +41,15 @@ function getUpdateLabel({ version, status }: SidebarUpdate) {
 }
 
 const UPDATE_ICONS = {
-  available: <Download />,
-  downloading: <Loader2 className="animate-spin" />,
-  ready: <RotateCw />,
+  available: <HugeiconsIcon icon={Download01Icon} strokeWidth={2} />,
+  downloading: (
+    <HugeiconsIcon
+      icon={Loading03Icon}
+      strokeWidth={2}
+      className="animate-spin"
+    />
+  ),
+  ready: <HugeiconsIcon icon={RotateRight01Icon} strokeWidth={2} />,
 } as const;
 
 /** The update button, shown only while a newer release exists. */
@@ -117,7 +125,7 @@ export function AppSidebarHeader({
                 aria-label="New note"
                 onClick={onNewNote}
               >
-                <FilePlus />
+                <HugeiconsIcon icon={FileAddIcon} strokeWidth={2} />
               </Button>
             </Hint>
             {onOpenFile && (
@@ -128,7 +136,7 @@ export function AppSidebarHeader({
                   aria-label="Open file"
                   onClick={onOpenFile}
                 >
-                  <FolderOpen />
+                  <HugeiconsIcon icon={FolderOpenIcon} strokeWidth={2} />
                 </Button>
               </Hint>
             )}
@@ -139,7 +147,7 @@ export function AppSidebarHeader({
                 aria-label="New drawing"
                 onClick={onNewDrawing}
               >
-                <PenTool />
+                <HugeiconsIcon icon={BrushIcon} strokeWidth={2} />
               </Button>
             </Hint>
             <Hint label="New folder" side="bottom">
@@ -149,9 +157,22 @@ export function AppSidebarHeader({
                 aria-label="New folder"
                 onClick={onNewFolder}
               >
-                <FolderPlus />
+                <HugeiconsIcon icon={FolderAddIcon} strokeWidth={2} />
               </Button>
             </Hint>
+            <Hint label="Search files" side="bottom" shortcut={["Ctrl", "E"]}>
+              <Button
+                variant="fluid"
+                size="icon-sm"
+                aria-label="Search files"
+                aria-keyshortcuts="Control+E"
+                aria-haspopup="dialog"
+                onClick={onSearch}
+              >
+                <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+              </Button>
+            </Hint>
+            <Separator orientation="vertical" className="mx-1 my-1.5" />
             {renderSettings(
               <Hint label="Settings" side="bottom">
                 <DialogTrigger
@@ -163,22 +184,10 @@ export function AppSidebarHeader({
                     />
                   }
                 >
-                  <Settings />
+                  <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} />
                 </DialogTrigger>
               </Hint>,
             )}
-            <Hint label="Search files" side="bottom" shortcut={["Ctrl", "E"]}>
-              <Button
-                variant="fluid"
-                size="icon-sm"
-                aria-label="Search files"
-                aria-keyshortcuts="Control+E"
-                aria-haspopup="dialog"
-                onClick={onSearch}
-              >
-                <Search />
-              </Button>
-            </Hint>
             <DarkModeToggle
               modKeyLabel={modKeyLabel}
               onToggle={onToggleTheme}

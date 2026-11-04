@@ -17,6 +17,8 @@
   "dependencies": {
     "@base-ui/react": "catalog:",
     "@excalidraw/excalidraw": "catalog:",
+    "@hugeicons/core-free-icons": "catalog:",
+    "@hugeicons/react": "catalog:",
     "@lexical/code": "catalog:",
     "@lexical/code-prism": "catalog:",
     "@lexical/link": "catalog:",
@@ -38,7 +40,6 @@
     "input-otp": "catalog:",
     "katex": "catalog:",
     "lexical": "catalog:",
-    "lucide-react": "catalog:",
     "mesurer": "catalog:",
     "pele": "catalog:",
     "react-day-picker": "catalog:",

@@ -1,3 +1,12 @@
+import {
+  Cancel01Icon,
+  HashtagIcon,
+  LeftToRightListBulletIcon,
+  PlusSignIcon,
+  TextFontIcon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Badge } from "@lunarscribe/components/ui/badge";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Checkbox } from "@lunarscribe/components/ui/checkbox";
@@ -9,15 +18,6 @@ import {
 } from "@lunarscribe/components/ui/dropdown-menu";
 import { Input } from "@lunarscribe/components/ui/input";
 import { Textarea } from "@lunarscribe/components/ui/textarea";
-import {
-  Check,
-  Hash,
-  List,
-  type LucideIcon,
-  Plus,
-  Type,
-  X,
-} from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -59,7 +59,7 @@ export function FrontmatterPanel({
           aria-label="Add frontmatter"
           onClick={addProperty}
         >
-          <Plus />
+          <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
         </Button>
       </div>
       {entries.map((entry, index) => (
@@ -137,7 +137,7 @@ function FrontmatterRow({
         aria-label={`Remove ${entry.key || "frontmatter row"}`}
         onClick={onRemove}
       >
-        <X />
+        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
       </Button>
     </div>
   );
@@ -165,7 +165,7 @@ function RawRow({
         aria-label="Remove frontmatter text"
         onClick={onRemove}
       >
-        <X />
+        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
       </Button>
     </div>
   );
@@ -276,7 +276,7 @@ function ListValue({
               onChange(items.filter((_, itemIndex) => itemIndex !== index))
             }
           >
-            <X />
+            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
           </Button>
         </Badge>
       ))}
@@ -312,16 +312,26 @@ function ListValue({
 
 const PROPERTY_TYPES: {
   label: string;
-  icon: LucideIcon;
+  icon: IconSvgElement;
   applies: (value: FrontmatterValue) => boolean;
   convert: (value: FrontmatterValue) => FrontmatterValue;
 }[] = [
-  { label: "Text", icon: Type, applies: isTextValue, convert: toText },
-  { label: "List", icon: List, applies: isListValue, convert: toList },
-  { label: "Number", icon: Hash, applies: isNumberValue, convert: toNumber },
+  { label: "Text", icon: TextFontIcon, applies: isTextValue, convert: toText },
+  {
+    label: "List",
+    icon: LeftToRightListBulletIcon,
+    applies: isListValue,
+    convert: toList,
+  },
+  {
+    label: "Number",
+    icon: HashtagIcon,
+    applies: isNumberValue,
+    convert: toNumber,
+  },
   {
     label: "Checkbox",
-    icon: Check,
+    icon: Tick02Icon,
     applies: isCheckboxValue,
     convert: toCheckbox,
   },
@@ -345,7 +355,7 @@ function PropertyTypeMenu({
           />
         }
       >
-        <Type />
+        <HugeiconsIcon icon={TextFontIcon} strokeWidth={2} />
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         {PROPERTY_TYPES.map((type) => (
@@ -353,9 +363,11 @@ function PropertyTypeMenu({
             key={type.label}
             onClick={() => onChange(type.convert(value))}
           >
-            <type.icon />
+            <HugeiconsIcon icon={type.icon} strokeWidth={2} />
             {type.label}
-            {type.applies(value) ? <Check /> : null}
+            {type.applies(value) ? (
+              <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} />
+            ) : null}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

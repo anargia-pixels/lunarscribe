@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@ff-labs/fff-node": "catalog:",
+    "@hugeicons/core-free-icons": "catalog:",
+    "@hugeicons/react": "catalog:",
     "@tanstack/pacer": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
@@ -32,7 +34,6 @@
     "electron": "^45.2.1",
     "electron-builder": "catalog:",
     "electron-vite": "^5.0.0",
-    "lucide-react": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "^7.3.0",

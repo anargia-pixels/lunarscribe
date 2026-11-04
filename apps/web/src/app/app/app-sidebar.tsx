@@ -55,6 +55,7 @@ import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSyncStore } from "@/stores/sync-store";
 
 import { AppearancePane } from "./settings-dialog/appearance-pane";
+import { StoragePane } from "./settings-dialog/storage-pane";
 import { SyncingPane } from "./settings-dialog/syncing-pane";
 import { useTheme } from "./theme-provider";
 
@@ -417,6 +418,7 @@ export function AppSidebar() {
             <SettingsDialog
               appearancePane={<AppearancePane />}
               syncingPane={<SyncingPane />}
+              storagePane={<StoragePane />}
             >
               {trigger}
             </SettingsDialog>

@@ -11,7 +11,7 @@ import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
 import { ScrollArea } from "@lunarscribe/components/ui/scroll-area";
 import type { EditorState } from "lexical";
-import { useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import {
   type FrontmatterEntry,
@@ -46,17 +46,24 @@ import { ToolbarPlugin } from "./toolbar-plugin";
  * joined back onto the body of every reported markdown string. The right-click
  * menu holds every toolbar action, so `showToolbar` can hide the toolbar.
  * `onOutlineChange` receives the headings for an outline sidebar.
+ * `readScrollTop` gives the scroll position to restore on mount, and `onScrollTopSave`
+ * receives the position on unmount, so a remounted buffer opens where it was left.
  */
 export function MarkdownEditor({
   markdown,
   onChange,
   showToolbar = true,
   onOutlineChange,
+  readScrollTop,
+  onScrollTopSave,
 }: {
   markdown: string;
   onChange: (markdown: string) => void;
   showToolbar?: boolean;
   onOutlineChange?: (outline: Outline | null) => void;
+  /** Read when the editor mounts, after any previous editor saved its position. */
+  readScrollTop?: () => number | undefined;
+  onScrollTopSave?: (scrollTop: number) => void;
 }) {
   const initialConfig = createMarkdownConfig(markdown);
   const [parsed] = useState(() => parseFrontmatter(markdown));
@@ -64,6 +71,44 @@ export function MarkdownEditor({
   // The panel edits frontmatter while Lexical owns the body, so the body keeps
   // its latest text here to compose the markdown both edits report.
   const bodyRef = useRef(parsed.body);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const readInitialScrollTop = useEffectEvent(() => readScrollTop?.() ?? 0);
+
+  const saveScrollTop = useEffectEvent((scrollTop: number) =>
+    onScrollTopSave?.(scrollTop),
+  );
+
+  // Tracks the position while scrolling, since the viewport is already detached and
+  // reads 0 by the time the unmount cleanup runs.
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector<HTMLElement>(
+      "[data-slot=scroll-area-viewport]",
+    );
+
+    if (!viewport) {
+      return;
+    }
+
+    let scrollTop = readInitialScrollTop();
+
+    // Waits a frame so Lexical has rendered the content the position points into.
+    const frame = requestAnimationFrame(() => {
+      viewport.scrollTop = scrollTop;
+    });
+
+    const onScroll = () => {
+      scrollTop = viewport.scrollTop;
+    };
+
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener("scroll", onScroll);
+      saveScrollTop(scrollTop);
+    };
+  }, []);
 
   const handleFrontmatterChange = (nextEntries: FrontmatterEntry[]) => {
     setEntries(nextEntries);
@@ -87,7 +132,7 @@ export function MarkdownEditor({
       {showToolbar && <ToolbarPlugin />}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <FindPlugin />
-        <ScrollArea className="min-h-0 flex-1">
+        <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
           <div className="relative mx-auto flex min-h-full w-full max-w-4xl flex-col px-8 pt-10">
             <FrontmatterPanel
               entries={entries}

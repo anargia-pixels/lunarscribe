@@ -36,6 +36,7 @@ import { useEffect, useState } from "react";
 
 import { AboutPane } from "@/components/settings-dialog/about-pane";
 import { AppearancePane } from "@/components/settings-dialog/appearance-pane";
+import { StoragePane } from "@/components/settings-dialog/storage-pane";
 import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
 import { useTheme } from "@/components/theme-provider";
 import { useUpdate } from "@/components/use-update";
@@ -382,6 +383,7 @@ export function AppSidebar() {
             <SettingsDialog
               appearancePane={<AppearancePane />}
               syncingPane={<SyncingPane />}
+              storagePane={<StoragePane />}
               aboutPane={<AboutPane />}
             >
               {trigger}

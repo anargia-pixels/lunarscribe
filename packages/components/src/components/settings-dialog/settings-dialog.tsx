@@ -17,17 +17,20 @@ import type { SettingsSection } from "./settings-sidebar";
 export function SettingsDialog({
   appearancePane,
   syncingPane,
+  storagePane,
   aboutPane,
   children,
 }: {
   appearancePane: ReactNode;
   syncingPane: ReactNode;
+  storagePane: ReactNode;
   aboutPane?: ReactNode;
   children: ReactNode;
 }) {
   const panes: Record<SettingsSection, ReactNode> = {
     appearances: appearancePane,
     syncing: syncingPane,
+    storage: storagePane,
     about: aboutPane,
   };
 

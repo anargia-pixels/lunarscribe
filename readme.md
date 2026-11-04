@@ -86,6 +86,12 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
   dark theme. Each theme can have a separate color theme. The interface, buffer writing,
   and code can use different fonts. Available fonts are Poppins, Roboto Mono, Pixelify
   Sans, and installed system fonts. The app keeps appearance settings between app starts.
+- **Reading position:** Each saved and external file reopens where you last scrolled, also
+  after a restart. Deleting a file, or removing an external file from the sidebar, forgets
+  its position.
+- **Storage:** Settings → General → Storage lists the settings and app state Lunarscribe
+  keeps between app starts and how much space each part takes. **Clear app storage**
+  resets them and reloads the app; saved files and sync sign-ins stay.
 - **Offline use:** The app includes its fonts, KaTeX fonts, and Excalidraw fonts. These
   fonts support writing, equations, and drawings without a network connection.
 

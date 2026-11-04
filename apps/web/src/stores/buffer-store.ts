@@ -139,7 +139,7 @@ function patchBuffer(
   );
 }
 
-/** Keeps a renamed saved file's access time under its new name. */
+/** Keeps a renamed saved file's access time and scroll position under its new name. */
 function moveSavedAccess(fromName: string, toName: string) {
   useFileAccessStore
     .getState()
@@ -149,17 +149,40 @@ function moveSavedAccess(fromName: string, toName: string) {
     );
 }
 
-/** Keeps the access times of files in a renamed folder under their new names. */
-function moveFolderAccess(fromFolder: string, toFolder: string) {
+/** Saved file names inside `folder` that have an access time or scroll position. */
+function trackedNamesInFolder(folder: string) {
   const savedPrefix = fileKey({ kind: "saved", name: "" });
+  const { accessedAt, scrollTops } = useFileAccessStore.getState();
 
-  for (const key of Object.keys(useFileAccessStore.getState().accessedAt)) {
+  return [
+    ...new Set([...Object.keys(accessedAt), ...Object.keys(scrollTops)]),
+  ].flatMap((key) => {
     const name = key.slice(savedPrefix.length);
 
-    if (key.startsWith(savedPrefix) && isInFolder(name, fromFolder)) {
-      moveSavedAccess(name, replaceFolder(name, fromFolder, toFolder));
-    }
+    return key.startsWith(savedPrefix) && isInFolder(name, folder)
+      ? [name]
+      : [];
+  });
+}
+
+/** Keeps the access times and scroll positions of files in a renamed folder under their new names. */
+function moveFolderAccess(fromFolder: string, toFolder: string) {
+  for (const name of trackedNamesInFolder(fromFolder)) {
+    moveSavedAccess(name, replaceFolder(name, fromFolder, toFolder));
   }
+}
+
+/** The `fileKey` of a buffer's saved or external file; null until it is first saved. */
+export function bufferFileKey(
+  buffer: Pick<TextBuffer, "fileName" | "externalId" | "title">,
+) {
+  if (buffer.fileName !== null) {
+    return fileKey({ kind: "saved", name: buffer.fileName });
+  }
+
+  return buffer.externalId === null
+    ? null
+    : fileKey({ kind: "external", id: buffer.externalId, name: buffer.title });
 }
 
 /** Open buffers whose saved file sits inside `folder`. */
@@ -531,6 +554,11 @@ export const useBufferStore = create<BufferStore>()(
           FILE_OPERATION_POLICIES.delete,
           async (buffer) => {
             await savedFiles.deleteFile(buffer?.fileName ?? name);
+            useFileAccessStore
+              .getState()
+              .forgetScrollTops([
+                fileKey({ kind: "saved", name: buffer?.fileName ?? name }),
+              ]);
           },
         ),
 
@@ -615,6 +643,13 @@ export const useBufferStore = create<BufferStore>()(
           }
 
           await savedFiles.deleteFolder(path);
+          useFileAccessStore
+            .getState()
+            .forgetScrollTops(
+              trackedNamesInFolder(path).map((name) =>
+                fileKey({ kind: "saved", name }),
+              ),
+            );
 
           for (const buffer of inside) {
             closeFileBuffer(buffer);
@@ -703,6 +738,7 @@ export const useBufferStore = create<BufferStore>()(
               (file) => file.id !== target.id,
             ),
           }));
+          useFileAccessStore.getState().forgetScrollTops([fileKey(target)]);
         }),
     }),
     {
@@ -852,12 +888,10 @@ useBufferStore.subscribe((state) => {
   const externalId = buffer?.externalId ?? null;
   const { recordAccess } = useFileAccessStore.getState();
 
-  if (fileName !== null) {
-    recordAccess(fileKey({ kind: "saved", name: fileName }));
-  } else if (externalId !== null) {
-    recordAccess(
-      fileKey({ kind: "external", id: externalId, name: buffer?.title ?? "" }),
-    );
+  const key = buffer ? bufferFileKey(buffer) : null;
+
+  if (key !== null) {
+    recordAccess(key);
   }
 
   if (

@@ -17,7 +17,12 @@ import { useEffect, useState } from "react";
 import { BUFFER_EXTENSIONS, isTextFile } from "@/lib/editor-files";
 import { MOD_KEY_LABEL } from "@/lib/platform";
 import { useAppearanceStore } from "@/stores/appearance-store";
-import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+import {
+  bufferFileKey,
+  useActiveBuffer,
+  useBufferStore,
+} from "@/stores/buffer-store";
+import { useFileAccessStore } from "@/stores/file-access-store";
 import { useSyncStore } from "@/stores/sync-store";
 
 import { EditorFileDropZone } from "./editor-file-drop-zone";
@@ -76,6 +81,7 @@ function syncMessage(isSyncing: boolean, hasSyncedSuccessfully: boolean) {
 export default function EditorPage() {
   const buffer = useActiveBuffer();
   const setContent = useBufferStore((state) => state.setContent);
+  const setScrollTop = useFileAccessStore((state) => state.setScrollTop);
   const theme = useAppearanceStore((state) => state.theme);
 
   const showEditorToolbar = useAppearanceStore(
@@ -123,6 +129,9 @@ export default function EditorPage() {
   if (!buffer) {
     return null;
   }
+
+  // Unsaved buffers have no file to remember a scroll position for.
+  const scrollKey = bufferFileKey(buffer);
 
   const fileName =
     buffer.fileName ?? `${buffer.title}${BUFFER_EXTENSIONS[buffer.kind]}`;
@@ -185,6 +194,16 @@ export default function EditorPage() {
             markdown={buffer.content}
             onChange={(markdown) => setContent(buffer.id, markdown)}
             showToolbar={showEditorToolbar}
+            readScrollTop={() =>
+              scrollKey === null
+                ? undefined
+                : useFileAccessStore.getState().scrollTops[scrollKey]
+            }
+            onScrollTopSave={(scrollTop) => {
+              if (scrollKey !== null) {
+                setScrollTop(scrollKey, scrollTop);
+              }
+            }}
           />
         </EditorFileDropZone>
       )}

@@ -20,7 +20,8 @@ import { useShallow } from "zustand/react/shallow";
 import { EditorFileDropZone } from "@/components/editor-file-drop-zone";
 import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
 import { useAppearanceStore } from "@/stores/appearance-store";
-import { useBufferStore } from "@/stores/buffer-store";
+import { bufferFileKey, useBufferStore } from "@/stores/buffer-store";
+import { useFileAccessStore } from "@/stores/file-access-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSyncStore } from "@/stores/sync-store";
 
@@ -96,6 +97,7 @@ export default function Page() {
   );
 
   const setContent = useBufferStore((state) => state.setContent);
+  const setScrollTop = useFileAccessStore((state) => state.setScrollTop);
   const theme = useAppearanceStore((state) => state.theme);
   const setOutline = useSidebarStore((state) => state.setOutline);
   const toggleOutline = useSidebarStore((state) => state.toggleOutline);
@@ -137,6 +139,9 @@ export default function Page() {
   if (!buffer) {
     return null;
   }
+
+  // Unsaved buffers have no file to remember a scroll position for.
+  const scrollKey = bufferFileKey(buffer);
 
   const fileName =
     buffer.fileName ?? `${buffer.title}${BUFFER_EXTENSIONS[buffer.kind]}`;
@@ -226,6 +231,16 @@ export default function Page() {
             onChange={(markdown) => setContent(buffer.id, markdown)}
             showToolbar={showEditorToolbar}
             onOutlineChange={setOutline}
+            readScrollTop={() =>
+              scrollKey === null
+                ? undefined
+                : useFileAccessStore.getState().scrollTops[scrollKey]
+            }
+            onScrollTopSave={(scrollTop) => {
+              if (scrollKey !== null) {
+                setScrollTop(scrollKey, scrollTop);
+              }
+            }}
           />
         </EditorFileDropZone>
       )}

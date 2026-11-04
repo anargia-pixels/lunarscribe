@@ -1,4 +1,5 @@
 import {
+  Database01Icon,
   InformationCircleIcon,
   PaintBoardIcon,
   RefreshIcon,
@@ -14,7 +15,7 @@ import {
   SidebarMenuItem,
 } from "@lunarscribe/components/ui/sidebar";
 
-export type SettingsSection = "appearances" | "syncing" | "about";
+export type SettingsSection = "appearances" | "syncing" | "storage" | "about";
 
 /**
  * Settings navigation listing the sections of the settings window; it never collapses.
@@ -51,6 +52,15 @@ export function SettingsSidebar({
               >
                 <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
                 <span>Syncing</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={section === "storage"}
+                onClick={() => onSectionChange("storage")}
+              >
+                <HugeiconsIcon icon={Database01Icon} strokeWidth={2} />
+                <span>Storage</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             {hasAbout && (

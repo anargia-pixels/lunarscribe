@@ -76,8 +76,9 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
   heading. Back, from a mouse button or touchpad swipe, returns to where you were reading.
 - **Search:** Find shows matching text in the active buffer. It has controls for case
   matching, whole-word matching, and the next and previous matches. The fff search finds
-  saved files by name or text. Closer name matches come first, and among them the most
-  recently opened files. Results show highlighted matches and line previews.
+  saved files by name or text, and external files by name. Closer name matches come first,
+  and among them the most recently opened files. Results show highlighted matches and line
+  previews.
 - **PDF and DOCX export:** The sidebar has actions to export text files. For an open
   buffer, exports use the current edits. Exports use the selected theme and fonts. They
   keep formatted text, tables, code, and equations.
@@ -208,11 +209,11 @@ To insert a horizontal rule, type `---` on a separate line and press Enter.
 In Find, press Enter to select the next match. Press Shift+Enter to select the previous
 match. Press Escape to close Find.
 
-In saved-file search, use the arrow keys to select a result. Press Enter to open the
-selected file. Select Content to search for text inside saved files.
+In file search, use the arrow keys to select a result. Press Enter to open the selected
+file. Select Content to search for text inside saved files.
 
-Saved-file search shows a maximum of ten results from the Lunarscribe documents folder. It
-does not search external files.
+File search shows a maximum of ten results from the Lunarscribe documents folder and your
+external files. It finds external files by name only, marked with an arrow.
 
 ### Where writing is saved
 

@@ -486,8 +486,14 @@ export function AppSidebar() {
         onFilesChanged={window.lunarscribe.onFilesChanged}
         onOpenFile={openFile}
         lastOpenedAt={(name) => accessedAt[fileKey({ kind: "saved", name })]}
-        scopeDescription="Find up to 10 saved files in lunarscribe. Toggle Content to search inside files."
-        scopeLabel="Up to 10 files in lunarscribe"
+        externalFiles={externalFiles.map((file) => ({
+          key: file.path,
+          name: file.name,
+          openedAt: accessedAt[fileKey({ kind: "external", ...file })],
+        }))}
+        onOpenExternalFile={(path) => openExternalFiles([path])}
+        scopeDescription="Find up to 10 saved files in lunarscribe and external files by name. Toggle Content to search inside saved files."
+        scopeLabel="Up to 10 saved and external files"
       />
     </>
   );

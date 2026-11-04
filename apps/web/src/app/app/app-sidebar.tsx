@@ -519,8 +519,14 @@ export function AppSidebar() {
         onFilesChanged={onFilesChanged}
         onOpenFile={openFile}
         lastOpenedAt={(name) => accessedAt[fileKey({ kind: "saved", name })]}
-        scopeDescription="Find up to 10 saved files in this browser. Toggle Content to search inside files."
-        scopeLabel="Up to 10 saved files"
+        externalFiles={externalFiles.map((file) => ({
+          key: file.id,
+          name: file.name,
+          openedAt: accessedAt[fileKey({ kind: "external", ...file })],
+        }))}
+        onOpenExternalFile={openExternalFile}
+        scopeDescription="Find up to 10 saved files in this browser and external files by name. Toggle Content to search inside saved files."
+        scopeLabel="Up to 10 saved and external files"
       />
     </>
   );

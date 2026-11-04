@@ -1,4 +1,4 @@
-import { TextSearchIcon } from "@hugeicons/core-free-icons";
+import { ArrowUpRight01Icon, TextSearchIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useAsyncAction } from "@lunarscribe/components/hooks/use-async-action";
 import { Alert, AlertDescription } from "@lunarscribe/components/ui/alert";
@@ -51,19 +51,43 @@ function matchTier(name: string, query: string, isContentSearch: boolean) {
   return name.toLowerCase().includes(needle) ? 1 : FUZZY_TIER;
 }
 
-/** Closer matches first; within a tier, except the fuzzy one, the most recently opened. */
-function rankMatches(
-  matches: FileSearchMatch[],
+/** Whether every character of `query` appears in `name` in order, ignoring case. */
+function isFuzzyMatch(name: string, query: string) {
+  const haystack = name.toLowerCase();
+  let position = 0;
+
+  for (const character of query.toLowerCase()) {
+    position = haystack.indexOf(character, position) + 1;
+
+    if (position === 0) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/** A listed result: a saved file match or a tracked external file. */
+type FileSearchResult = FileSearchMatch & {
+  key: string;
+  /** The external file's key; absent for saved files. */
+  externalKey?: string;
+  openedAt: number;
+};
+
+/**
+ * Closer matches first; within a tier, except the fuzzy one, the most recently opened.
+ * Fuzzy matches keep the backend's ranking, with external files after saved ones.
+ */
+function rankResults(
+  results: FileSearchResult[],
   query: string,
   isContentSearch: boolean,
-  lastOpenedAt: (name: string) => number | undefined,
 ) {
-  const openedAt = (match: FileSearchMatch) => lastOpenedAt(match.name) ?? 0;
-
-  return matches
-    .map((match) => ({
-      match,
-      tier: matchTier(match.name, query, isContentSearch),
+  return results
+    .map((result) => ({
+      result,
+      tier: matchTier(result.name, query, isContentSearch),
     }))
     .toSorted((first, second) => {
       if (first.tier !== second.tier) {
@@ -72,10 +96,10 @@ function rankMatches(
 
       return first.tier === FUZZY_TIER
         ? 0
-        : openedAt(second.match) - openedAt(first.match);
+        : second.result.openedAt - first.result.openedAt;
     })
     .slice(0, MAX_RESULTS)
-    .map(({ match }) => match);
+    .map(({ result }) => result);
 }
 
 /** A saved file returned by file-name or content search. */
@@ -86,6 +110,46 @@ export type FileSearchMatch = {
   lineMatchRanges?: SearchMatchRange[];
 };
 
+/** A tracked external file; the dialog matches it by name, never by content. */
+export type ExternalSearchFile = {
+  /** Unique among external files; passed back to `onOpenExternalFile`. */
+  key: string;
+  name: string;
+  /** Epoch milliseconds the file was last opened, if ever. */
+  openedAt?: number;
+};
+
+/** Saved file matches as results, with when each was last opened. */
+function savedResults(
+  matches: FileSearchMatch[],
+  lastOpenedAt: (name: string) => number | undefined,
+): FileSearchResult[] {
+  return matches.map((match) => ({
+    ...match,
+    key: `saved:${match.name}`,
+    openedAt: lastOpenedAt(match.name) ?? 0,
+  }));
+}
+
+/** External files whose names fuzzily match `query`; every file when it is empty. */
+function externalResults(
+  files: readonly ExternalSearchFile[],
+  query: string,
+): FileSearchResult[] {
+  return files.flatMap((file) =>
+    isFuzzyMatch(file.name, query.trim())
+      ? [
+          {
+            key: `external:${file.key}`,
+            externalKey: file.key,
+            name: file.name,
+            openedAt: file.openedAt ?? 0,
+          },
+        ]
+      : [],
+  );
+}
+
 type FileSearchState = {
   query: string;
   isContentSearch: boolean;
@@ -95,10 +159,11 @@ type FileSearchState = {
 };
 
 /**
- * Searches saved files and opens the picked match. Each app supplies its search backend,
- * a subscription to saved file changes, when each file was last opened, and the copy
- * describing where files are searched. Closer name matches list first; within a tier the
- * most recently opened come first, except fuzzy matches, which keep the backend's ranking.
+ * Searches saved files, and tracked external files by name, and opens the picked match.
+ * Each app supplies its search backend, a subscription to saved file changes, its external
+ * files, when each file was last opened, and the copy describing where files are searched.
+ * Closer name matches list first; within a tier the most recently opened come first,
+ * except fuzzy matches, which keep the backend's ranking.
  */
 export function FileSearchDialog({
   open,
@@ -107,6 +172,8 @@ export function FileSearchDialog({
   onFilesChanged,
   onOpenFile,
   lastOpenedAt,
+  externalFiles,
+  onOpenExternalFile,
   scopeDescription,
   scopeLabel,
 }: {
@@ -120,6 +187,8 @@ export function FileSearchDialog({
   onOpenFile: (name: string) => Promise<void>;
   /** Epoch milliseconds the saved file was last opened, if ever. */
   lastOpenedAt: (name: string) => number | undefined;
+  externalFiles: readonly ExternalSearchFile[];
+  onOpenExternalFile: (key: string) => Promise<void>;
   scopeDescription: string;
   scopeLabel: string;
 }) {
@@ -137,11 +206,15 @@ export function FileSearchDialog({
     search.revision !== revision;
 
   const matches = search
-    ? rankMatches(
-        search.matches,
+    ? rankResults(
+        [
+          ...savedResults(search.matches, lastOpenedAt),
+          ...(search.isContentSearch
+            ? []
+            : externalResults(externalFiles, search.query)),
+        ],
         search.query,
         search.isContentSearch,
-        lastOpenedAt,
       )
     : [];
 
@@ -268,8 +341,8 @@ export function FileSearchDialog({
             <CommandGroup>
               {matches.map((match) => (
                 <CommandItem
-                  key={match.name}
-                  value={match.name}
+                  key={match.key}
+                  value={match.key}
                   disabled={isPending}
                   onSelect={() => {
                     if (isSearching) {
@@ -277,11 +350,21 @@ export function FileSearchDialog({
                     }
 
                     void run(async () => {
-                      await onOpenFile(match.name);
+                      await (match.externalKey === undefined
+                        ? onOpenFile(match.name)
+                        : onOpenExternalFile(match.externalKey));
                       onOpenChange(false);
                     });
                   }}
                 >
+                  {match.externalKey !== undefined && (
+                    <HugeiconsIcon
+                      icon={ArrowUpRight01Icon}
+                      strokeWidth={2}
+                      aria-label="External file"
+                      className="size-3 opacity-60"
+                    />
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="truncate">
                       <SearchHighlight

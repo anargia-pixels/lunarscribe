@@ -24,6 +24,7 @@ import {
   SidebarMenu,
 } from "@lunarscribe/components/ui/sidebar";
 import { toast } from "@lunarscribe/components/ui/toast";
+import { imageMimeType, isImageFileName } from "@lunarscribe/utils/images";
 import {
   allFolders,
   baseNameOf,
@@ -48,6 +49,7 @@ import {
   listFiles,
   onFilesChanged,
   readFile,
+  readImage,
 } from "@/lib/saved-files";
 import { stemOf, useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
 import { useFileAccessStore } from "@/stores/file-access-store";
@@ -106,6 +108,7 @@ export function AppSidebar() {
   const { toggleTheme } = useTheme();
 
   const activeBuffer = useActiveBuffer();
+  const viewedImage = useBufferStore((state) => state.viewedImage);
   const externalFiles = useBufferStore((state) => state.externalFiles);
 
   const openExternalFile = useBufferStore((state) => state.openExternalFile);
@@ -193,6 +196,23 @@ export function AppSidebar() {
   function downloadTarget(target: FileTarget) {
     return runFileAction(
       async () => {
+        if (isImageFileName(target.name)) {
+          const image = await readImage(target.name);
+
+          if (!image) {
+            throw new Error(
+              `The saved image "${target.name}" no longer exists.`,
+            );
+          }
+
+          downloadBlob(
+            new Blob([image.content], { type: imageMimeType(target.name) }),
+            target.name,
+          );
+
+          return;
+        }
+
         const content = await readFile(target.name);
 
         downloadBlob(
@@ -340,10 +360,17 @@ export function AppSidebar() {
     const key = fileKey(target);
     const accessedMs = accessedAt[key];
 
+    // An image in the viewer replaces the active buffer on screen.
     const isActive =
-      target.kind === "saved"
-        ? target.name === activeBuffer?.fileName
-        : target.id === activeBuffer?.externalId;
+      viewedImage !== null
+        ? target.kind === "saved" && target.name === viewedImage
+        : target.kind === "saved"
+          ? target.name === activeBuffer?.fileName
+          : target.id === activeBuffer?.externalId;
+
+    // Force sync replaces text through open buffers, so images sync with Sync now.
+    const canSyncAlone =
+      target.kind === "saved" && !isImageFileName(target.name);
 
     return (
       <SidebarFileItem
@@ -386,14 +413,10 @@ export function AppSidebar() {
         isExporting={isExporting}
         canForceSync={canForceSync && !isForcingSync}
         onForceSync={
-          target.kind === "saved"
-            ? () => void forceSyncTarget(target, "push")
-            : undefined
+          canSyncAlone ? () => void forceSyncTarget(target, "push") : undefined
         }
         onForcePull={
-          target.kind === "saved"
-            ? () => void forceSyncTarget(target, "pull")
-            : undefined
+          canSyncAlone ? () => void forceSyncTarget(target, "pull") : undefined
         }
         onDelete={() => deleteTarget(target)}
       />

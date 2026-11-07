@@ -43,6 +43,10 @@ import {
   HeadingOutlinePlugin,
   type Outline,
 } from "./plugins/heading-outline-plugin";
+import {
+  type EditorImages,
+  EditorImagesContext,
+} from "./plugins/image-context";
 import { MarkdownShortcutPlugin } from "./plugins/markdown-shortcut-plugin";
 import { MARKDOWN_TRANSFORMERS } from "./plugins/markdown-transformers";
 import { MathPlugin } from "./plugins/math-plugin";
@@ -261,18 +265,21 @@ function OutlineSheetPlugin({
  * the platform's own caret, selection handles and scrolling, which the desktop
  * editor replaces, and docks a touch toolbar under the document. Loads `markdown`
  * once on mount (remount via `key` to load a different buffer) and reports markdown
- * on every content change. The app owns whether the outline sheet is open.
+ * on every content change. The app owns whether the outline sheet is open. `images`
+ * resolves embedded image files; pass a stable object.
  */
 export function MarkdownMobileEditor({
   markdown,
   onChange,
   isOutlineOpen,
   onOutlineOpenChange,
+  images,
 }: {
   markdown: string;
   onChange: (markdown: string) => void;
   isOutlineOpen: boolean;
   onOutlineOpenChange: (open: boolean) => void;
+  images?: EditorImages;
 }) {
   const initialConfig = createMarkdownConfig(markdown);
 
@@ -285,50 +292,52 @@ export function MarkdownMobileEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
-        <div className="relative mx-auto flex min-h-full w-full max-w-3xl flex-col px-5 pt-5">
-          <EditorContextMenuPlugin>
-            <RichTextPlugin
-              contentEditable={
-                <ContentEditable
-                  data-markdown-editor
-                  aria-label="Document"
-                  aria-placeholder="Start writing…"
-                  placeholder={
-                    <div className="font-buffer text-muted-foreground pointer-events-none absolute top-0 left-0 select-none">
-                      Start writing…
-                    </div>
-                  }
-                  className="font-buffer w-full min-w-0 flex-1 pb-24 outline-none select-text"
-                />
-              }
-              ErrorBoundary={LexicalErrorBoundary}
-            />
-            <TableCellMenuPlugin />
-          </EditorContextMenuPlugin>
+      <EditorImagesContext.Provider value={images ?? null}>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+          <div className="relative mx-auto flex min-h-full w-full max-w-3xl flex-col px-5 pt-5">
+            <EditorContextMenuPlugin>
+              <RichTextPlugin
+                contentEditable={
+                  <ContentEditable
+                    data-markdown-editor
+                    aria-label="Document"
+                    aria-placeholder="Start writing…"
+                    placeholder={
+                      <div className="font-buffer text-muted-foreground pointer-events-none absolute top-0 left-0 select-none">
+                        Start writing…
+                      </div>
+                    }
+                    className="font-buffer w-full min-w-0 flex-1 pb-24 outline-none select-text"
+                  />
+                }
+                ErrorBoundary={LexicalErrorBoundary}
+              />
+              <TableCellMenuPlugin />
+            </EditorContextMenuPlugin>
+          </div>
         </div>
-      </div>
-      <MobileToolbarPlugin />
-      <ScrollCaretIntoViewPlugin />
-      <HistoryPlugin />
-      <ListPlugin />
-      <CheckListPlugin disableTakeFocusOnClick />
-      <CheckListReorderPlugin />
-      <TablePlugin
-        hasCellMerge={false}
-        hasCellBackgroundColor={false}
-        hasHorizontalScroll
-      />
-      <CodeHighlightPlugin />
-      <MathPlugin />
-      <MermaidPlugin />
-      <LinkPlugin />
-      <MarkdownShortcutPlugin />
-      <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
-      <OutlineSheetPlugin
-        open={isOutlineOpen}
-        onOpenChange={onOutlineOpenChange}
-      />
+        <MobileToolbarPlugin />
+        <ScrollCaretIntoViewPlugin />
+        <HistoryPlugin />
+        <ListPlugin />
+        <CheckListPlugin disableTakeFocusOnClick />
+        <CheckListReorderPlugin />
+        <TablePlugin
+          hasCellMerge={false}
+          hasCellBackgroundColor={false}
+          hasHorizontalScroll
+        />
+        <CodeHighlightPlugin />
+        <MathPlugin />
+        <MermaidPlugin />
+        <LinkPlugin />
+        <MarkdownShortcutPlugin />
+        <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
+        <OutlineSheetPlugin
+          open={isOutlineOpen}
+          onOpenChange={onOutlineOpenChange}
+        />
+      </EditorImagesContext.Provider>
     </LexicalComposer>
   );
 }

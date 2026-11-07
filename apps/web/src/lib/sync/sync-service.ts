@@ -258,7 +258,7 @@ async function syncCloud(name: string | null): Promise<SyncResult> {
 
   await remoteProvider.write(plan.push, remote);
 
-  const changes = await applySyncPulls(
+  const { pulled } = await applySyncPulls(
     local,
     plan,
     settings.baseline,
@@ -271,7 +271,7 @@ async function syncCloud(name: string | null): Promise<SyncResult> {
   return {
     conflicts: plan.conflicts,
     pushed: plan.push.length,
-    pulled: changes.length,
+    pulled,
   };
 }
 
@@ -345,6 +345,14 @@ export function forcePullFile(name: string) {
     }
 
     const before = (await readLocalSyncFiles()).get(name) ?? null;
+
+    // Force pull is a sidebar action, so it only reaches markdown and drawings.
+    if (
+      remote?.content instanceof Uint8Array ||
+      before?.content instanceof Uint8Array
+    ) {
+      throw new Error("Only saved markdown and drawings can be pulled.");
+    }
 
     const isApplied = await applySyncedFile(
       name,

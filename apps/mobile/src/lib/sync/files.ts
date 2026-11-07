@@ -1,8 +1,14 @@
+import { isImageFileName } from "@lunarscribe/utils/images";
 import { baseNameOf, isSafeSavedPath } from "@lunarscribe/utils/saved-paths";
-import type { RemoteChange, RemoteFiles } from "@lunarscribe/utils/sync/types";
+import type {
+  RemoteChange,
+  RemoteFiles,
+  SyncContent,
+} from "@lunarscribe/utils/sync/types";
 import {
   CryptoDigestAlgorithm,
   CryptoEncoding,
+  digest,
   digestStringAsync,
 } from "expo-crypto";
 
@@ -34,11 +40,30 @@ export function isSavedFileName(name: string) {
   return isSafeSavedPath(name) && getFileExtension(baseNameOf(name)) !== null;
 }
 
-/** Hash saved text so cloud sync can detect changes on each side. */
-export function contentHash(content: string) {
-  return digestStringAsync(CryptoDigestAlgorithm.SHA256, content, {
-    encoding: CryptoEncoding.HEX,
-  });
+/** Markdown, drawings, and the images they embed. */
+export function isSyncedFileName(name: string) {
+  return (
+    isSafeSavedPath(name) &&
+    (getFileExtension(baseNameOf(name)) !== null ||
+      isImageFileName(baseNameOf(name)))
+  );
+}
+
+/** Hash saved text or image bytes so cloud sync can detect changes on each side. */
+export async function contentHash(content: SyncContent) {
+  if (!(content instanceof Uint8Array)) {
+    return digestStringAsync(CryptoDigestAlgorithm.SHA256, content, {
+      encoding: CryptoEncoding.HEX,
+    });
+  }
+
+  const hash = new Uint8Array(
+    await digest(CryptoDigestAlgorithm.SHA256, content),
+  );
+
+  return Array.from(hash, (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
 }
 
 /** Compare with the shared base; never pull an older remote file over local edits. */
@@ -228,6 +253,7 @@ export async function applySyncPulls(
   onApplied: (change: SyncedFileChange) => void,
 ) {
   const changes: SyncedFileChange[] = [];
+  let pulled = 0;
 
   for (const change of plan.pull) {
     const before = snapshot.get(change.name) ?? null;
@@ -258,9 +284,21 @@ export async function applySyncPulls(
       pulledTimes[change.name] = { fileTime, modifiedAt: change.modifiedAt };
     }
 
+    pulled += 1;
+
+    const beforeContent = before?.content ?? null;
+
+    // Only buffers need the text; images are read again when the editor resolves them.
+    if (
+      beforeContent instanceof Uint8Array ||
+      change.content instanceof Uint8Array
+    ) {
+      continue;
+    }
+
     const applied = {
       name: change.name,
-      before: before?.content ?? null,
+      before: beforeContent,
       after: change.content,
     };
 
@@ -269,5 +307,5 @@ export async function applySyncPulls(
     onApplied(applied);
   }
 
-  return changes;
+  return { changes, pulled };
 }

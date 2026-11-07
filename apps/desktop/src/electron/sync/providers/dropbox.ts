@@ -1,3 +1,4 @@
+import { isImageFileName } from "@lunarscribe/utils/images";
 import { mapConcurrent } from "@lunarscribe/utils/map-concurrent";
 import {
   jsonArray,
@@ -10,13 +11,14 @@ import type {
   FileSyncProvider,
   RemoteFile,
   RemoteFiles,
+  SyncContent,
 } from "@lunarscribe/utils/sync/types";
 import {
   SYNC_CONCURRENCY,
   SyncSignInRequired,
 } from "@lunarscribe/utils/sync/types";
 
-import { isSavedFileName } from "../files";
+import { isSyncedFileName } from "../files";
 
 // Dropbox destination
 const BACKUP_FOLDER_PATH = "/lunarscribe-bak-files";
@@ -114,7 +116,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
   function createProvider(): FileSyncProvider {
     async function upload(
       name: string,
-      content: string,
+      content: SyncContent,
       modifiedAt: number,
       mode: WriteMode,
       strictConflict: boolean,
@@ -152,7 +154,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
       /** Read each file at the revision returned by the folder listing. */
       async read(name) {
         const files: RemoteFiles = new Map();
-        const downloads: RemoteFile[] = [];
+        const downloads: { name: string; file: RemoteFile }[] = [];
 
         let response = await rpc(
           "files/list_folder",
@@ -170,7 +172,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
             );
 
             if (
-              !isSavedFileName(entryName) ||
+              !isSyncedFileName(entryName) ||
               (name !== null && entryName !== name)
             ) {
               continue;
@@ -196,7 +198,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
             };
 
             files.set(entryName, remoteFile);
-            downloads.push(remoteFile);
+            downloads.push({ name: entryName, file: remoteFile });
           }
 
           if (!jsonBoolean(page, "has_more")) {
@@ -210,23 +212,30 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
         }
 
         // Fill in contents once the listing is complete.
-        await mapConcurrent(downloads, SYNC_CONCURRENCY, async (remoteFile) => {
-          const download = await request(
-            "files/download",
-            {
-              method: "POST",
-              headers: {
-                "Dropbox-API-Arg": JSON.stringify({
-                  path: `rev:${remoteFile.revision}`,
-                }),
+        await mapConcurrent(
+          downloads,
+          SYNC_CONCURRENCY,
+          async ({ name: downloadName, file: remoteFile }) => {
+            const download = await request(
+              "files/download",
+              {
+                method: "POST",
+                headers: {
+                  "Dropbox-API-Arg": JSON.stringify({
+                    path: `rev:${remoteFile.revision}`,
+                  }),
+                },
               },
-            },
-            true,
-          );
+              true,
+            );
 
-          checkResponse(download);
-          remoteFile.content = await download.text();
-        });
+            checkResponse(download);
+            // Images keep their bytes; markdown and drawings are text.
+            remoteFile.content = isImageFileName(downloadName)
+              ? new Uint8Array(await download.arrayBuffer())
+              : await download.text();
+          },
+        );
 
         return files;
       },

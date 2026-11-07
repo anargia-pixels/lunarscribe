@@ -9,6 +9,7 @@ import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 
 import { editorTheme } from "./editor-theme";
 import { parseFrontmatter } from "./frontmatter";
+import { ImageNode } from "./plugins/image-node";
 import { MARKDOWN_TRANSFORMERS } from "./plugins/markdown-transformers";
 import { MathNode } from "./plugins/math-node";
 import { MermaidNode } from "./plugins/mermaid-node";
@@ -33,6 +34,7 @@ export function createMarkdownConfig(markdown: string): InitialConfigType {
       HorizontalRuleNode,
       MathNode,
       MermaidNode,
+      ImageNode,
     ],
     // Frontmatter belongs to the frontmatter panel, not to the editor graph.
     editorState: () =>

@@ -36,6 +36,11 @@ const UNSUPPORTED_LINK_CODES = [
   "ENOSYS",
 ] as const;
 
+/** Whether `path` is a canonical external file path the user opened in this session. */
+export function isOpenedExternalPath(path: string) {
+  return openedPaths.has(path);
+}
+
 /** Reads local text files; canonical paths deduplicate aliases while source paths survive reopening. */
 async function readTextFile(path: string): Promise<OpenedExternalFile> {
   if (!isAbsolute(path) || !isTextFile(path)) {

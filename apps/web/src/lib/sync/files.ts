@@ -1,9 +1,14 @@
+import { isImageFileName } from "@lunarscribe/utils/images";
 import { baseNameOf, isSafeSavedPath } from "@lunarscribe/utils/saved-paths";
-import type { RemoteChange, RemoteFiles } from "@lunarscribe/utils/sync/types";
+import type {
+  RemoteChange,
+  RemoteFiles,
+  SyncContent,
+} from "@lunarscribe/utils/sync/types";
 
-import type { SavedFileRecord } from "@/lib/browser-database";
+import type { SavedFileRecord, SavedImageRecord } from "@/lib/browser-database";
 import { getFileExtension } from "@/lib/editor-files";
-import { applySyncedFile, readAllFiles } from "@/lib/saved-files";
+import { applySyncedFile, readAllSyncFiles } from "@/lib/saved-files";
 import type {
   SyncBaseline,
   SyncConflict,
@@ -12,7 +17,7 @@ import type {
 
 // Sync comparisons
 /** Saved files by name, as read from browser storage when the sync started. */
-export type LocalSyncFiles = Map<string, SavedFileRecord>;
+export type LocalSyncFiles = Map<string, SavedFileRecord | SavedImageRecord>;
 
 export type SyncPlan = {
   push: RemoteChange[];
@@ -26,11 +31,20 @@ export function isSavedFileName(name: string) {
   return isSafeSavedPath(name) && getFileExtension(baseNameOf(name)) !== null;
 }
 
-/** Hash saved text so cloud sync can detect changes on each side. */
-export async function contentHash(content: string) {
+/** Markdown, drawings, and the images they embed. */
+export function isSyncedFileName(name: string) {
+  return (
+    isSafeSavedPath(name) &&
+    (getFileExtension(baseNameOf(name)) !== null ||
+      isImageFileName(baseNameOf(name)))
+  );
+}
+
+/** Hash saved text or image bytes so cloud sync can detect changes on each side. */
+export async function contentHash(content: SyncContent) {
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(content),
+    content instanceof Uint8Array ? content : new TextEncoder().encode(content),
   );
 
   return Array.from(new Uint8Array(digest), (byte) =>
@@ -179,8 +193,8 @@ export async function planSync(
 /** Read saved files inside the same queue that processes local saves. */
 export async function readLocalSyncFiles(): Promise<LocalSyncFiles> {
   return new Map(
-    (await readAllFiles())
-      .filter((record) => getFileExtension(record.name) !== null)
+    (await readAllSyncFiles())
+      .filter((record) => isSyncedFileName(record.name))
       .map((record) => [record.name, record]),
   );
 }
@@ -194,6 +208,7 @@ export async function applySyncPulls(
   onApplied: (change: SyncedFileChange) => void,
 ) {
   const changes: SyncedFileChange[] = [];
+  let pulled = 0;
 
   for (const change of plan.pull) {
     const before = snapshot.get(change.name) ?? null;
@@ -223,9 +238,21 @@ export async function applySyncPulls(
       continue;
     }
 
+    pulled += 1;
+
+    const beforeContent = before?.content ?? null;
+
+    // Image changes reach the editor through the saved-files listeners instead.
+    if (
+      beforeContent instanceof Uint8Array ||
+      change.content instanceof Uint8Array
+    ) {
+      continue;
+    }
+
     const applied = {
       name: change.name,
-      before: before?.content ?? null,
+      before: beforeContent,
       after: change.content,
     };
 
@@ -234,5 +261,5 @@ export async function applySyncPulls(
     onApplied(applied);
   }
 
-  return changes;
+  return { changes, pulled };
 }

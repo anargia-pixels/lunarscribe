@@ -30,6 +30,11 @@ import {
   HeadingOutlinePlugin,
   type Outline,
 } from "./plugins/heading-outline-plugin";
+import {
+  type EditorImages,
+  EditorImagesContext,
+} from "./plugins/image-context";
+import { ImagePlugin } from "./plugins/image-plugin";
 import { LinkEditorPlugin } from "./plugins/link-editor-plugin";
 import { LinkOpenPlugin } from "./plugins/link-open-plugin";
 import { MarkdownShortcutPlugin } from "./plugins/markdown-shortcut-plugin";
@@ -39,6 +44,8 @@ import { MermaidPlugin } from "./plugins/mermaid-plugin";
 import { TableCellMenuPlugin } from "./plugins/table-cell-menu-plugin";
 import { ToolbarPlugin } from "./toolbar-plugin";
 
+export type { EditorImages, ImageSource } from "./plugins/image-context";
+
 /**
  * WYSIWYG markdown editor. Loads `markdown` once on mount (remount via `key` to
  * load a different buffer) and reports markdown on every content change.
@@ -47,7 +54,8 @@ import { ToolbarPlugin } from "./toolbar-plugin";
  * menu holds every toolbar action, so `showToolbar` can hide the toolbar.
  * `onOutlineChange` receives the headings for an outline sidebar.
  * `readScrollTop` gives the scroll position to restore on mount, and `onScrollTopSave`
- * receives the position on unmount, so a remounted buffer opens where it was left.
+ * receives the position on unmount, so a remounted buffer opens where it was left. `images` resolves
+ * embedded image files and saves dropped or pasted ones; pass a stable object.
  */
 export function MarkdownEditor({
   markdown,
@@ -56,6 +64,7 @@ export function MarkdownEditor({
   onOutlineChange,
   readScrollTop,
   onScrollTopSave,
+  images,
 }: {
   markdown: string;
   onChange: (markdown: string) => void;
@@ -64,6 +73,7 @@ export function MarkdownEditor({
   /** Read when the editor mounts, after any previous editor saved its position. */
   readScrollTop?: () => number | undefined;
   onScrollTopSave?: (scrollTop: number) => void;
+  images?: EditorImages;
 }) {
   const initialConfig = createMarkdownConfig(markdown);
   const [parsed] = useState(() => parseFrontmatter(markdown));
@@ -129,57 +139,60 @@ export function MarkdownEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      {showToolbar && <ToolbarPlugin />}
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        <FindPlugin />
-        <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
-          <div className="relative mx-auto flex min-h-full w-full max-w-4xl flex-col px-8 pt-10">
-            <FrontmatterPanel
-              entries={entries}
-              onChange={handleFrontmatterChange}
-            />
-            <EditorContextMenuPlugin>
-              <RichTextPlugin
-                contentEditable={
-                  <ContentEditable
-                    data-markdown-editor
-                    aria-label="Document"
-                    aria-placeholder="Start writing…"
-                    placeholder={
-                      <div className="font-buffer text-muted-foreground pointer-events-none absolute top-0 left-0 select-none">
-                        Start writing…
-                      </div>
-                    }
-                    className="font-buffer w-full min-w-0 cursor-text pb-48 outline-none select-text"
-                  />
-                }
-                ErrorBoundary={LexicalErrorBoundary}
+      <EditorImagesContext.Provider value={images ?? null}>
+        {showToolbar && <ToolbarPlugin />}
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          <FindPlugin />
+          <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
+            <div className="relative mx-auto flex min-h-full w-full max-w-4xl flex-col px-8 pt-10">
+              <FrontmatterPanel
+                entries={entries}
+                onChange={handleFrontmatterChange}
               />
-              <CaretPlugin />
-              <HeadingCollapsePlugin />
-              <LinkEditorPlugin />
-              <LinkOpenPlugin />
-              <TableCellMenuPlugin />
-            </EditorContextMenuPlugin>
-          </div>
-        </ScrollArea>
-      </div>
-      <HistoryPlugin />
-      <ListPlugin />
-      <CheckListPlugin disableTakeFocusOnClick />
-      <CheckListReorderPlugin />
-      <TablePlugin
-        hasCellMerge={false}
-        hasCellBackgroundColor={false}
-        hasHorizontalScroll
-      />
-      <CodeHighlightPlugin />
-      <MathPlugin />
-      <MermaidPlugin />
-      <LinkPlugin />
-      <MarkdownShortcutPlugin />
-      <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
-      {onOutlineChange && <HeadingOutlinePlugin onChange={onOutlineChange} />}
+              <EditorContextMenuPlugin>
+                <RichTextPlugin
+                  contentEditable={
+                    <ContentEditable
+                      data-markdown-editor
+                      aria-label="Document"
+                      aria-placeholder="Start writing…"
+                      placeholder={
+                        <div className="font-buffer text-muted-foreground pointer-events-none absolute top-0 left-0 select-none">
+                          Start writing…
+                        </div>
+                      }
+                      className="font-buffer w-full min-w-0 cursor-text pb-48 outline-none select-text"
+                    />
+                  }
+                  ErrorBoundary={LexicalErrorBoundary}
+                />
+                <CaretPlugin />
+                <HeadingCollapsePlugin />
+                <LinkEditorPlugin />
+                <LinkOpenPlugin />
+                <TableCellMenuPlugin />
+              </EditorContextMenuPlugin>
+            </div>
+          </ScrollArea>
+        </div>
+        <HistoryPlugin />
+        <ListPlugin />
+        <CheckListPlugin disableTakeFocusOnClick />
+        <CheckListReorderPlugin />
+        <TablePlugin
+          hasCellMerge={false}
+          hasCellBackgroundColor={false}
+          hasHorizontalScroll
+        />
+        <CodeHighlightPlugin />
+        <MathPlugin />
+        <MermaidPlugin />
+        <ImagePlugin />
+        <LinkPlugin />
+        <MarkdownShortcutPlugin />
+        <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
+        {onOutlineChange && <HeadingOutlinePlugin onChange={onOutlineChange} />}
+      </EditorImagesContext.Provider>
     </LexicalComposer>
   );
 }

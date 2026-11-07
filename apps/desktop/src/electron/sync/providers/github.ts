@@ -11,6 +11,7 @@ import { homedir, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
 
+import { IMAGE_EXTENSIONS } from "@lunarscribe/utils/images";
 import type { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
 
@@ -19,7 +20,7 @@ import type {
   SyncResult,
   SyncedFileChange,
 } from "../../../lib/sync";
-import { getFileChanges, isSavedFileName, readLocalSyncFiles } from "../files";
+import { getFileChanges, isSyncedFileName, readLocalSyncFiles } from "../files";
 import type { LocalSyncFiles } from "../files";
 
 // Git commands
@@ -133,10 +134,16 @@ async function initializeRepository(
   }
 
   await mkdir(join(folder, ".git", "info"), { recursive: true });
-  // Drawing scenes must keep both versions when both devices change them.
+
+  // Drawing scenes and images must keep both versions when both devices change them.
+  const binaryPatterns = ["draw", ...IMAGE_EXTENSIONS].map(
+    (extension) =>
+      `*.${[...extension].map((letter) => `[${letter.toLowerCase()}${letter.toUpperCase()}]`).join("")} -merge -filter -text`,
+  );
+
   await writeFile(
     join(folder, ".git", "info", "attributes"),
-    "* merge=text -filter -text\n*.[dD][rR][aA][wW] -merge -filter -text\n",
+    ["* merge=text -filter -text", ...binaryPatterns, ""].join("\n"),
   );
 }
 
@@ -214,9 +221,9 @@ async function validateTree(git: GitCommand, tree: string) {
 
     const name = entry.slice(entry.indexOf("\t") + 1);
 
-    if (!/^100(?:644|755) blob /u.test(entry) || !isSavedFileName(name)) {
+    if (!/^100(?:644|755) blob /u.test(entry) || !isSyncedFileName(name)) {
       throw new Error(
-        `GitHub contains an unsupported path ${JSON.stringify(name)}. Keep only saved markdown and drawings in the backup repository.`,
+        `GitHub contains an unsupported path ${JSON.stringify(name)}. Keep only saved markdown, drawings, and images in the backup repository.`,
       );
     }
   }
@@ -257,7 +264,7 @@ async function commitSavedFiles(
         );
 
   for (const candidate of names) {
-    if (!isSavedFileName(candidate) || local.blockedNames.has(candidate)) {
+    if (!isSyncedFileName(candidate) || local.blockedNames.has(candidate)) {
       throw new Error(
         `GitHub cannot sync the path ${JSON.stringify(candidate)}. Saved writing must be a regular file inside the documents folder.`,
       );

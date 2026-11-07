@@ -7,6 +7,10 @@ import {
 } from "@lexical/markdown";
 
 import {
+  MARKDOWN_IMAGE_SHORTCUT,
+  WIKILINK_IMAGE_SHORTCUT,
+} from "./image-transformers";
+import {
   BLOCK_MATH_END,
   INLINE_MATH,
   MATH_SOURCE_SHORTCUTS,
@@ -41,5 +45,8 @@ export const INLINE_TRANSFORMERS: Transformer[] = [
   SUPERSCRIPT,
   // Keep `~~` ahead of `~` so strikethrough wins over subscript.
   SUBSCRIPT,
+  // Ahead of the link shortcut, so `![alt](target)` never becomes `!` and a link.
+  WIKILINK_IMAGE_SHORTCUT,
+  MARKDOWN_IMAGE_SHORTCUT,
   ...TEXT_MATCH_TRANSFORMERS,
 ];

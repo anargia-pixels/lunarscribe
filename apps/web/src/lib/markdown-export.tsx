@@ -1,8 +1,11 @@
+import type { EditorImages } from "@lunarscribe/components/editor/markdown-editor";
 import { MarkdownPreview } from "@lunarscribe/components/editor/markdown-preview";
+import { folderOf } from "@lunarscribe/utils/saved-paths";
 import { createRoot } from "react-dom/client";
 
 import type { FileTarget } from "@/lib/editor-files";
 import { isTextFile, stemOf } from "@/lib/editor-files";
+import { createEditorImages } from "@/lib/editor-images";
 import { readExternalFile } from "@/lib/external-files";
 import { readFile } from "@/lib/saved-files";
 import { useBufferStore } from "@/stores/buffer-store";
@@ -16,6 +19,7 @@ type MarkdownSnapshotExporter<Result> = (
 async function renderMarkdownSnapshot<Result>(
   markdown: string,
   title: string,
+  images: EditorImages,
   exportSnapshot: MarkdownSnapshotExporter<Result>,
 ) {
   const host = document.createElement("div");
@@ -46,6 +50,7 @@ async function renderMarkdownSnapshot<Result>(
           markdown={markdown}
           onReady={resolve}
           onError={reject}
+          images={images}
         />,
       );
     });
@@ -102,5 +107,11 @@ export async function withMarkdownSnapshot<Result>(
     return exportSnapshot(activeRoot, title);
   }
 
-  return renderMarkdownSnapshot(markdown, title, exportSnapshot);
+  const images = createEditorImages(
+    target.kind === "saved"
+      ? { kind: "saved", folder: folderOf(target.name) }
+      : { kind: "external" },
+  );
+
+  return renderMarkdownSnapshot(markdown, title, images, exportSnapshot);
 }

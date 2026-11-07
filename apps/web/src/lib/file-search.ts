@@ -1,6 +1,6 @@
 import type { SavedFileRecord } from "@/lib/browser-database";
 import type { FileSearchMatch, SearchMatchRange } from "@/lib/editor-files";
-import { readAllFiles } from "@/lib/saved-files";
+import { readAllFiles, readAllSyncFiles } from "@/lib/saved-files";
 
 /** Content matches returned per search; the dialog lists at most this many. */
 const MAX_RESULTS = 10;
@@ -29,7 +29,10 @@ function fuzzyScore(name: string, query: string) {
 }
 
 /** Every saved file whose name matches, so the dialog can rank them by when they were opened. */
-function searchFileNames(files: SavedFileRecord[], query: string) {
+function searchFileNames(
+  files: Pick<SavedFileRecord, "name" | "modifiedAt">[],
+  query: string,
+) {
   if (!query) {
     // Without a query, recently edited files come first.
     return files
@@ -99,12 +102,12 @@ function searchFileContent(files: SavedFileRecord[], query: string) {
 
 /** Searches saved files in browser storage by name, or by content when asked. */
 export async function searchFiles(query: string, isContentSearch: boolean) {
-  const files = await readAllFiles();
   const searchQuery = query.trim();
 
   if (isContentSearch && searchQuery) {
-    return searchFileContent(files, searchQuery);
+    return searchFileContent(await readAllFiles(), searchQuery);
   }
 
-  return searchFileNames(files, searchQuery);
+  // Names include images, which open in the image viewer.
+  return searchFileNames(await readAllSyncFiles(), searchQuery);
 }

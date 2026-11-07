@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, watch } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import { isImageFileName, splitImageFileName } from "@lunarscribe/utils/images";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import {
   baseNameOf,
@@ -19,8 +20,19 @@ import {
 } from "../lib/editor-files";
 import { registerFileSearch } from "./file-search";
 import { registerFileWatcher } from "./file-watcher";
+import { registerImages } from "./images";
 import { listSavedEntries, resolveSavedPath } from "./saved-path";
 import { registerSync } from "./sync/sync-service";
+
+/** A saved file's extension, kept when it moves; images keep theirs as written. */
+function extensionOf(name: string) {
+  return (
+    getFileExtension(name) ??
+    (isImageFileName(name)
+      ? splitImageFileName(baseNameOf(name)).extension
+      : "")
+  );
+}
 
 /** Saves buffers as `<folder>/<title><extension>` in Documents/lunarscribe and tells windows when it changes. */
 export function registerDocumentsFolder() {
@@ -59,6 +71,7 @@ export function registerDocumentsFolder() {
   mkdirSync(folder, { recursive: true });
   registerFileSearch(folder);
   registerFileWatcher(folder);
+  const images = registerImages(folder, queueFileOperation);
   registerSync(folder, queueFileOperation);
 
   ipcMain.handle("files:list", () => listSavedEntries(folder));
@@ -129,7 +142,7 @@ export function registerDocumentsFolder() {
       const moved = availableName(
         parent,
         stemOf(name),
-        getFileExtension(name) ?? "",
+        extensionOf(name),
         null,
       );
 
@@ -137,6 +150,32 @@ export function registerDocumentsFolder() {
       await rename(pathOf(name), pathOf(moved));
 
       return moved;
+    }),
+  );
+  ipcMain.handle("images:rename", (_event, name: string, title: string) =>
+    queueFileOperation(folder, async () => {
+      if (!isImageFileName(name)) {
+        throw new Error("Only images are renamed in place.");
+      }
+
+      const stem = title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_");
+
+      if (!stem || stem.startsWith(".")) {
+        throw new Error("Enter a name for the image.");
+      }
+
+      const renamed = availableName(
+        folderOf(name),
+        stem,
+        extensionOf(name),
+        name,
+      );
+
+      if (renamed !== name) {
+        await rename(pathOf(name), pathOf(renamed));
+      }
+
+      return renamed;
     }),
   );
   ipcMain.handle("files:delete", (_event, name: string) =>
@@ -188,5 +227,8 @@ export function registerDocumentsFolder() {
   );
 
   // Recursive, so edits inside folders refresh the sidebar too.
-  watch(folder, { recursive: true }, () => notify.maybeExecute());
+  watch(folder, { recursive: true }, () => {
+    images.invalidate();
+    notify.maybeExecute();
+  });
 }

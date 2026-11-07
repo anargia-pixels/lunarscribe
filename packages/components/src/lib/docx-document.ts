@@ -5,6 +5,7 @@ import {
   Document,
   ExternalHyperlink,
   HeadingLevel,
+  ImageRun,
   LevelFormat,
   Math as WordMath,
   Paragraph,
@@ -35,8 +36,60 @@ const HEADINGS = [
   HeadingLevel.HEADING_6,
 ] as const;
 
+/** Page width inside the margins, in CSS pixels: 210mm less 2 × 18mm. */
+const PAGE_CONTENT_WIDTH = ((210 - 36) / 25.4) * 96;
+
+type DocxImage = { data: Uint8Array; width: number; height: number };
+
+/**
+ * PNG bytes for an image embed, drawn through a canvas so every format the editor shows
+ * (WebP, AVIF, SVG, …) becomes one Word can open. Null when the image cannot be read,
+ * such as a remote image whose server does not allow it.
+ */
+async function rasterizeImage(
+  image: HTMLImageElement,
+): Promise<DocxImage | null> {
+  try {
+    await image.decode();
+
+    const canvas = document.createElement("canvas");
+
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    canvas.getContext("2d")?.drawImage(image, 0, 0);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/png"),
+    );
+
+    if (!blob || !image.naturalWidth) {
+      return null;
+    }
+
+    // As shown in the editor, but no wider than 80% of the page.
+    const shown = image.getBoundingClientRect().width || image.naturalWidth;
+    const width = Math.min(shown, PAGE_CONTENT_WIDTH * 0.8);
+
+    return {
+      data: new Uint8Array(await blob.arrayBuffer()),
+      width,
+      height: (width * image.naturalHeight) / image.naturalWidth,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Translate the rendered editor into editable Word blocks and inline formats. */
-export function createDocxDocument(root: HTMLElement, title: string) {
+export async function createDocxDocument(root: HTMLElement, title: string) {
+  const images = new Map<HTMLImageElement, DocxImage | null>();
+
+  for (const image of root.querySelectorAll<HTMLImageElement>(
+    ".editor-image img",
+  )) {
+    images.set(image, await rasterizeImage(image));
+  }
+
   const numbering: INumberingOptions["config"][number][] = [];
 
   const backgroundColor = getDocxColor(
@@ -226,6 +279,43 @@ export function createDocxDocument(root: HTMLElement, title: string) {
     });
   }
 
+  /** An embedded image, or its alt text and error message when it cannot be read. */
+  function createImage(element: HTMLElement) {
+    const image = element.querySelector("img");
+    const prepared = image ? images.get(image) : null;
+
+    if (image && prepared) {
+      return new Paragraph({
+        children: [
+          new ImageRun({
+            type: "png",
+            data: prepared.data,
+            transformation: {
+              width: prepared.width,
+              height: prepared.height,
+            },
+            altText: { name: image.alt, description: image.alt },
+          }),
+        ],
+      });
+    }
+
+    const text =
+      element
+        .querySelector("[data-image-error]")
+        ?.getAttribute("data-image-error") ?? `Image: ${image?.alt ?? ""}`;
+
+    return new Paragraph({
+      children: [
+        new TextRun({
+          ...getDocxRunStyle(element),
+          italics: true,
+          text: `[${text}]`,
+        }),
+      ],
+    });
+  }
+
   function createBlocks(container: HTMLElement): (Paragraph | Table)[] {
     return Array.from(container.childNodes).flatMap((node) => {
       if (node instanceof Text) {
@@ -243,6 +333,8 @@ export function createDocxDocument(root: HTMLElement, title: string) {
       if (node.matches("ul, ol")) return createList(node, 0);
 
       if (node instanceof HTMLTableElement) return [createTable(node)];
+
+      if (node.classList.contains("editor-image")) return [createImage(node)];
 
       if (node.tagName === "DIV" && !node.classList.contains("editor-math"))
         return createBlocks(node);

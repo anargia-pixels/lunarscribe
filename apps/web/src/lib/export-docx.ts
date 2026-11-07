@@ -10,7 +10,7 @@ export async function exportDocx(target: FileTarget) {
   ]);
 
   return withMarkdownSnapshot(target, async (root, title) => {
-    const blob = await Packer.toBlob(createDocxDocument(root, title));
+    const blob = await Packer.toBlob(await createDocxDocument(root, title));
 
     return downloadBlob(blob, `${title || "untitled"}.docx`);
   });

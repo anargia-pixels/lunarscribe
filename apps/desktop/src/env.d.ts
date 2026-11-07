@@ -37,6 +37,16 @@ interface Window {
       listener: (changes: import("./lib/sync").SyncedFileChange[]) => void,
     ) => () => void;
     getPathForFile: (file: File) => string;
+    /** The URL of an image embed's file next to `note`, or why it can't be shown. */
+    resolveImage: (
+      note: import("./lib/images").ImageNote,
+      target: string,
+    ) => Promise<import("./lib/images").ResolvedImage>;
+    /** Copies images next to `note` without overwriting; returns their embed targets. */
+    saveImages: (
+      note: import("./lib/images").ImageNote,
+      uploads: import("./lib/images").ImageUpload[],
+    ) => Promise<string[]>;
     /** Scales the window, where 1 is 100%. */
     setZoomFactor: (factor: number) => void;
     /** Versions and folders for the About pane. */
@@ -82,6 +92,8 @@ interface Window {
       content: string,
       expectedContent: string | null,
     ) => Promise<string>;
+    /** Renames a saved image to `<title><its extension>` in its folder; returns its new name. */
+    renameImage: (name: string, title: string) => Promise<string>;
     /** Moves a saved file into `folder` (`""` for the top level); returns its new name. */
     moveFile: (name: string, folder: string) => Promise<string>;
     deleteFile: (name: string) => Promise<void>;

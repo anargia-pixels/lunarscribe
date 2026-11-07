@@ -8,6 +8,10 @@ import { useEffect } from "react";
 
 import { createMarkdownConfig } from "./markdown-config";
 import { CodeHighlightPlugin } from "./plugins/code-highlight-plugin";
+import {
+  type EditorImages,
+  EditorImagesContext,
+} from "./plugins/image-context";
 
 import "./plugins/math-plugin.css";
 
@@ -19,11 +23,11 @@ function PreviewReadyPlugin({
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    // Allow decorators to mount, then wait for asynchronous Mermaid previews.
+    // Allow decorators to mount, then wait for Mermaid previews and image lookups.
     const ready = () => {
       const root = editor.getRootElement();
 
-      if (root?.querySelector("[data-mermaid-pending]")) {
+      if (root?.querySelector("[data-mermaid-pending], [data-image-pending]")) {
         frame = requestAnimationFrame(ready);
       } else if (root) {
         onReady(root);
@@ -45,10 +49,12 @@ export function MarkdownPreview({
   markdown,
   onReady,
   onError,
+  images,
 }: {
   markdown: string;
   onReady: (root: HTMLElement) => void;
   onError: (error: Error) => void;
+  images?: EditorImages;
 }) {
   const initialConfig = {
     ...createMarkdownConfig(markdown),
@@ -58,19 +64,21 @@ export function MarkdownPreview({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <RichTextPlugin
-        contentEditable={
-          <ContentEditable className="font-buffer w-full min-w-0 outline-none" />
-        }
-        ErrorBoundary={LexicalErrorBoundary}
-      />
-      <TablePlugin
-        hasCellMerge={false}
-        hasCellBackgroundColor={false}
-        hasHorizontalScroll
-      />
-      <CodeHighlightPlugin />
-      <PreviewReadyPlugin onReady={onReady} />
+      <EditorImagesContext.Provider value={images ?? null}>
+        <RichTextPlugin
+          contentEditable={
+            <ContentEditable className="font-buffer w-full min-w-0 outline-none" />
+          }
+          ErrorBoundary={LexicalErrorBoundary}
+        />
+        <TablePlugin
+          hasCellMerge={false}
+          hasCellBackgroundColor={false}
+          hasHorizontalScroll
+        />
+        <CodeHighlightPlugin />
+        <PreviewReadyPlugin onReady={onReady} />
+      </EditorImagesContext.Provider>
     </LexicalComposer>
   );
 }

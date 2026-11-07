@@ -1,3 +1,8 @@
+import {
+  availableImageName,
+  isImageFileName,
+  splitImageFileName,
+} from "@lunarscribe/utils/images";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import {
   allFolders,
@@ -9,15 +14,18 @@ import {
   toFolderName,
 } from "@lunarscribe/utils/saved-paths";
 import type { SavedEntries } from "@lunarscribe/utils/saved-paths";
+import { isSameSyncContent } from "@lunarscribe/utils/sync/types";
+import type { SyncContent } from "@lunarscribe/utils/sync/types";
 
 import {
   deleteRecord,
+  getAllNames,
   getAllRecords,
   getRecord,
   putRecord,
   withStore,
 } from "@/lib/browser-database";
-import type { SavedFileRecord } from "@/lib/browser-database";
+import type { SavedFileRecord, SavedImageRecord } from "@/lib/browser-database";
 import {
   getFileExtension,
   INVALID_FILE_TITLE_CHARACTERS,
@@ -53,11 +61,21 @@ async function readFolderNames() {
   ).map((record) => record.name);
 }
 
-/** Saved files and folders, named by their paths. */
+/** A saved file's extension, kept when it moves; images keep theirs as written. */
+function extensionOf(name: string) {
+  return (
+    getFileExtension(name) ??
+    (isImageFileName(name)
+      ? splitImageFileName(baseNameOf(name)).extension
+      : "")
+  );
+}
+
+/** Saved notes, drawings, the images they embed, and folders, named by their paths. */
 export async function listFiles(): Promise<SavedEntries> {
   const files = (await readRecords())
     .map((record) => record.name)
-    .filter((name) => getFileExtension(name) !== null)
+    .filter((name) => getFileExtension(name) !== null || isImageFileName(name))
     .sort((left, right) => left.localeCompare(right));
 
   return {
@@ -100,7 +118,7 @@ export function readFile(name: string) {
   return queueFileOperation(QUEUE_KEY, async () => {
     const record = await readRecord(name);
 
-    if (!record) {
+    if (!record || record.content instanceof Uint8Array) {
       throw new Error(`The saved file "${name}" no longer exists.`);
     }
 
@@ -108,9 +126,75 @@ export function readFile(name: string) {
   });
 }
 
-/** Every saved file with its content and modification time, for search and sync. */
+function isTextRecord(
+  record: SavedFileRecord | SavedImageRecord,
+): record is SavedFileRecord {
+  return !(record.content instanceof Uint8Array);
+}
+
+/** Every saved markdown file and drawing with its content and modification time. */
 export function readAllFiles() {
+  return queueFileOperation(QUEUE_KEY, async () =>
+    (await readRecords()).filter(isTextRecord),
+  );
+}
+
+/** Every synced file: markdown, drawings, and the images they embed. */
+export function readAllSyncFiles() {
   return queueFileOperation(QUEUE_KEY, readRecords);
+}
+
+/** Every saved image path, for resolving embeds. */
+export async function listImageNames() {
+  const names = await withStore("files", "readonly", getAllNames);
+
+  return names.filter(isImageFileName);
+}
+
+/** A saved image's bytes and modification time, or null when it does not exist. */
+export async function readImage(name: string) {
+  const record = await readRecord(name);
+
+  return record?.content instanceof Uint8Array
+    ? { content: record.content, modifiedAt: record.modifiedAt }
+    : null;
+}
+
+/**
+ * Copies images into `folder`, next to the markdown that embeds them, never over another
+ * file. Returns the name of each inside `folder`, which is its embed target.
+ */
+export function saveImages(
+  folder: string,
+  images: { name: string; content: Uint8Array<ArrayBuffer> }[],
+) {
+  return queueFileOperation(QUEUE_KEY, async () => {
+    const targets = await withStore("files", "readwrite", async (store) => {
+      const taken = new Set(await getAllNames(store));
+
+      const saved: string[] = [];
+
+      for (const image of images) {
+        const name = availableImageName(folder, image.name, (path) =>
+          taken.has(path),
+        );
+
+        taken.add(name);
+        await putRecord<"files">(store, {
+          name,
+          content: image.content,
+          modifiedAt: Date.now(),
+        });
+        saved.push(name.slice(folder ? folder.length + 1 : 0));
+      }
+
+      return saved;
+    });
+
+    await notifyFilesChanged();
+
+    return targets;
+  });
 }
 
 /** `<stem><extension>` in `folder`, or `<stem>_1<extension>`, ... when another file has it. */
@@ -215,7 +299,7 @@ export function moveFile(name: string, folder: string) {
         store,
         folder,
         stemOf(name),
-        getFileExtension(name) ?? "",
+        extensionOf(name),
         null,
       );
 
@@ -228,6 +312,44 @@ export function moveFile(name: string, folder: string) {
     await notifyFilesChanged();
 
     return moved;
+  });
+}
+
+/** Renames a saved image to `<title><its extension>` in its folder; returns its new name. */
+export function renameImage(name: string, title: string) {
+  return queueFileOperation(QUEUE_KEY, async () => {
+    const stem = title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_");
+
+    if (!stem || stem.startsWith(".")) {
+      throw new Error("Enter a name for the image.");
+    }
+
+    const renamed = await withStore("files", "readwrite", async (store) => {
+      const record = await getRecord<"files">(store, name);
+
+      if (!record) {
+        throw new Error(`The saved image "${name}" no longer exists.`);
+      }
+
+      const candidate = await availableName(
+        store,
+        folderOf(name),
+        stem,
+        extensionOf(name),
+        name,
+      );
+
+      if (candidate !== name) {
+        await putRecord<"files">(store, { ...record, name: candidate });
+        await deleteRecord(store, name);
+      }
+
+      return candidate;
+    });
+
+    await notifyFilesChanged();
+
+    return renamed;
   });
 }
 
@@ -332,8 +454,8 @@ export function deleteFile(name: string) {
  */
 export function applySyncedFile(
   name: string,
-  snapshot: SavedFileRecord | null,
-  content: string | null,
+  snapshot: SavedFileRecord | SavedImageRecord | null,
+  content: SyncContent | null,
   modifiedAt: number,
 ) {
   return queueFileOperation(QUEUE_KEY, async () => {
@@ -341,7 +463,7 @@ export function applySyncedFile(
       const current = (await getRecord<"files">(store, name)) ?? null;
 
       if (
-        current?.content !== snapshot?.content ||
+        !isSameSyncContent(current?.content, snapshot?.content) ||
         current?.modifiedAt !== snapshot?.modifiedAt
       ) {
         return false;
@@ -350,7 +472,13 @@ export function applySyncedFile(
       if (content === null) {
         await deleteRecord(store, name);
       } else {
-        await putRecord<"files">(store, { name, content, modifiedAt });
+        // The branches match; each narrows `content` to one record type.
+        await putRecord<"files">(
+          store,
+          content instanceof Uint8Array
+            ? { name, content, modifiedAt }
+            : { name, content, modifiedAt },
+        );
       }
 
       return true;

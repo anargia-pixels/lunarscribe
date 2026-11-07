@@ -1,6 +1,24 @@
 // Provider contracts
+/** Markdown and drawings sync as text; images sync as their bytes. */
+export type SyncContent = string | Uint8Array<ArrayBuffer>;
+
+/** Whether two copies of a synced file hold the same text or bytes. */
+export function isSameSyncContent(
+  first: SyncContent | null | undefined,
+  second: SyncContent | null | undefined,
+) {
+  if (!(first instanceof Uint8Array) || !(second instanceof Uint8Array)) {
+    return first === second;
+  }
+
+  return (
+    first.length === second.length &&
+    first.every((byte, index) => byte === second[index])
+  );
+}
+
 export type RemoteFile = {
-  content: string;
+  content: SyncContent;
   revision: string;
   modifiedAt: number;
   modifiedAtPrecisionMs: number;
@@ -11,7 +29,7 @@ export type RemoteFile = {
 export type RemoteFiles = Map<string, RemoteFile>;
 
 export type RemoteChange =
-  | { name: string; content: string; modifiedAt: number }
+  | { name: string; content: SyncContent; modifiedAt: number }
   | { name: string; content: null };
 
 /** Pause background sync until the user signs in again. */
@@ -27,7 +45,7 @@ export type FileSyncProvider = {
   write: (changes: RemoteChange[], snapshot: RemoteFiles) => Promise<void>;
   forceWrite: (
     name: string,
-    content: string,
+    content: SyncContent,
     modifiedAt: number,
   ) => Promise<void>;
 };

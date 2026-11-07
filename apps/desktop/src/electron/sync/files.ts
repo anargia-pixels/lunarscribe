@@ -10,8 +10,14 @@ import {
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import { isImageFileName } from "@lunarscribe/utils/images";
 import { baseNameOf, isSafeSavedPath } from "@lunarscribe/utils/saved-paths";
-import type { RemoteChange, RemoteFiles } from "@lunarscribe/utils/sync/types";
+import { isSameSyncContent } from "@lunarscribe/utils/sync/types";
+import type {
+  RemoteChange,
+  RemoteFiles,
+  SyncContent,
+} from "@lunarscribe/utils/sync/types";
 
 import { getFileExtension } from "../../lib/editor-files";
 import type {
@@ -23,7 +29,7 @@ import { listSavedEntries } from "../saved-path";
 
 // Sync comparisons
 export type LocalSyncFiles = {
-  files: Map<string, string>;
+  files: Map<string, SyncContent>;
   modifiedTimes: Map<string, number>;
   blockedNames: Set<string>;
 };
@@ -40,8 +46,35 @@ export function isSavedFileName(name: string) {
   return isSafeSavedPath(name) && getFileExtension(baseNameOf(name)) !== null;
 }
 
-/** Hash saved text so cloud sync can detect changes on each side. */
-export function contentHash(content: string) {
+/** Markdown, drawings, and the images they embed, inside the documents folder. */
+export function isSyncedFileName(name: string) {
+  return (
+    isSafeSavedPath(name) &&
+    (getFileExtension(baseNameOf(name)) !== null ||
+      isImageFileName(baseNameOf(name)))
+  );
+}
+
+/** Read a synced file as text, or as bytes for an image. */
+async function readSyncContent(path: string): Promise<SyncContent> {
+  return isImageFileName(path)
+    ? new Uint8Array(await readFile(path))
+    : readFile(path, "utf8");
+}
+
+/** Text changes for buffers; image changes reach the editor through the folder watcher. */
+function toTextChange(
+  name: string,
+  before: SyncContent | null,
+  after: SyncContent | null,
+): SyncedFileChange | null {
+  return before instanceof Uint8Array || after instanceof Uint8Array
+    ? null
+    : { name, before, after };
+}
+
+/** Hash saved text or image bytes so cloud sync can detect changes on each side. */
+export function contentHash(content: SyncContent) {
   return createHash("sha256").update(content).digest("hex");
 }
 
@@ -189,17 +222,17 @@ export function planSync(
 export async function readLocalSyncFiles(
   folder: string,
 ): Promise<LocalSyncFiles> {
-  const files = new Map<string, string>();
+  const files = new Map<string, SyncContent>();
   const modifiedTimes = new Map<string, number>();
   const blockedNames = new Set<string>();
 
-  for (const name of (await listSavedEntries(folder)).files) {
+  for (const name of (await listSavedEntries(folder, isSyncedFileName)).files) {
     const path = join(folder, name);
 
     const metadata = await lstat(path);
 
     if (metadata.isFile()) {
-      files.set(name, await readFile(path, "utf8"));
+      files.set(name, await readSyncContent(path));
       modifiedTimes.set(name, metadata.mtimeMs);
     } else {
       blockedNames.add(name);
@@ -209,7 +242,10 @@ export async function readLocalSyncFiles(
   return { files, modifiedTimes, blockedNames };
 }
 
-/** Recheck each pull inside the save queue after the network work ends. */
+/**
+ * Recheck each pull inside the save queue after the network work ends. Returns the text
+ * changes for open buffers and how many files were pulled, images included.
+ */
 export async function applySyncPulls(
   folder: string,
   snapshot: LocalSyncFiles,
@@ -219,11 +255,12 @@ export async function applySyncPulls(
   onApplied: (change: SyncedFileChange) => void,
 ) {
   const changes: SyncedFileChange[] = [];
+  let pulled = 0;
 
   for (const change of plan.pull) {
     const path = join(folder, change.name);
     const before = snapshot.files.get(change.name) ?? null;
-    let current: string | null = null;
+    let current: SyncContent | null = null;
     let currentModifiedAt: number | undefined;
 
     try {
@@ -235,7 +272,7 @@ export async function applySyncPulls(
         );
       }
 
-      current = await readFile(path, "utf8");
+      current = await readSyncContent(path);
       currentModifiedAt = metadata.mtimeMs;
     } catch (cause) {
       if (
@@ -247,7 +284,7 @@ export async function applySyncPulls(
 
     if (
       getProtectedNames().has(change.name) ||
-      before !== current ||
+      !isSameSyncContent(before, current) ||
       snapshot.modifiedTimes.get(change.name) !== currentModifiedAt
     ) {
       plan.conflicts.push({
@@ -267,13 +304,18 @@ export async function applySyncPulls(
 
     await writeSavedFile(folder, change);
 
-    const applied = { name: change.name, before, after: change.content };
-    changes.push(applied);
-    // Refresh buffers even if a later pull or settings write fails.
-    onApplied(applied);
+    pulled += 1;
+
+    const applied = toTextChange(change.name, before, change.content);
+
+    if (applied) {
+      changes.push(applied);
+      // Refresh buffers even if a later pull or settings write fails.
+      onApplied(applied);
+    }
   }
 
-  return changes;
+  return { changes, pulled };
 }
 
 /** Write a pulled file through a temporary copy, or remove it when its content is null. */
@@ -317,17 +359,17 @@ export async function readSavedFile(folder: string, name: string) {
 
 /** Return disk changes so clean buffers can reload after a Git merge. */
 export function getFileChanges(
-  before: Map<string, string>,
-  after: Map<string, string>,
+  before: Map<string, SyncContent>,
+  after: Map<string, SyncContent>,
 ) {
   const changes: SyncedFileChange[] = [];
 
   for (const name of new Set([...before.keys(), ...after.keys()])) {
     const oldContent = before.get(name) ?? null;
     const newContent = after.get(name) ?? null;
+    const change = toTextChange(name, oldContent, newContent);
 
-    if (oldContent !== newContent)
-      changes.push({ name, before: oldContent, after: newContent });
+    if (change && oldContent !== newContent) changes.push(change);
   }
 
   return changes;

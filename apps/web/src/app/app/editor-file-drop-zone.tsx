@@ -1,3 +1,4 @@
+import { isImageFileName } from "@lunarscribe/utils/images";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent, ReactNode } from "react";
 
@@ -20,10 +21,26 @@ async function readDroppedFiles(
   return { handles, files: handles.length ? [] : files };
 }
 
+/** Whether a drag holds only images; names are hidden until the drop, MIME types are not. */
+function isImageDrag(transfer: DataTransfer) {
+  const files = Array.from(transfer.items).filter(
+    (item) => item.kind === "file",
+  );
+
+  return (
+    files.length > 0 &&
+    files.every((item) => item.type.startsWith("image/")) &&
+    Array.from(transfer.files).every(
+      (file) => file.type.startsWith("image/") || isImageFileName(file.name),
+    )
+  );
+}
+
 /**
- * Opens dropped text files in the markdown editor, whichever editor is shown, keeping file
- * drops out of Lexical. Over a drawing (`isDrawing`), only drops holding a text file are
- * taken, so Excalidraw still receives the images and libraries it opens itself.
+ * Opens dropped text files in the markdown editor, whichever editor is shown. Images
+ * dropped on the markdown editor pass through, so it embeds them at the drop point. Over
+ * a drawing (`isDrawing`), only drops holding a text file are taken, so Excalidraw still
+ * receives the images and libraries it opens itself.
  */
 export function EditorFileDropZone({
   isDrawing = false,
@@ -57,7 +74,10 @@ export function EditorFileDropZone({
   }, []);
 
   const captureFileDrag = (event: DragEvent<HTMLElement>) => {
-    if (!event.dataTransfer.types.includes("Files")) {
+    if (
+      !event.dataTransfer.types.includes("Files") ||
+      (!isDrawing && isImageDrag(event.dataTransfer))
+    ) {
       return false;
     }
 

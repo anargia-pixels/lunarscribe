@@ -187,7 +187,7 @@ export function registerSync(
     await remoteProvider.write(plan.push, remote);
 
     return queue(folder, async () => {
-      const changes = await applySyncPulls(
+      const { pulled } = await applySyncPulls(
         folder,
         local,
         plan,
@@ -201,7 +201,7 @@ export function registerSync(
       return {
         conflicts: plan.conflicts,
         pushed: plan.push.length,
-        pulled: changes.length,
+        pulled,
       };
     });
   }
@@ -317,7 +317,16 @@ export function registerSync(
           );
         }
 
-        remote = file ?? null;
+        const content = file?.content ?? null;
+
+        if (content instanceof Uint8Array) {
+          throw new Error("Only saved markdown and drawings can be pulled.");
+        }
+
+        remote =
+          file && content !== null
+            ? { content, modifiedAt: file.modifiedAt }
+            : null;
       }
 
       const change = await queue(folder, async () => {

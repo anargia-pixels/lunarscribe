@@ -42,6 +42,15 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
 - **Math:** KaTeX shows LaTeX equations as inline math or math blocks. The toolbar has
   controls to insert both types. The editor also converts `$...$`, `$$...$$`, and pasted
   markdown equations to math. You can edit the LaTeX source of a selected equation.
+- **Images:** Type `![[photo.png]]` or `![alt](photo.png)` on its own line to embed an
+  image, as in Obsidian. Drop or paste an image into the markdown editor to copy it next
+  to the note and embed it at the drop point. `![alt](https://…)` embeds a remote image;
+  only `http` and `https` links load. `|300` after the name or alt text sets the width.
+  Images keep their aspect ratio and fill at most 80% of the editor's width. A missing
+  image shows a message in its place. The editor shows PNG, JPEG, GIF, WebP, AVIF, SVG,
+  BMP, and ICO files. Images appear in the sidebar with notes: select one to view it, and
+  rename, move, or drag it onto a folder like a note. Renaming or moving an image updates
+  the notes that embed it. Images sync with notes and drawings.
 - **Drawings:** The app has an Excalidraw canvas to create and edit drawings. Lunarscribe
   saves drawing scenes as local `.draw` files.
 - **Frontmatter:** A buffer's markdown can start with frontmatter, a block of YAML

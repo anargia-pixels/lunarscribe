@@ -1,4 +1,5 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import { isImageFileName, rewriteImageEmbeds } from "@lunarscribe/utils/images";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import {
   folderOf,
@@ -93,6 +94,68 @@ function createBufferId() {
 // Buffer helpers
 function findBuffer(predicate: (buffer: TextBuffer) => boolean) {
   return useBufferStore.getState().buffers.find(predicate) ?? null;
+}
+
+/**
+ * Points every embed of the image `from` at `to` after it was renamed or moved, as
+ * Obsidian updates links: in open buffers, which save as usual, and in saved notes.
+ * Throws once every note was tried, naming the ones left unchanged.
+ */
+async function updateImageEmbeds(from: string, to: string) {
+  const files = documentsFolder.listFiles();
+  const imagesAfter = files.filter(isImageFileName);
+  const imagesBefore = imagesAfter.map((name) => (name === to ? from : name));
+  const failed: string[] = [];
+
+  const notes = files.filter(
+    (name) => getFileExtension(name) !== null && kindOf(name) === "markdown",
+  );
+
+  for (const note of notes) {
+    try {
+      const buffer = findBuffer((candidate) => candidate.fileName === note);
+
+      const markdown =
+        buffer?.content ?? (await documentsFolder.readFile(note));
+
+      const content = rewriteImageEmbeds(
+        markdown,
+        note,
+        from,
+        to,
+        imagesBefore,
+        imagesAfter,
+      );
+
+      if (content === markdown) {
+        continue;
+      }
+
+      if (buffer) {
+        updateBuffer(buffer.id, (current) => ({
+          content,
+          syncRevision: current.syncRevision + 1,
+        }));
+        scheduleSave(buffer.id);
+      } else {
+        await documentsFolder.saveFile(
+          note,
+          folderOf(note),
+          stemOf(note),
+          getFileExtension(note) ?? BUFFER_EXTENSIONS.markdown,
+          content,
+        );
+      }
+    } catch {
+      failed.push(note);
+    }
+  }
+
+  if (failed.length) {
+    throw new Error(
+      `Embeds of the image in ${failed.join(", ")} still point at ${from}. Update them by hand.`,
+    );
+  }
 }
 
 /** Merges the fields `update` returns into the buffer with `id`. */
@@ -272,6 +335,18 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
   },
 
   renameFile: async (name, rawTitle) => {
+    if (isImageFileName(name)) {
+      const renamed = await documentsFolder.renameImage(name, rawTitle);
+
+      get().refreshFiles();
+
+      if (renamed !== name) {
+        await updateImageEmbeds(name, renamed);
+      }
+
+      return;
+    }
+
     const title = toBufferTitle(rawTitle.trim());
 
     if (!title) {
@@ -331,8 +406,13 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
     const open = findBuffer((buffer) => buffer.fileName === name);
 
     if (!open) {
-      await documentsFolder.moveFile(name, folder);
+      const moved = await documentsFolder.moveFile(name, folder);
+
       get().refreshFiles();
+
+      if (isImageFileName(name) && moved !== name) {
+        await updateImageEmbeds(name, moved);
+      }
 
       return;
     }

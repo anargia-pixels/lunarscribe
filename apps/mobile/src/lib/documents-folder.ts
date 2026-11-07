@@ -1,3 +1,8 @@
+import {
+  imageMimeType,
+  isImageFileName,
+  splitImageFileName,
+} from "@lunarscribe/utils/images";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import {
   baseNameOf,
@@ -7,6 +12,8 @@ import {
   toFolderName,
 } from "@lunarscribe/utils/saved-paths";
 import type { SavedEntries } from "@lunarscribe/utils/saved-paths";
+import { isSameSyncContent } from "@lunarscribe/utils/sync/types";
+import type { SyncContent } from "@lunarscribe/utils/sync/types";
 import { Directory, File, Paths } from "expo-file-system";
 
 import {
@@ -70,6 +77,28 @@ function availableName(
   return name;
 }
 
+/** A saved file's extension, kept when it moves; images keep theirs as written. */
+function extensionOf(name: string) {
+  return (
+    getFileExtension(name) ??
+    (isImageFileName(name)
+      ? splitImageFileName(baseNameOf(name)).extension
+      : "")
+  );
+}
+
+/** The `file://` URI of a saved image, for native image views; null when it is missing. */
+export function imageUri(name: string) {
+  const file = fileOf(name);
+
+  return file.exists ? file.uri : null;
+}
+
+/** A saved SVG's markup, for the SVG renderer; native image views cannot draw SVG. */
+export function readSvg(name: string) {
+  return queueFileOperation(FOLDER_KEY, () => fileOf(name).text());
+}
+
 function removeFile(name: string) {
   const file = fileOf(name);
 
@@ -84,8 +113,14 @@ function ensureFolder() {
   }
 }
 
-/** Saved files and folders, named by their paths and sorted; hidden entries are skipped. */
-export function listEntries(): SavedEntries {
+/**
+ * Saved files and folders, named by their paths and sorted; hidden entries are skipped.
+ * `isListed` picks the files by name: markdown, drawings, and images unless set.
+ */
+export function listEntries(
+  isListed = (name: string) =>
+    getFileExtension(name) !== null || isImageFileName(name),
+): SavedEntries {
   ensureFolder();
 
   const entries: SavedEntries = { files: [], folders: [] };
@@ -101,7 +136,7 @@ export function listEntries(): SavedEntries {
       if (entry instanceof Directory) {
         entries.folders.push(path);
         walk(entry, path);
-      } else if (getFileExtension(entry.name) !== null) {
+      } else if (isListed(entry.name)) {
         entries.files.push(path);
       }
     }
@@ -114,9 +149,23 @@ export function listEntries(): SavedEntries {
   return entries;
 }
 
-/** Saved file paths with a supported extension, sorted. */
+/** Saved notes, drawings, and image paths, sorted. */
 export function listFiles() {
   return listEntries().files;
+}
+
+/** Every saved image path, for resolving embeds. */
+export function listImageNames() {
+  return listEntries(isImageFileName).files;
+}
+
+/** A saved image as a data URL the editor page can load, or null when it is missing. */
+export async function readImageDataUrl(name: string) {
+  const file = fileOf(name);
+
+  return file.exists
+    ? `data:${imageMimeType(name)};base64,${await file.base64()}`
+    : null;
 }
 
 export function readFile(name: string) {
@@ -170,17 +219,36 @@ export function moveFile(name: string, parent: string) {
       return name;
     }
 
-    const moved = availableName(
-      parent,
-      stemOf(name),
-      getFileExtension(name) ?? "",
-      null,
-    );
+    const moved = availableName(parent, stemOf(name), extensionOf(name), null);
 
     ensureParent(moved);
     await fileOf(name).move(fileOf(moved));
 
     return moved;
+  });
+}
+
+/** Renames a saved image to `<title><its extension>` in its folder; returns its new name. */
+export function renameImage(name: string, title: string) {
+  return queueFileOperation(FOLDER_KEY, async () => {
+    const stem = title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_");
+
+    if (!stem || stem.startsWith(".")) {
+      throw new Error("Enter a name for the image.");
+    }
+
+    const renamed = availableName(
+      folderOf(name),
+      stem,
+      extensionOf(name),
+      name,
+    );
+
+    if (renamed !== name) {
+      await fileOf(name).move(fileOf(renamed));
+    }
+
+    return renamed;
   });
 }
 
@@ -231,22 +299,31 @@ export function deleteFolder(path: string) {
   });
 }
 
-/** A saved file as sync reads it; `fileTime` is its modification time on this device. */
+/**
+ * A saved file as sync reads it: text, or bytes for an image. `fileTime` is its
+ * modification time on this device.
+ */
 export type SavedFileRecord = {
   name: string;
-  content: string;
+  content: SyncContent;
   fileTime: number;
 };
 
 async function readRecord(name: string): Promise<SavedFileRecord | null> {
   const file = fileOf(name);
 
-  return file.exists
-    ? { name, content: await file.text(), fileTime: file.modificationTime ?? 0 }
-    : null;
+  if (!file.exists) {
+    return null;
+  }
+
+  return {
+    name,
+    content: isImageFileName(name) ? await file.bytes() : await file.text(),
+    fileTime: file.modificationTime ?? 0,
+  };
 }
 
-/** Every saved file, read inside the queue that processes local saves. */
+/** Every synced file, images included, read inside the queue that processes local saves. */
 export function readAllFiles() {
   return queueFileOperation(FOLDER_KEY, async () => {
     const records: SavedFileRecord[] = [];
@@ -271,13 +348,13 @@ export function readAllFiles() {
 export function applySyncedFile(
   name: string,
   snapshot: SavedFileRecord | null,
-  content: string | null,
+  content: SyncContent | null,
 ) {
   return queueFileOperation(FOLDER_KEY, async () => {
     const current = await readRecord(name);
 
     if (
-      current?.content !== snapshot?.content ||
+      !isSameSyncContent(current?.content, snapshot?.content) ||
       current?.fileTime !== snapshot?.fileTime
     ) {
       return null;
@@ -318,8 +395,8 @@ export async function searchFiles(query: string): Promise<FileSearchMatch[]> {
       continue;
     }
 
-    // Drawings are scene JSON; only their names are searchable.
-    if (getFileExtension(name) === ".draw") {
+    // Drawings are scene JSON and images are bytes; only their names are searchable.
+    if (getFileExtension(name) === ".draw" || isImageFileName(name)) {
       continue;
     }
 

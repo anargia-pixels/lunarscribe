@@ -5,6 +5,13 @@ export type SavedFileRecord = {
   modifiedAt: number;
 };
 
+/** An image file next to the markdown that embeds it, stored beside the saved files. */
+export type SavedImageRecord = {
+  name: string;
+  content: Uint8Array<ArrayBuffer>;
+  modifiedAt: number;
+};
+
 /** A saved folder, kept so empty folders survive; files name their folders in their paths. */
 export type SavedFolderRecord = { name: string };
 
@@ -18,7 +25,7 @@ export type ExternalFileRecord = {
 type StoreName = "files" | "folders" | "external-files";
 
 type StoreRecords = {
-  files: SavedFileRecord;
+  files: SavedFileRecord | SavedImageRecord;
   folders: SavedFolderRecord;
   "external-files": ExternalFileRecord;
 };
@@ -105,6 +112,11 @@ export function getAllRecords<Name extends StoreName>(
   store: IDBObjectStore,
 ): Promise<StoreRecords[Name][]> {
   return settle(store.getAll());
+}
+
+/** Every key in `store`; saved files are keyed by their path. */
+export async function getAllNames(store: IDBObjectStore) {
+  return (await settle(store.getAllKeys())).map(String);
 }
 
 export function putRecord<Name extends StoreName>(

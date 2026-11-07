@@ -9,6 +9,7 @@ import type {
   WatchedFile,
   WatchedFileChange,
 } from "../lib/editor-files";
+import type { ImageNote, ImageUpload, ResolvedImage } from "../lib/images";
 import type {
   SyncProvider,
   SyncStatus,
@@ -62,6 +63,10 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     return () => ipcRenderer.off("sync:files", handler);
   },
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  resolveImage: (note: ImageNote, target: string): Promise<ResolvedImage> =>
+    ipcRenderer.invoke("images:resolve", note, target),
+  saveImages: (note: ImageNote, uploads: ImageUpload[]): Promise<string[]> =>
+    ipcRenderer.invoke("images:save", note, uploads),
   setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
   getAppInfo: (): Promise<AppInfo> => ipcRenderer.invoke("app:info"),
   checkForUpdate: (): Promise<UpdateCheck> =>
@@ -121,6 +126,8 @@ contextBridge.exposeInMainWorld("lunarscribe", {
       content,
       expectedContent,
     ),
+  renameImage: (name: string, title: string): Promise<string> =>
+    ipcRenderer.invoke("images:rename", name, title),
   moveFile: (name: string, folder: string): Promise<string> =>
     ipcRenderer.invoke("files:move", name, folder),
   deleteFile: (name: string) => ipcRenderer.invoke("files:delete", name),

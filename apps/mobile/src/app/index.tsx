@@ -1,3 +1,4 @@
+import { isImageFileName } from "@lunarscribe/utils/images";
 import {
   allFolders,
   baseNameOf,
@@ -135,6 +136,13 @@ export default function FilesScreen() {
   }
 
   function openInEditor(name: string) {
+    // Images open in the image viewer; they are never buffers.
+    if (isImageFileName(name)) {
+      router.push({ pathname: "/image", params: { name } });
+
+      return;
+    }
+
     openFile(name).then(
       () => router.push("/editor"),
       (error) => reportFileError(name, String(error)),
@@ -193,7 +201,7 @@ export default function FilesScreen() {
         }
         onDelete={() => setDialog({ kind: "delete", name: node.path })}
         onForceSync={
-          isSyncConnected
+          isSyncConnected && !isImageFileName(node.path)
             ? () =>
                 forceSyncFile(node.path).catch((error) =>
                   reportFileError(node.path, String(error)),
@@ -201,7 +209,7 @@ export default function FilesScreen() {
             : undefined
         }
         onForcePull={
-          isSyncConnected
+          isSyncConnected && !isImageFileName(node.path)
             ? () =>
                 forcePullFile(node.path).catch((error) =>
                   reportFileError(node.path, String(error)),

@@ -2,6 +2,7 @@ import type {
   DrawingEditor,
   DrawingEditorProps,
 } from "@lunarscribe/components/editor/drawing-editor";
+import { ImageViewer } from "@lunarscribe/components/editor/image-viewer";
 import { MarkdownEditor } from "@lunarscribe/components/editor/markdown-editor";
 import { Hint } from "@lunarscribe/components/hint/hint";
 import {
@@ -12,9 +13,11 @@ import {
 import { Button } from "@lunarscribe/components/ui/button";
 import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
+import { folderOf } from "@lunarscribe/utils/saved-paths";
 import { useEffect, useState } from "react";
 
 import { BUFFER_EXTENSIONS, isTextFile } from "@/lib/editor-files";
+import { useEditorImages, useSavedImageSource } from "@/lib/editor-images";
 import { MOD_KEY_LABEL } from "@/lib/platform";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import {
@@ -98,6 +101,14 @@ export default function EditorPage() {
 
   const isSyncing = useSyncStore((state) => state.busy);
 
+  const viewedImage = useBufferStore((state) => state.viewedImage);
+  const viewedImageSource = useSavedImageSource(viewedImage);
+
+  const images = useEditorImages(
+    buffer?.fileName ? folderOf(buffer.fileName) : (buffer?.folder ?? ""),
+    Boolean(buffer?.externalId),
+  );
+
   useEffect(() => {
     const preventFileNavigation = (event: DragEvent) => {
       if (event.dataTransfer?.types.includes("Files")) {
@@ -137,10 +148,13 @@ export default function EditorPage() {
     buffer.fileName ?? `${buffer.title}${BUFFER_EXTENSIONS[buffer.kind]}`;
 
   // Browsers expose no paths, so external files show only their name.
-  const filePath = buffer.externalId
-    ? (externalFiles.find((file) => file.id === buffer.externalId)?.name ??
-      fileName)
-    : `lunarscribe / ${fileName}`;
+  const filePath =
+    viewedImage !== null
+      ? `lunarscribe / ${viewedImage}`
+      : buffer.externalId
+        ? (externalFiles.find((file) => file.id === buffer.externalId)?.name ??
+          fileName)
+        : `lunarscribe / ${fileName}`;
 
   return (
     <div className="flex h-svh flex-col">
@@ -162,7 +176,7 @@ export default function EditorPage() {
             {filePath}
           </span>
           <output className="text-muted-foreground ml-1 shrink-0">
-            {buffer.fileName && !buffer.externalId
+            {viewedImage === null && buffer.fileName && !buffer.externalId
               ? syncMessage(isSyncing, hasSyncedSuccessfully)
               : null}
           </output>
@@ -178,7 +192,9 @@ export default function EditorPage() {
           </AlertDescription>
         </Alert>
       )}
-      {buffer.kind === "drawing" ? (
+      {viewedImage !== null ? (
+        <ImageViewer name={viewedImage} source={viewedImageSource} />
+      ) : buffer.kind === "drawing" ? (
         <EditorFileDropZone isDrawing>
           <LazyDrawingEditor
             key={`${buffer.id}:${buffer.syncRevision}`}
@@ -204,6 +220,7 @@ export default function EditorPage() {
                 setScrollTop(scrollKey, scrollTop);
               }
             }}
+            images={images}
           />
         </EditorFileDropZone>
       )}

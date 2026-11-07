@@ -1,4 +1,5 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import { isImageFileName, rewriteImageEmbeds } from "@lunarscribe/utils/images";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import {
   folderOf,
@@ -14,6 +15,7 @@ import {
   fileKey,
   getFileExtension,
   INVALID_FILE_TITLE_CHARACTERS,
+  isTextFile,
 } from "@/lib/editor-files";
 import type {
   ExternalFile,
@@ -50,6 +52,8 @@ export type TextBuffer = {
 export type BufferStore = {
   buffers: TextBuffer[];
   activeId: string;
+  /** Saved image shown in the image viewer in place of the active buffer, or null. */
+  viewedImage: string | null;
   /** File shown when the app last closed, reopened on launch; null for an unsaved buffer. */
   lastOpenedFileName: string | null;
   externalFiles: ExternalFile[];
@@ -66,6 +70,7 @@ export type BufferStore = {
   forceSyncFile: (name: string) => Promise<void>;
   /** Replaces the saved file and its buffer with the remote copy, discarding pending edits. */
   forcePullFile: (name: string) => Promise<void>;
+  /** Opens a saved note or drawing as a buffer, or shows a saved image in the viewer. */
   openFile: (name: string) => Promise<void>;
   openExternalFiles: (paths: string[]) => Promise<void>;
   /** Starts an untitled buffer that saves into `folder`, `""` for the top level. */
@@ -321,6 +326,7 @@ export const useBufferStore = create<BufferStore>()(
     (set, get) => ({
       buffers: [initialBuffer],
       activeId: initialBuffer.id,
+      viewedImage: null,
       lastOpenedFileName: null,
       externalFiles: [],
       lastOpenedExternalPath: null,
@@ -496,6 +502,13 @@ export const useBufferStore = create<BufferStore>()(
       openFile: (name) =>
         queueOperation(fileKey({ kind: "saved", name }), async () => {
           await bufferRestored;
+
+          if (isImageFileName(name)) {
+            set({ viewedImage: name });
+
+            return;
+          }
+
           await openSavedFile(name);
         }),
 
@@ -534,6 +547,7 @@ export const useBufferStore = create<BufferStore>()(
               buffer.id === blank.id ? { ...buffer, folder } : buffer,
             ),
             activeId: blank.id,
+            viewedImage: null,
           }));
 
           return;
@@ -565,6 +579,7 @@ export const useBufferStore = create<BufferStore>()(
         set((state) => ({
           buffers: [...state.buffers, buffer],
           activeId: buffer.id,
+          viewedImage: null,
         }));
       },
 
@@ -580,11 +595,17 @@ export const useBufferStore = create<BufferStore>()(
               .forgetScrollTops([
                 fileKey({ kind: "saved", name: buffer?.fileName ?? name }),
               ]);
+
+            if (get().viewedImage === name) {
+              set({ viewedImage: null });
+            }
           },
         ),
 
-      moveFile: (name, folder) =>
-        applyFileOperation(
+      moveFile: async (name, folder) => {
+        let movedImage: string | null = null;
+
+        await applyFileOperation(
           { kind: "saved", name },
           FILE_OPERATION_POLICIES.move,
           async (buffer) => {
@@ -606,8 +627,21 @@ export const useBufferStore = create<BufferStore>()(
             }
 
             moveSavedAccess(current, moved);
+
+            if (isImageFileName(current) && moved !== current) {
+              movedImage = moved;
+              set((state) => ({
+                viewedImage:
+                  state.viewedImage === current ? moved : state.viewedImage,
+              }));
+            }
           },
-        ),
+        );
+
+        if (movedImage) {
+          await updateImageEmbeds(name, movedImage);
+        }
+      },
 
       renameFolder: (path, name) =>
         queueOperation(`folder:${path}`, async () => {
@@ -647,6 +681,10 @@ export const useBufferStore = create<BufferStore>()(
                   }
                 : buffer;
             }),
+            viewedImage:
+              state.viewedImage !== null && isInFolder(state.viewedImage, path)
+                ? replaceFolder(state.viewedImage, path, renamed)
+                : state.viewedImage,
           }));
           moveFolderAccess(path, renamed);
 
@@ -683,11 +721,21 @@ export const useBufferStore = create<BufferStore>()(
                 ? { ...buffer, folder: "" }
                 : buffer,
             ),
+            viewedImage:
+              state.viewedImage !== null && isInFolder(state.viewedImage, path)
+                ? null
+                : state.viewedImage,
           }));
         }),
 
-      renameFile: (target, rawTitle) =>
-        applyFileOperation(
+      renameFile: async (target, rawTitle) => {
+        if (target.kind === "saved" && isImageFileName(target.name)) {
+          await renameImage(target.name, rawTitle);
+
+          return;
+        }
+
+        await applyFileOperation(
           target,
           target.kind === "external"
             ? FILE_OPERATION_POLICIES.renameExternal
@@ -749,7 +797,8 @@ export const useBufferStore = create<BufferStore>()(
               moveSavedAccess(target.name, renamed.fileName);
             }
           },
-        ),
+        );
+      },
 
       removeExternalFile: (target) =>
         applyFileOperation(target, FILE_OPERATION_POLICIES.remove, async () => {
@@ -772,12 +821,96 @@ export const useBufferStore = create<BufferStore>()(
   ),
 );
 
+/** Renames a saved image in place, then points the embeds of it at the new name. */
+async function renameImage(name: string, title: string) {
+  let renamed = name;
+
+  await queueOperation(fileKey({ kind: "saved", name }), async () => {
+    renamed = await window.lunarscribe.renameImage(name, title);
+    moveSavedAccess(name, renamed);
+    useBufferStore.setState((state) => ({
+      viewedImage: state.viewedImage === name ? renamed : state.viewedImage,
+    }));
+  });
+
+  if (renamed !== name) {
+    await updateImageEmbeds(name, renamed);
+  }
+}
+
+/**
+ * Points every embed of the image `from` at `to` after it was renamed or moved, as
+ * Obsidian updates links: in open buffers, which save as usual, and in saved notes on
+ * disk. Throws once every note was tried, naming the ones left unchanged.
+ */
+async function updateImageEmbeds(from: string, to: string) {
+  const { files } = await window.lunarscribe.listFiles();
+  const imagesAfter = files.filter(isImageFileName);
+  const imagesBefore = imagesAfter.map((name) => (name === to ? from : name));
+  const failed: string[] = [];
+
+  const rewrite = (markdown: string, note: string) =>
+    rewriteImageEmbeds(markdown, note, from, to, imagesBefore, imagesAfter);
+
+  for (const note of files.filter(isTextFile)) {
+    try {
+      // Ordered with opens of the same file, so a read never misses the rewrite.
+      await queueOperation(fileKey({ kind: "saved", name: note }), async () => {
+        const buffer = findFileBuffer({ kind: "saved", name: note });
+
+        if (buffer) {
+          const content = rewrite(buffer.content, note);
+
+          if (content !== buffer.content) {
+            useBufferStore.setState((state) => ({
+              buffers: state.buffers.map((candidate) =>
+                candidate.id === buffer.id
+                  ? {
+                      ...candidate,
+                      content,
+                      syncRevision: candidate.syncRevision + 1,
+                    }
+                  : candidate,
+              ),
+            }));
+            bufferFileWrites.scheduleSave(buffer.id);
+          }
+
+          return;
+        }
+
+        const markdown = await window.lunarscribe.readFile(note);
+        const content = rewrite(markdown, note);
+
+        if (content !== markdown) {
+          await window.lunarscribe.saveFile(
+            note,
+            folderOf(note),
+            stemOf(note),
+            getFileExtension(note) ?? BUFFER_EXTENSIONS.markdown,
+            content,
+            markdown,
+          );
+        }
+      });
+    } catch {
+      failed.push(note);
+    }
+  }
+
+  if (failed.length) {
+    throw new Error(
+      `Embeds of the image in ${failed.join(", ")} still point at ${from}. Update them by hand.`,
+    );
+  }
+}
+
 /** Reuse an open saved buffer, or read it before selecting it. */
 async function openSavedFile(name: string) {
   const open = findFileBuffer({ kind: "saved", name });
 
   if (open) {
-    useBufferStore.setState({ activeId: open.id });
+    useBufferStore.setState({ activeId: open.id, viewedImage: null });
 
     return;
   }
@@ -799,6 +932,7 @@ async function openSavedFile(name: string) {
   useBufferStore.setState((state) => ({
     buffers: [...state.buffers, buffer],
     activeId: buffer.id,
+    viewedImage: null,
   }));
 }
 
@@ -846,7 +980,7 @@ async function openExternalFile(path: string) {
   const openBuffer = buffers.find((buffer) => buffer.externalPath === path);
 
   if (openBuffer) {
-    useBufferStore.setState({ activeId: openBuffer.id });
+    useBufferStore.setState({ activeId: openBuffer.id, viewedImage: null });
 
     return;
   }
@@ -864,7 +998,7 @@ async function openExternalFile(path: string) {
     );
 
     if (existingBuffer) {
-      return { activeId: existingBuffer.id };
+      return { activeId: existingBuffer.id, viewedImage: null };
     }
 
     const buffer: TextBuffer = {
@@ -897,6 +1031,7 @@ async function openExternalFile(path: string) {
           )
         : [...state.externalFiles, externalFile],
       activeId: buffer.id,
+      viewedImage: null,
     };
   });
 }

@@ -109,6 +109,17 @@ Markdown syntax typed at the start of a block or around text (`## `, `> `,
 `**bold**`) that the editor converts to formatting on the spot.
 _Avoid_: autoformat, markdown syntax
 
+**Image embed**:
+An image block in the markdown editor, written `![[photo.png]]` or `![alt](photo.png)`
+on its own line, as in Obsidian. A local image file sits next to the markdown file that
+embeds it; a dropped or pasted image is copied there.
+_Avoid_: attachment, inline image, picture
+
+**Image viewer**:
+The read-only view that shows a saved image in place of the markdown editor when it is
+selected in the sidebar.
+_Avoid_: image preview, lightbox, image editor
+
 **Inline format**:
 A style applied to a run of text: bold, italic, strikethrough, or inline code.
 _Avoid_: text style, mark

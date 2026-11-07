@@ -175,7 +175,7 @@ async function syncCloud(name: string | null): Promise<SyncResult> {
 
   const pulledTimes = currentPulledTimes(local, settings.pulledTimes);
 
-  const changes = await applySyncPulls(
+  const { pulled } = await applySyncPulls(
     local,
     plan,
     settings.baseline,
@@ -190,7 +190,7 @@ async function syncCloud(name: string | null): Promise<SyncResult> {
   return {
     conflicts: plan.conflicts,
     pushed: plan.push.length,
-    pulled: changes.length,
+    pulled,
   };
 }
 
@@ -257,6 +257,14 @@ export function forcePullFile(name: string) {
 
     const before =
       (await readLocalSyncFiles(settings.pulledTimes)).get(name) ?? null;
+
+    // Force pull is a file list action, so it only reaches markdown and drawings.
+    if (
+      remote?.content instanceof Uint8Array ||
+      before?.content instanceof Uint8Array
+    ) {
+      throw new Error("Only saved markdown and drawings can be pulled.");
+    }
 
     const fileTime = await applySyncedFile(
       name,

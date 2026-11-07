@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { isImageFileName } from "@lunarscribe/utils/images";
 import { mapConcurrent } from "@lunarscribe/utils/map-concurrent";
 import { baseNameOf, folderOf } from "@lunarscribe/utils/saved-paths";
 import {
@@ -18,13 +19,14 @@ import {
 import type {
   FileSyncProvider,
   RemoteFiles,
+  SyncContent,
 } from "@lunarscribe/utils/sync/types";
 import {
   SYNC_CONCURRENCY,
   SyncSignInRequired,
 } from "@lunarscribe/utils/sync/types";
 
-import { isSavedFileName } from "../files";
+import { isSyncedFileName } from "../files";
 
 // Drive metadata
 const API = "https://www.googleapis.com/drive/v2/files";
@@ -37,6 +39,34 @@ type DriveFile = {
   md5Checksum: string;
   modifiedAt: number;
 };
+
+/**
+ * A Drive multipart upload: the JSON metadata, then the file. Text stays a string; image
+ * bytes need a binary body around them.
+ */
+function multipartBody(
+  boundary: string,
+  metadataJson: string,
+  content: SyncContent,
+) {
+  const head = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadataJson}\r\n--${boundary}\r\nContent-Type: application/octet-stream\r\n\r\n`;
+  const tail = `\r\n--${boundary}--`;
+
+  if (!(content instanceof Uint8Array)) {
+    return `${head}${content}${tail}`;
+  }
+
+  const encoder = new TextEncoder();
+  const start = encoder.encode(head);
+  const end = encoder.encode(tail);
+  const body = new Uint8Array(start.length + content.length + end.length);
+
+  body.set(start);
+  body.set(content, start.length);
+  body.set(end, start.length + content.length);
+
+  return body;
+}
 
 /** v2 exposes metadata ETags for conditional updates and trash operations. */
 export function createGoogleDriveApi(accessToken: () => Promise<string>) {
@@ -196,7 +226,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
 
     async function upload(
       name: string,
-      content: string,
+      content: SyncContent,
       modifiedAt: number,
       id?: string,
       revision?: string,
@@ -227,7 +257,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
       const uploaded = await request(url, {
         method: id ? "PUT" : "POST",
         headers,
-        body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/octet-stream\r\n\r\n${content}\r\n--${boundary}--`,
+        body: multipartBody(boundary, JSON.stringify(metadata), content),
       });
 
       if (!id) {
@@ -256,7 +286,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
 
         for (const file of await tree.list()) {
           if (
-            !isSavedFileName(file.path) ||
+            !isSyncedFileName(file.path) ||
             (name !== null && file.path !== name)
           ) {
             continue;
@@ -299,7 +329,9 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
             );
           }
 
-          const content = bytes.toString("utf8");
+          const content = isImageFileName(file.path)
+            ? new Uint8Array(bytes)
+            : bytes.toString("utf8");
 
           files.set(file.path, {
             id: file.id,

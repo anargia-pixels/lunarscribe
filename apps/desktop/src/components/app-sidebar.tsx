@@ -24,6 +24,7 @@ import {
   SidebarMenu,
 } from "@lunarscribe/components/ui/sidebar";
 import { toast } from "@lunarscribe/components/ui/toast";
+import { isImageFileName } from "@lunarscribe/utils/images";
 import {
   allFolders,
   baseNameOf,
@@ -98,6 +99,7 @@ export function AppSidebar() {
   const update = useUpdate();
 
   const activeBuffer = useActiveBuffer();
+  const viewedImage = useBufferStore((state) => state.viewedImage);
   const externalFiles = useBufferStore((state) => state.externalFiles);
 
   const openExternalFiles = useBufferStore((state) => state.openExternalFiles);
@@ -299,10 +301,17 @@ export function AppSidebar() {
     const key = fileKey(target);
     const accessedMs = accessedAt[key];
 
+    // An image in the viewer replaces the active buffer on screen.
     const isActive =
-      target.kind === "saved"
-        ? target.name === activeBuffer?.fileName
-        : target.path === activeBuffer?.externalPath;
+      viewedImage !== null
+        ? target.kind === "saved" && target.name === viewedImage
+        : target.kind === "saved"
+          ? target.name === activeBuffer?.fileName
+          : target.path === activeBuffer?.externalPath;
+
+    // Force sync replaces text through open buffers, so images sync with Sync now.
+    const canSyncAlone =
+      target.kind === "saved" && !isImageFileName(target.name);
 
     return (
       <SidebarFileItem
@@ -341,14 +350,10 @@ export function AppSidebar() {
         isExporting={isExporting}
         canForceSync={canForceSync && !isForcingSync}
         onForceSync={
-          target.kind === "saved"
-            ? () => void forceSyncTarget(target, "push")
-            : undefined
+          canSyncAlone ? () => void forceSyncTarget(target, "push") : undefined
         }
         onForcePull={
-          target.kind === "saved"
-            ? () => void forceSyncTarget(target, "pull")
-            : undefined
+          canSyncAlone ? () => void forceSyncTarget(target, "pull") : undefined
         }
         onDelete={() => deleteTarget(target)}
       />

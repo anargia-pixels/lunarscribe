@@ -53,7 +53,7 @@ export function registerPdfExport() {
       try {
         // A local HTML file lets packaged styles and offline fonts load with web security enabled.
         const csp =
-          "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'none'; style-src 'unsafe-inline' file: http: https:; font-src file: data: http: https:; img-src file: data: http: https:; base-uri file: http: https:\">";
+          "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'none'; style-src 'unsafe-inline' file: http: https:; font-src file: data: http: https:; img-src file: data: http: https: lunarscribe-image:; base-uri file: http: https:\">";
 
         const snapshotPath = join(snapshotFolder, "snapshot.html");
 

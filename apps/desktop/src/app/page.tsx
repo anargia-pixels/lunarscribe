@@ -4,6 +4,7 @@ import type {
   DrawingEditor,
   DrawingEditorProps,
 } from "@lunarscribe/components/editor/drawing-editor";
+import { ImageViewer } from "@lunarscribe/components/editor/image-viewer";
 import { MarkdownEditor } from "@lunarscribe/components/editor/markdown-editor";
 import { Hint } from "@lunarscribe/components/hint/hint";
 import {
@@ -18,6 +19,10 @@ import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 
 import { EditorFileDropZone } from "@/components/editor-file-drop-zone";
+import {
+  useEditorImages,
+  useSavedImageSource,
+} from "@/components/use-editor-images";
 import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import { bufferFileKey, useBufferStore } from "@/stores/buffer-store";
@@ -90,6 +95,7 @@ export default function Page() {
             kind: active.kind,
             syncRevision: active.syncRevision,
             fileName: active.fileName,
+            folder: active.folder,
             externalPath: active.externalPath,
           }
         : null;
@@ -114,6 +120,15 @@ export default function Page() {
   );
 
   const isSyncing = useSyncStore((state) => state.busy);
+
+  const viewedImage = useBufferStore((state) => state.viewedImage);
+  const viewedImageSource = useSavedImageSource(viewedImage);
+
+  const images = useEditorImages(
+    buffer?.fileName ?? null,
+    buffer?.folder ?? "",
+    buffer?.externalPath ?? null,
+  );
 
   useEffect(() => {
     const preventFileNavigation = (event: DragEvent) => {
@@ -146,7 +161,10 @@ export default function Page() {
   const fileName =
     buffer.fileName ?? `${buffer.title}${BUFFER_EXTENSIONS[buffer.kind]}`;
 
-  const filePath = buffer.externalPath ?? `lunarscribe / ${fileName}`;
+  const filePath =
+    viewedImage !== null
+      ? `lunarscribe / ${viewedImage}`
+      : (buffer.externalPath ?? `lunarscribe / ${fileName}`);
 
   // Editors read the content once on mount; the key remounts them for a new one.
   const content =
@@ -177,11 +195,11 @@ export default function Page() {
             {filePath}
           </span>
           <output className="text-muted-foreground ml-1 shrink-0">
-            {buffer.fileName && !buffer.externalPath
+            {viewedImage === null && buffer.fileName && !buffer.externalPath
               ? syncMessage(isSyncing, hasSyncedSuccessfully)
               : null}
           </output>
-          {buffer.kind === "markdown" && (
+          {viewedImage === null && buffer.kind === "markdown" && (
             <Hint
               label="Toggle outline"
               side="bottom"
@@ -214,7 +232,9 @@ export default function Page() {
           </AlertDescription>
         </Alert>
       )}
-      {buffer.kind === "drawing" ? (
+      {viewedImage !== null ? (
+        <ImageViewer name={viewedImage} source={viewedImageSource} />
+      ) : buffer.kind === "drawing" ? (
         <EditorFileDropZone isDrawing>
           <LazyDrawingEditor
             key={`${buffer.id}:${buffer.syncRevision}`}
@@ -241,6 +261,7 @@ export default function Page() {
                 setScrollTop(scrollKey, scrollTop);
               }
             }}
+            images={images}
           />
         </EditorFileDropZone>
       )}

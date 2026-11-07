@@ -1,10 +1,15 @@
-import { useCallback, useMemo, useState } from "react";
+import type { ImageSource } from "@lunarscribe/components/editor/markdown-editor";
+import { resolveSavedImage } from "@lunarscribe/utils/images";
+import { folderOf } from "@lunarscribe/utils/saved-paths";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import DrawingDom from "@/components/drawing-dom";
 import type { EditorDomProps } from "@/components/editor-dom-props";
 import MarkdownDom from "@/components/markdown-dom";
 import { useColorPalette } from "@/components/use-color-palette";
+import { listImageNames, readImageDataUrl } from "@/lib/documents-folder";
 import type { EditorKind } from "@/lib/editor-types";
+import { onSyncResult } from "@/lib/sync/sync-service";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import {
   type TextBuffer,
@@ -13,10 +18,23 @@ import {
 } from "@/stores/buffer-store";
 import { useEditorHostStore } from "@/stores/editor-host-store";
 
-/** The buffer the editor shows; `id` is null on the empty warm-up page. */
-type OpenedBuffer = { id: string | null; contentKey: string; content: string };
+/**
+ * The buffer the editor shows; `id` is null on the empty warm-up page. `folder` holds its
+ * file, where its embedded images sit.
+ */
+type OpenedBuffer = {
+  id: string | null;
+  contentKey: string;
+  content: string;
+  folder: string;
+};
 
-const EMPTY_PAGE: OpenedBuffer = { id: null, contentKey: "", content: "" };
+const EMPTY_PAGE: OpenedBuffer = {
+  id: null,
+  contentKey: "",
+  content: "",
+  folder: "",
+};
 
 // Reload the editor only for a new buffer or a sync revision.
 function getContentKey(buffer: TextBuffer) {
@@ -28,6 +46,7 @@ function openBuffer(buffer: TextBuffer): OpenedBuffer {
     id: buffer.id,
     contentKey: getContentKey(buffer),
     content: buffer.content,
+    folder: buffer.fileName ? folderOf(buffer.fileName) : buffer.folder,
   };
 }
 
@@ -40,9 +59,13 @@ function openBuffer(buffer: TextBuffer): OpenedBuffer {
  * props still arrive through Expo as `$$props`.
  */
 function createPageStartScript(
-  props: Omit<EditorDomProps, "onChange" | "onOutlineOpenChange" | "dom">,
+  props: Omit<
+    EditorDomProps,
+    "onChange" | "onOutlineOpenChange" | "resolveImage" | "dom"
+  >,
+  actions: string[],
 ) {
-  const initialProps = { names: ["onChange", "onOutlineOpenChange"], props };
+  const initialProps = { names: actions, props };
 
   return [
     `document.documentElement.classList.add(${JSON.stringify(props.theme)});`,
@@ -82,15 +105,34 @@ export function EditorWebView({
   }
 
   // Only the first page load reads it, so it stays fixed like Expo's initial props.
+  // Synced images may replace the ones shown, so a pull reads every embed again.
+  const [imageRevision, setImageRevision] = useState(0);
+
+  useEffect(
+    () =>
+      onSyncResult((result) => {
+        if (result.pulled > 0) {
+          setImageRevision((current) => current + 1);
+        }
+      }),
+    [],
+  );
+
   const [pageStartScript] = useState(() =>
-    createPageStartScript({
-      content: opened.content,
-      contentKey: opened.contentKey,
-      theme,
-      palette,
-      isShown,
-      isOutlineOpen,
-    }),
+    createPageStartScript(
+      {
+        content: opened.content,
+        contentKey: opened.contentKey,
+        theme,
+        palette,
+        isShown,
+        isOutlineOpen,
+        imageRevision,
+      },
+      kind === "markdown"
+        ? ["onChange", "onOutlineOpenChange", "resolveImage"]
+        : ["onChange", "onOutlineOpenChange"],
+    ),
   );
 
   const openedId = opened.id;
@@ -102,6 +144,18 @@ export function EditorWebView({
       }
     },
     [openedId, setContent],
+  );
+
+  const openedFolder = opened.folder;
+
+  const resolveImage = useCallback(
+    async (target: string): Promise<ImageSource> => {
+      const name = resolveSavedImage(openedFolder, target, listImageNames());
+      const src = name ? await readImageDataUrl(name) : null;
+
+      return src ? { status: "ready", src } : { status: "missing" };
+    },
+    [openedFolder],
   );
 
   const handleOutlineOpenChange = useCallback(
@@ -123,6 +177,8 @@ export function EditorWebView({
         onChange={handleChange}
         isOutlineOpen={isOutlineOpen}
         onOutlineOpenChange={handleOutlineOpenChange}
+        resolveImage={kind === "markdown" ? resolveImage : undefined}
+        imageRevision={imageRevision}
         dom={{
           useExpoDOMWebView: false,
           injectedJavaScriptBeforeContentLoaded: pageStartScript,
@@ -149,6 +205,8 @@ export function EditorWebView({
       handleChange,
       isOutlineOpen,
       handleOutlineOpenChange,
+      resolveImage,
+      imageRevision,
       pageStartScript,
     ],
   );

@@ -6,10 +6,13 @@ import appIcon from "../../../../assets/icons/512x512.png?asset";
 import { registerDocumentsFolder } from "./documents-folder";
 import { registerDocxExport } from "./docx-export";
 import { queueExternalFiles, registerExternalFiles } from "./external-files";
+import { registerImageScheme } from "./images";
 import { registerPdfExport } from "./pdf-export";
 import { registerUpdates } from "./updates";
 
 const hasInstanceLock = app.requestSingleInstanceLock();
+
+registerImageScheme();
 
 if (!hasInstanceLock) {
   app.quit();

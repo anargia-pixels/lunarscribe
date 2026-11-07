@@ -10,7 +10,7 @@ export async function exportDocx(target: FileTarget) {
 
   return withMarkdownSnapshot(target, async (root, title) => {
     const bytes = new Uint8Array(
-      await Packer.toArrayBuffer(createDocxDocument(root, title)),
+      await Packer.toArrayBuffer(await createDocxDocument(root, title)),
     );
 
     return window.lunarscribe.exportDocx(title, bytes);

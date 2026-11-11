@@ -1,44 +1,39 @@
-import { errorMessage } from "@lunarscribe/utils/error-message";
-import type { FileSyncProvider } from "@lunarscribe/utils/sync/types";
-import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
-
-import { applySyncedFile } from "@/lib/saved-files";
-import { createDropboxApi } from "@/lib/sync/dropbox";
+import { refreshTokens } from "@lunarscribe/utils/sync/oauth";
+import type { LocalSyncStore } from "@lunarscribe/utils/sync/plan";
 import {
-  applySyncPulls,
-  contentHash,
-  isSavedFileName,
-  planSync,
-  readLocalSyncFiles,
-} from "@/lib/sync/files";
-import { createGoogleDriveApi } from "@/lib/sync/google-drive";
-import { refreshDropboxTokens, signIn } from "@/lib/sync/oauth";
-import publicCredentials from "@/lib/sync/public-creds.json";
+  createCloudBackend,
+  createSyncService,
+  SyncLockHeld,
+} from "@lunarscribe/utils/sync/service";
 import {
   createEmptySettings,
-  loadSyncSettings,
-  saveSyncSettings,
-  SYNC_SETTINGS_KEY,
-} from "@/lib/sync/settings";
-import type { SyncSettings } from "@/lib/sync/settings";
-import { SYNC_PROVIDERS } from "@/lib/sync/sync-types";
+  parseSyncSettings,
+} from "@lunarscribe/utils/sync/settings";
+import type { SyncSettingsStore } from "@lunarscribe/utils/sync/settings";
+import { isCloudSyncProvider } from "@lunarscribe/utils/sync/types";
 import type {
+  CloudSyncProvider,
   SyncedFileChange,
-  SyncProvider,
   SyncResult,
-  SyncStatus,
-} from "@/lib/sync/sync-types";
+} from "@lunarscribe/utils/sync/types";
+
+import type { SavedFileRecord, SavedImageRecord } from "@/lib/browser-database";
+import { applySyncedFile, readSyncedFiles } from "@/lib/saved-files";
+import { signIn } from "@/lib/sync/oauth";
+import publicCredentials from "@/lib/sync/public-creds.json";
 
 /**
- * Browser counterpart of the desktop sync service. Each tab runs its own copy; a Web Lock
- * lets one tab sync at a time, and a broadcast channel shares results, pulled files and
- * buffers with pending edits between tabs.
+ * Browser sync. Each tab runs its own service; a Web Lock lets one tab sync at a time,
+ * and a broadcast channel shares results, pulled files and protected buffers.
  */
 
-// Background schedule
+// Tabs
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 const SYNC_LOCK = "lunarscribe-sync";
+
+/** localStorage key; every tab reads it, so sync history stays shared. */
+const SYNC_SETTINGS_KEY = "lunarscribe-sync-settings";
 
 type TabMessage =
   | { type: "result"; result: SyncResult }
@@ -49,80 +44,94 @@ const tabId = crypto.randomUUID();
 
 const channel = new BroadcastChannel("lunarscribe-sync");
 
-const statusListeners = new Set<(status: SyncStatus) => void>();
-
-const resultListeners = new Set<(result: SyncResult) => void>();
-
-const filesListeners = new Set<(changes: SyncedFileChange[]) => void>();
-
-let settings = createEmptySettings();
-
-let isBusy = false;
-
-let error: string | null = null;
-
-let needsSignIn = false;
-
-let authorization: AbortController | null = null;
-
 const protectedByTab = new Map<string, Set<string>>();
 
-/** Reads the settings every tab shares; called before each operation. */
-function reloadSettings() {
-  try {
-    settings = loadSyncSettings();
-    needsSignIn = settings.provider !== null && settings.tokens === null;
+/** Results and pulled files from other tabs. */
+const remoteResultListeners = new Set<(result: SyncResult) => void>();
 
-    if (needsSignIn) {
-      error =
-        "Sign-in is required. Open Settings → Syncing and select Sign in again.";
-    }
-  } catch (cause) {
-    error = errorMessage(cause, "Unable to load sync settings.");
-  }
+const remoteFilesListeners = new Set<(changes: SyncedFileChange[]) => void>();
+
+// Storage
+const settingsStore: SyncSettingsStore = {
+  async load() {
+    const serialized = localStorage.getItem(SYNC_SETTINGS_KEY);
+
+    return serialized === null
+      ? createEmptySettings()
+      : parseSyncSettings(serialized, isCloudSyncProvider);
+  },
+  async save(settings) {
+    localStorage.setItem(SYNC_SETTINGS_KEY, JSON.stringify(settings));
+  },
+};
+
+const localSyncStore: LocalSyncStore<SavedFileRecord | SavedImageRecord> = {
+  async read(name) {
+    return new Map(
+      (await readSyncedFiles(name)).map((record) => [record.name, record]),
+    );
+  },
+  apply: (change, before) =>
+    applySyncedFile(
+      change.name,
+      before,
+      change.content,
+      change.content === null ? 0 : change.modifiedAt,
+    ),
+};
+
+// Service
+function cloudBackend(provider: CloudSyncProvider) {
+  const clientId =
+    provider === "google-drive"
+      ? publicCredentials.googleClientId
+      : publicCredentials.dropboxAppKey;
+
+  return createCloudBackend(
+    provider,
+    {
+      signIn: (signal) => signIn(provider, clientId, signal),
+      refresh: (tokens) => refreshTokens(provider, tokens),
+    },
+    localSyncStore,
+  );
 }
 
-reloadSettings();
+const service = createSyncService<CloudSyncProvider>({
+  backends: {
+    "google-drive": cloudBackend("google-drive"),
+    dropbox: cloudBackend("dropbox"),
+  },
+  settings: settingsStore,
+  getProtectedNames: () =>
+    new Set([...protectedByTab.values()].flatMap((names) => [...names])),
+  lock: (operation) =>
+    navigator.locks.request(SYNC_LOCK, { ifAvailable: true }, (lock) => {
+      if (!lock) {
+        throw new SyncLockHeld(
+          "Another Lunarscribe tab is syncing. Try again when it finishes.",
+        );
+      }
 
-// Public API, matching the desktop preload bridge.
-export function getSyncStatus(): SyncStatus {
-  return {
-    provider: settings.provider,
-    account: settings.account,
-    busy: isBusy,
-    lastSyncedAt: settings.lastSyncedAt,
-    error,
-    needsSignIn,
-  };
-}
+      return operation();
+    }),
+});
 
-function emit<T>(listeners: Set<(value: T) => void>, value: T) {
-  for (const listener of listeners) {
-    listener(value);
-  }
-}
+service.onResult((result) =>
+  channel.postMessage({ type: "result", result } satisfies TabMessage),
+);
 
-function emitStatus() {
-  emit(statusListeners, getSyncStatus());
-}
-
-function emitResult(result: SyncResult) {
-  emit(resultListeners, result);
-  channel.postMessage({ type: "result", result } satisfies TabMessage);
-}
-
-function emitFiles(changes: SyncedFileChange[]) {
-  emit(filesListeners, changes);
-  channel.postMessage({ type: "files", changes } satisfies TabMessage);
-}
+service.onFiles((changes) =>
+  channel.postMessage({ type: "files", changes } satisfies TabMessage),
+);
 
 channel.addEventListener("message", (event: MessageEvent<TabMessage>) => {
   const message = event.data;
 
   if (message.type === "result") {
-    emit(resultListeners, message.result);
+    for (const listener of remoteResultListeners) listener(message.result);
   } else if (message.type === "files") {
-    emit(filesListeners, message.changes);
+    for (const listener of remoteFilesListeners) listener(message.changes);
   } else {
     protectedByTab.set(message.tabId, new Set(message.names));
   }
@@ -130,15 +139,13 @@ channel.addEventListener("message", (event: MessageEvent<TabMessage>) => {
 
 // Another tab connected, disconnected, or finished a sync.
 window.addEventListener("storage", (event) => {
-  if (event.key === SYNC_SETTINGS_KEY && !isBusy) {
-    error = null;
-    reloadSettings();
-    emitStatus();
+  if (event.key === SYNC_SETTINGS_KEY && !service.getStatus().isBusy) {
+    void service.reload();
   }
 });
 
 window.addEventListener("pagehide", () => {
-  authorization?.abort();
+  service.cancelSignIn();
   channel.postMessage({
     type: "protected",
     tabId,
@@ -146,321 +153,30 @@ window.addEventListener("pagehide", () => {
   } satisfies TabMessage);
 });
 
-// Access tokens
-/** Refresh expired Dropbox tokens; Google tokens require sign-in again. */
-async function getAccessToken(provider: SyncProvider) {
-  if (!settings.tokens || settings.provider !== provider) {
-    throw new SyncSignInRequired("Reconnect your sync account.");
-  }
+// Public API, matching the desktop preload bridge
+export const getSyncStatus = service.getStatus;
 
-  let tokens = settings.tokens;
+export const syncFiles = (name: string | null) => service.sync(name);
 
-  if (tokens.expiresAt <= Date.now() + 60_000) {
-    if (!tokens.refreshToken) {
-      throw new SyncSignInRequired(
-        "Google Drive needs sign-in again. Open Settings → Syncing and select Sign in again. Your writing is safe.",
-      );
-    }
+export const forceSyncFile = service.forcePush;
 
-    tokens = await refreshDropboxTokens(tokens);
-    settings.tokens = tokens;
-    saveSyncSettings(settings);
-  }
+/** Other tabs get the change; this tab's buffers apply the returned change themselves. */
+export async function forcePullFile(name: string) {
+  const change = await service.forcePull(name);
 
-  return tokens.accessToken;
+  channel.postMessage({
+    type: "files",
+    changes: [change],
+  } satisfies TabMessage);
+
+  return change;
 }
 
-/** Build a cloud adapter with the current token and saved destination. */
-function createCloudProvider(): FileSyncProvider {
-  if (settings.provider === "google-drive" && settings.folderId) {
-    return createGoogleDriveApi(() =>
-      getAccessToken("google-drive"),
-    ).createProvider(settings.folderId);
-  }
+export const connectSync = service.connect;
 
-  if (settings.provider === "dropbox") {
-    return createDropboxApi(() => getAccessToken("dropbox")).createProvider();
-  }
+export const disconnectSync = service.disconnect;
 
-  throw new Error("Connect a sync provider first.");
-}
-
-// Sync operations
-/** Another tab holds the sync lock. */
-class SyncLockHeld extends Error {}
-
-/** Allow one sync operation across tabs and report its status. */
-async function runSyncOperation<T>(
-  operation: () => Promise<T>,
-  isBackground = false,
-) {
-  if (isBusy) {
-    throw new Error(
-      "A sync operation is already running. Try again when it finishes.",
-    );
-  }
-
-  isBusy = true;
-  reloadSettings();
-  error = null;
-  emitStatus();
-
-  try {
-    return await navigator.locks.request(
-      SYNC_LOCK,
-      { ifAvailable: true },
-      (lock) => {
-        if (!lock) {
-          throw new SyncLockHeld(
-            "Another Lunarscribe tab is syncing. Try again when it finishes.",
-          );
-        }
-
-        return operation();
-      },
-    );
-  } catch (cause) {
-    // A background run skips without an error when another tab syncs.
-    if (isBackground && cause instanceof SyncLockHeld) {
-      throw cause;
-    }
-
-    if (cause instanceof SyncSignInRequired) {
-      needsSignIn = true;
-    }
-
-    error = errorMessage(cause, "Sync failed. Your local writing is safe.");
-    throw new Error(error);
-  } finally {
-    isBusy = false;
-    emitStatus();
-  }
-}
-
-/** Protect pending buffer edits across all open tabs. */
-function getProtectedNames() {
-  return new Set([...protectedByTab.values()].flatMap((names) => [...names]));
-}
-
-/** Compare with the shared base and reject concurrent remote writes. */
-async function syncCloud(name: string | null): Promise<SyncResult> {
-  const remoteProvider = createCloudProvider();
-  const remote = await remoteProvider.read(name);
-  const local = await readLocalSyncFiles();
-
-  const plan = await planSync(
-    local,
-    remote,
-    settings.baseline,
-    getProtectedNames(),
-    name,
-  );
-
-  await remoteProvider.write(plan.push, remote);
-
-  const { pulled } = await applySyncPulls(
-    local,
-    plan,
-    settings.baseline,
-    getProtectedNames,
-    (change) => emitFiles([change]),
-  );
-
-  settings.baseline = plan.acknowledged;
-
-  return {
-    conflicts: plan.conflicts,
-    pushed: plan.push.length,
-    pulled,
-  };
-}
-
-function finishSync(result: SyncResult) {
-  settings.lastSyncedAt = new Date().toISOString();
-  saveSyncSettings(settings);
-  emitResult(result);
-
-  return result;
-}
-
-/** Rejects names that cloud sync must not read or write. */
-function assertSavedFileName(name: string) {
-  if (!isSavedFileName(name)) {
-    throw new Error("Only saved markdown and drawings can be synced.");
-  }
-}
-
-/** Syncs every saved file, or pushes one when `name` is set. */
-export function syncFiles(name: string | null, isBackground = false) {
-  return runSyncOperation(async () => {
-    if (name !== null) {
-      assertSavedFileName(name);
-    }
-
-    return finishSync(await syncCloud(name));
-  }, isBackground);
-}
-
-/** Overwrites the remote copy with the saved file. */
-export function forceSyncFile(name: string) {
-  return runSyncOperation(async (): Promise<SyncResult> => {
-    assertSavedFileName(name);
-
-    const local = (await readLocalSyncFiles()).get(name);
-
-    if (!local) {
-      throw new Error(`The saved file "${name}" no longer exists.`);
-    }
-
-    await createCloudProvider().forceWrite(
-      name,
-      local.content,
-      local.modifiedAt,
-    );
-    Object.defineProperty(settings.baseline, name, {
-      value: await contentHash(local.content),
-      enumerable: true,
-      configurable: true,
-      writable: true,
-    });
-
-    return finishSync({ conflicts: [], pushed: 1, pulled: 0 });
-  });
-}
-
-/**
- * Replaces the saved file with the remote copy, or removes it when the remote has none.
- * Other tabs get the change; this tab's buffers apply the returned change themselves.
- */
-export function forcePullFile(name: string) {
-  return runSyncOperation(async (): Promise<SyncedFileChange> => {
-    assertSavedFileName(name);
-
-    const remote = (await createCloudProvider().read(name)).get(name) ?? null;
-
-    if (remote?.blocked) {
-      throw new Error(
-        "The remote copy is not a regular saved file, so it cannot replace the local copy.",
-      );
-    }
-
-    const before = (await readLocalSyncFiles()).get(name) ?? null;
-
-    // Force pull is a sidebar action, so it only reaches markdown and drawings.
-    if (
-      remote?.content instanceof Uint8Array ||
-      before?.content instanceof Uint8Array
-    ) {
-      throw new Error("Only saved markdown and drawings can be pulled.");
-    }
-
-    const isApplied = await applySyncedFile(
-      name,
-      before,
-      remote?.content ?? null,
-      remote?.modifiedAt ?? 0,
-    );
-
-    if (!isApplied) {
-      throw new Error("The saved file changed while pulling. Retry.");
-    }
-
-    if (remote) {
-      Object.defineProperty(settings.baseline, name, {
-        value: await contentHash(remote.content),
-        enumerable: true,
-        configurable: true,
-        writable: true,
-      });
-    } else {
-      delete settings.baseline[name];
-    }
-
-    const change = {
-      name,
-      before: before?.content ?? null,
-      after: remote?.content ?? null,
-    };
-
-    channel.postMessage({
-      type: "files",
-      changes: [change],
-    } satisfies TabMessage);
-    finishSync({ conflicts: [], pushed: 0, pulled: 1 });
-
-    return change;
-  });
-}
-
-/** Signs in to `selected` and stores its destination; sign-in opens a pop-up. */
-export async function connectSync(selected: SyncProvider) {
-  await runSyncOperation(async () => {
-    if (!Object.hasOwn(SYNC_PROVIDERS, selected)) {
-      throw new Error("Unknown sync provider.");
-    }
-
-    const next: SyncSettings = createEmptySettings();
-    next.provider = selected;
-    authorization = new AbortController();
-
-    try {
-      const tokens = await signIn(
-        selected,
-        selected === "google-drive"
-          ? publicCredentials.googleClientId
-          : publicCredentials.dropboxAppKey,
-        authorization.signal,
-      );
-
-      next.tokens = tokens;
-
-      if (selected === "google-drive") {
-        const api = createGoogleDriveApi(async () => tokens.accessToken);
-        next.folderId = await api.getOrCreateFolder();
-        next.account = await api.getAccountEmail();
-      } else {
-        next.account = await createDropboxApi(
-          async () => tokens.accessToken,
-        ).connect();
-      }
-
-      authorization.signal.throwIfAborted();
-    } finally {
-      authorization = null;
-    }
-
-    // Keep comparison history when the same destination reconnects.
-    if (
-      settings.provider === next.provider &&
-      settings.account === next.account &&
-      settings.folderId === next.folderId
-    ) {
-      next.baseline = settings.baseline;
-      next.lastSyncedAt = settings.lastSyncedAt;
-    }
-
-    saveSyncSettings(next);
-    settings = next;
-    needsSignIn = false;
-  });
-
-  return getSyncStatus();
-}
-
-export async function disconnectSync() {
-  await runSyncOperation(async () => {
-    const next = createEmptySettings();
-    saveSyncSettings(next);
-    settings = next;
-    needsSignIn = false;
-  });
-
-  return getSyncStatus();
-}
-
-export function cancelSyncSignIn() {
-  authorization?.abort();
-}
+export const cancelSyncSignIn = service.cancelSignIn;
 
 /** Names of saved files whose open buffers have pending edits in this tab. */
 export function protectSyncFiles(names: string[]) {
@@ -468,41 +184,39 @@ export function protectSyncFiles(names: string[]) {
   channel.postMessage({ type: "protected", tabId, names } satisfies TabMessage);
 }
 
-function subscribe<T>(listeners: Set<T>, listener: T) {
-  listeners.add(listener);
+export const onSyncStatus = service.onStatus;
+
+/** Results from this tab and every other tab. */
+export function onSyncResult(listener: (result: SyncResult) => void) {
+  remoteResultListeners.add(listener);
+  const unsubscribe = service.onResult(listener);
 
   return () => {
-    listeners.delete(listener);
+    remoteResultListeners.delete(listener);
+    unsubscribe();
   };
 }
 
-export function onSyncStatus(listener: (status: SyncStatus) => void) {
-  return subscribe(statusListeners, listener);
-}
-
-export function onSyncResult(listener: (result: SyncResult) => void) {
-  return subscribe(resultListeners, listener);
-}
-
+/** Pulled files from this tab and every other tab. */
 export function onSyncedFiles(listener: (changes: SyncedFileChange[]) => void) {
-  return subscribe(filesListeners, listener);
+  remoteFilesListeners.add(listener);
+  const unsubscribe = service.onFiles(listener);
+
+  return () => {
+    remoteFilesListeners.delete(listener);
+    unsubscribe();
+  };
 }
 
 // Background sync runs while a tab is open and skips when another tab is syncing.
-function syncInBackground() {
-  if (settings.provider && !needsSignIn && !isBusy) {
-    void syncFiles(null, true).catch(() => undefined);
-  }
-}
-
 let hasStartupSynced = false;
 
 /** Starts the one sync that runs when the tab opens; later calls do nothing. */
 export function startupSync() {
   if (!hasStartupSynced) {
     hasStartupSynced = true;
-    syncInBackground();
+    void service.syncInBackground();
   }
 }
 
-setInterval(syncInBackground, SYNC_INTERVAL_MS);
+setInterval(service.syncInBackground, SYNC_INTERVAL_MS);

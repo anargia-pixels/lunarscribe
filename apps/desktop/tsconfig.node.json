@@ -12,6 +12,7 @@
     "src/electron/**/*.ts",
     "src/electron/**/*.tsx",
     "src/electron/sync/public-creds.json",
+    "src/lib/bridge.ts",
     "src/lib/editor-files.ts",
     "src/lib/images.ts",
     "src/lib/sync.ts",

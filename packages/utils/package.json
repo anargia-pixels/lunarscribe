@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     "./error-message": "./src/error-message.ts",
+    "./file-kinds": "./src/file-kinds.ts",
+    "./file-search": "./src/file-search.ts",
     "./cn": "./src/cn.ts",
     "./try-catch": "./src/try-catch.ts",
     "./fonts.css": "./src/fonts.css",
@@ -12,9 +14,18 @@
     "./map-concurrent": "./src/map-concurrent.ts",
     "./operation-queue": "./src/operation-queue.ts",
     "./redact-email": "./src/redact-email.ts",
+    "./relative-time": "./src/relative-time.ts",
     "./saved-paths": "./src/saved-paths.ts",
+    "./utf8": "./src/utf8.ts",
+    "./sync/dropbox": "./src/sync/dropbox.ts",
+    "./sync/google-drive": "./src/sync/google-drive.ts",
     "./sync/google-drive-tree": "./src/sync/google-drive-tree.ts",
+    "./sync/hash": "./src/sync/hash.ts",
     "./sync/json": "./src/sync/json.ts",
+    "./sync/oauth": "./src/sync/oauth.ts",
+    "./sync/plan": "./src/sync/plan.ts",
+    "./sync/service": "./src/sync/service.ts",
+    "./sync/settings": "./src/sync/settings.ts",
     "./sync/types": "./src/sync/types.ts"
   },
   "scripts": {
@@ -24,6 +35,7 @@
     "cn": "catalog:"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
     "typescript": "catalog:"
   }
 }

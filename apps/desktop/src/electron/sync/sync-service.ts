@@ -1,32 +1,23 @@
-import { lstat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { errorMessage } from "@lunarscribe/utils/error-message";
 import type { createOperationQueue } from "@lunarscribe/utils/operation-queue";
-import type { FileSyncProvider } from "@lunarscribe/utils/sync/types";
-import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
+import { revokeTokens } from "@lunarscribe/utils/sync/oauth";
+import type {
+  LocalSyncFile,
+  LocalSyncStore,
+} from "@lunarscribe/utils/sync/plan";
+import {
+  createCloudBackend,
+  createSyncService,
+} from "@lunarscribe/utils/sync/service";
+import type { SyncBackend } from "@lunarscribe/utils/sync/service";
+import type { CloudSyncProvider } from "@lunarscribe/utils/sync/types";
 import { app, BrowserWindow, ipcMain } from "electron";
 import type { WebContents } from "electron";
 
-import type {
-  SyncProvider,
-  SyncResult,
-  SyncStatus,
-  SyncedFileChange,
-} from "../../lib/sync";
-import { SYNC_PROVIDERS } from "../../lib/sync";
-import { refreshTokens, revokeTokens, signIn } from "./auth/oauth";
-import type { OAuthProvider } from "./auth/oauth";
-import {
-  applySyncPulls,
-  contentHash,
-  isSavedFileName,
-  planSync,
-  readLocalSyncFiles,
-  readSavedFile,
-  writeSavedFile,
-} from "./files";
-import { createDropboxApi } from "./providers/dropbox";
+import type { SyncProvider } from "../../lib/sync";
+import { refreshTokens, signIn } from "./auth/oauth";
+import { createLocalSyncStore, readSavedText, writeSavedFile } from "./files";
 import {
   connectGithub,
   disconnectGithub,
@@ -34,9 +25,8 @@ import {
   readGithubFile,
   syncGithub,
 } from "./providers/github";
-import { createGoogleDriveApi } from "./providers/google-drive";
 import publicCredentials from "./public-creds.json";
-import { createEmptySettings, createSyncSettings } from "./settings";
+import { createSettingsStore } from "./settings-store";
 
 // Background schedule
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
@@ -50,397 +40,143 @@ function broadcast<T>(channel: string, payload: T, except?: WebContents) {
   }
 }
 
+/** Sync through the Git repository `lunarscribe` in the account's GitHub. */
+function createGithubBackend(
+  folder: string,
+  queue: ReturnType<typeof createOperationQueue>,
+  local: LocalSyncStore,
+): SyncBackend<SyncProvider> {
+  /** The connected account; GitHub keeps no tokens of its own here. */
+  function accountOf(account: string | null) {
+    if (!account) {
+      throw new Error("Connect a sync provider first.");
+    }
+
+    return account;
+  }
+
+  return {
+    isSignedIn: () => true,
+    connect: async () => ({
+      account: await connectGithub(folder, queue),
+      folderId: null,
+      tokens: null,
+    }),
+    disconnect: () => queue(folder, () => disconnectGithub(folder)),
+    sync: (session, name) =>
+      syncGithub(
+        folder,
+        accountOf(session.settings.account),
+        name,
+        queue,
+        session.getProtectedNames,
+        session.emitFiles,
+      ),
+    async forcePush(session, name) {
+      const file = (await local.read(name)).get(name);
+
+      if (!file || file.blocked || file.content instanceof Uint8Array) {
+        throw new Error("The selected path is not a regular saved file.");
+      }
+
+      await forceWriteGithub(
+        folder,
+        accountOf(session.settings.account),
+        name,
+        file.content,
+        queue,
+      );
+    },
+    async forcePull(session, name) {
+      const after = await readGithubFile(
+        folder,
+        accountOf(session.settings.account),
+        name,
+        queue,
+      );
+
+      return queue(folder, async () => {
+        const before = await readSavedText(folder, name);
+
+        await writeSavedFile(
+          folder,
+          after === null
+            ? { name, content: null }
+            : { name, content: after, modifiedAt: Date.now() },
+        );
+
+        return { name, before, after };
+      });
+    },
+  };
+}
+
 /** Register sync IPC and scheduling with the documents save queue. */
 export function registerSync(
   folder: string,
   queue: ReturnType<typeof createOperationQueue>,
 ) {
-  // Load saved state before accepting IPC operations.
-  const directory = join(app.getPath("userData"), "sync");
-  const persistence = createSyncSettings(directory);
-  let settings = createEmptySettings();
-  let isBusy = false;
-  let error: string | null = null;
-  let authorization: AbortController | null = null;
-  let needsSignIn = false;
   const protectedByWindow = new Map<number, Set<string>>();
+  const local = createLocalSyncStore(folder, queue);
 
-  const loaded = persistence
-    .load()
-    .then((saved) => {
-      settings = saved;
-      needsSignIn =
-        saved.provider !== null &&
-        saved.provider !== "github" &&
-        saved.tokens === null;
+  const cloudBackend = (provider: CloudSyncProvider) =>
+    createCloudBackend<LocalSyncFile, SyncProvider>(
+      provider,
+      {
+        signIn: (signal) =>
+          signIn(
+            provider,
+            provider === "google-drive"
+              ? publicCredentials.googleClientId
+              : publicCredentials.dropboxAppKey,
+            signal,
+          ),
+        refresh: (tokens) => refreshTokens(provider, tokens),
+        revoke: (tokens) => revokeTokens(provider, tokens),
+      },
+      local,
+    );
 
-      if (needsSignIn) {
-        error =
-          "Sign-in is required. Open Settings → Syncing and select Sign in again.";
-      }
-    })
-    .catch((cause) => {
-      error = errorMessage(cause, "Unable to load sync settings.");
-    });
-
-  const getStatus = (): SyncStatus => ({
-    provider: settings.provider,
-    account: settings.account,
-    busy: isBusy,
-    lastSyncedAt: settings.lastSyncedAt,
-    error,
-    needsSignIn,
+  const service = createSyncService<SyncProvider>({
+    backends: {
+      github: createGithubBackend(folder, queue, local),
+      "google-drive": cloudBackend("google-drive"),
+      dropbox: cloudBackend("dropbox"),
+    },
+    settings: createSettingsStore(join(app.getPath("userData"), "sync")),
+    // Protect pending buffer edits across all open windows.
+    getProtectedNames: () =>
+      new Set([...protectedByWindow.values()].flatMap((names) => [...names])),
   });
 
-  const broadcastStatus = () => broadcast("sync:status", getStatus());
-
-  // Access tokens stay in the main process.
-  /** Refresh expired tokens, or require sign-in when refresh is absent. */
-  async function getAccessToken(provider: OAuthProvider) {
-    if (!settings.tokens || settings.provider !== provider) {
-      throw new SyncSignInRequired("Reconnect your sync account.");
-    }
-
-    let tokens = settings.tokens;
-
-    if (tokens.expiresAt <= Date.now() + 60_000) {
-      if (!tokens.refreshToken) {
-        throw new SyncSignInRequired(
-          "Your sync account needs sign-in again. Open Settings → Syncing and select Sign in again. Your writing is safe.",
-        );
-      }
-
-      tokens = await refreshTokens(provider, tokens);
-      settings.tokens = tokens;
-      await persistence.save(settings);
-    }
-
-    return tokens.accessToken;
-  }
-
-  /** Build a cloud adapter with the current token and saved destination. */
-  function createCloudProvider(): FileSyncProvider {
-    if (settings.provider === "google-drive" && settings.folderId) {
-      return createGoogleDriveApi(() =>
-        getAccessToken("google-drive"),
-      ).createProvider(settings.folderId);
-    }
-
-    if (settings.provider === "dropbox") {
-      return createDropboxApi(() => getAccessToken("dropbox")).createProvider();
-    }
-
-    throw new Error("Connect a sync provider first.");
-  }
-
-  // Sync operations
-  /** Allow one sync operation and broadcast its status to all windows. */
-  async function runSyncOperation<T>(operation: () => Promise<T>) {
-    await loaded;
-
-    if (isBusy) {
-      throw new Error(
-        "A sync operation is already running. Try again when it finishes.",
-      );
-    }
-
-    isBusy = true;
-    error = null;
-    broadcastStatus();
-
-    try {
-      return await operation();
-    } catch (cause) {
-      if (cause instanceof SyncSignInRequired) {
-        needsSignIn = true;
-      }
-
-      error = errorMessage(cause, "Sync failed. Your local writing is safe.");
-      throw new Error(error);
-    } finally {
-      isBusy = false;
-      broadcastStatus();
-    }
-  }
-
-  /** Protect pending buffer edits across all open windows. */
-  function getProtectedNames() {
-    return new Set(
-      [...protectedByWindow.values()].flatMap((names) => [...names]),
-    );
-  }
-
-  /** Compare with the shared base and reject concurrent remote writes. */
-  async function syncCloud(name: string | null): Promise<SyncResult> {
-    const remoteProvider = createCloudProvider();
-    const remote = await remoteProvider.read(name);
-    const local = await queue(folder, () => readLocalSyncFiles(folder));
-
-    const plan = planSync(
-      local,
-      remote,
-      settings.baseline,
-      getProtectedNames(),
-      name,
-    );
-
-    await remoteProvider.write(plan.push, remote);
-
-    return queue(folder, async () => {
-      const { pulled } = await applySyncPulls(
-        folder,
-        local,
-        plan,
-        settings.baseline,
-        getProtectedNames,
-        (change) => broadcast("sync:files", [change]),
-      );
-
-      settings.baseline = plan.acknowledged;
-
-      return {
-        conflicts: plan.conflicts,
-        pushed: plan.push.length,
-        pulled,
-      };
-    });
-  }
-
-  /** Keep Git merges and cloud comparisons behind the same status events. */
-  async function sync(name: string | null): Promise<SyncResult> {
-    return runSyncOperation(async () => {
-      if (name !== null && !isSavedFileName(name)) {
-        throw new Error("Only saved markdown and drawings can be synced.");
-      }
-
-      const syncResult =
-        settings.provider === "github" && settings.account
-          ? await syncGithub(
-              folder,
-              settings.account,
-              name,
-              queue,
-              getProtectedNames,
-              (changes) => broadcast("sync:files", changes),
-            )
-          : await syncCloud(name);
-
-      settings.lastSyncedAt = new Date().toISOString();
-      await persistence.save(settings);
-      broadcast("sync:result", syncResult);
-
-      return syncResult;
-    });
-  }
+  service.onStatus((status) => broadcast("sync:status", status));
+  service.onResult((result) => broadcast("sync:result", result));
+  service.onFiles((changes) => broadcast("sync:files", changes));
 
   // Renderer requests
   ipcMain.handle("sync:status", async () => {
-    await loaded;
+    await service.ready;
 
-    return getStatus();
+    return service.getStatus();
   });
-  ipcMain.handle("sync:run", (_event, name: string | null) => sync(name));
+  ipcMain.handle("sync:run", (_event, name: string | null) =>
+    service.sync(name),
+  );
   ipcMain.handle("sync:force", (_event, name: string) =>
-    runSyncOperation(async (): Promise<SyncResult> => {
-      if (!isSavedFileName(name)) {
-        throw new Error("Only saved markdown and drawings can be synced.");
-      }
-
-      const local = await queue(folder, async () => {
-        const path = join(folder, name);
-        const metadata = await lstat(path);
-
-        if (!metadata.isFile()) {
-          throw new Error("The selected path is not a regular saved file.");
-        }
-
-        return {
-          content: await readFile(path, "utf8"),
-          modifiedAt: metadata.mtimeMs,
-        };
-      });
-
-      if (settings.provider === "github" && settings.account) {
-        await forceWriteGithub(
-          folder,
-          settings.account,
-          name,
-          local.content,
-          queue,
-        );
-      } else {
-        await createCloudProvider().forceWrite(
-          name,
-          local.content,
-          local.modifiedAt,
-        );
-        Object.defineProperty(settings.baseline, name, {
-          value: contentHash(local.content),
-          enumerable: true,
-          configurable: true,
-          writable: true,
-        });
-      }
-
-      const result = { conflicts: [], pushed: 1, pulled: 0 };
-      settings.lastSyncedAt = new Date().toISOString();
-      await persistence.save(settings);
-      broadcast("sync:result", result);
-
-      return result;
-    }),
+    service.forcePush(name),
   );
-  // Replace one local file with the remote copy, or remove it when the remote has none.
-  ipcMain.handle("sync:force-pull", (event, name: string) =>
-    runSyncOperation(async (): Promise<SyncedFileChange> => {
-      if (!isSavedFileName(name)) {
-        throw new Error("Only saved markdown and drawings can be synced.");
-      }
+  // The requesting window applies the change itself, discarding pending edits.
+  ipcMain.handle("sync:force-pull", async (event, name: string) => {
+    const change = await service.forcePull(name);
+    broadcast("sync:files", [change], event.sender);
 
-      let remote: { content: string; modifiedAt: number } | null;
-
-      if (settings.provider === "github" && settings.account) {
-        const content = await readGithubFile(
-          folder,
-          settings.account,
-          name,
-          queue,
-        );
-
-        remote = content === null ? null : { content, modifiedAt: Date.now() };
-      } else {
-        const file = (await createCloudProvider().read(name)).get(name);
-
-        if (file?.blocked) {
-          throw new Error(
-            "The remote copy is not a regular saved file, so it cannot replace the local copy.",
-          );
-        }
-
-        const content = file?.content ?? null;
-
-        if (content instanceof Uint8Array) {
-          throw new Error("Only saved markdown and drawings can be pulled.");
-        }
-
-        remote =
-          file && content !== null
-            ? { content, modifiedAt: file.modifiedAt }
-            : null;
-      }
-
-      const change = await queue(folder, async () => {
-        const before = await readSavedFile(folder, name);
-
-        await writeSavedFile(
-          folder,
-          remote ? { name, ...remote } : { name, content: null },
-        );
-
-        return { name, before, after: remote?.content ?? null };
-      });
-
-      if (settings.provider !== "github") {
-        if (remote) {
-          Object.defineProperty(settings.baseline, name, {
-            value: contentHash(remote.content),
-            enumerable: true,
-            configurable: true,
-            writable: true,
-          });
-        } else {
-          delete settings.baseline[name];
-        }
-      }
-
-      const result = { conflicts: [], pushed: 0, pulled: 1 };
-      settings.lastSyncedAt = new Date().toISOString();
-      await persistence.save(settings);
-      // The requesting window applies the change itself, discarding pending edits.
-      broadcast("sync:files", [change], event.sender);
-      broadcast("sync:result", result);
-
-      return change;
-    }),
+    return change;
+  });
+  ipcMain.handle("sync:connect", (_event, provider: SyncProvider) =>
+    service.connect(provider),
   );
-  ipcMain.handle("sync:connect", async (_event, selected: SyncProvider) => {
-    await runSyncOperation(async () => {
-      if (!Object.hasOwn(SYNC_PROVIDERS, selected)) {
-        throw new Error("Unknown sync provider.");
-      }
-
-      const next = createEmptySettings();
-      next.provider = selected;
-
-      if (selected === "github") {
-        next.account = await connectGithub(folder, queue);
-      } else {
-        authorization = new AbortController();
-
-        try {
-          const tokens = await signIn(
-            selected,
-            selected === "google-drive"
-              ? publicCredentials.googleClientId
-              : publicCredentials.dropboxAppKey,
-            authorization.signal,
-          );
-
-          next.tokens = tokens;
-
-          if (selected === "google-drive") {
-            const api = createGoogleDriveApi(async () => tokens.accessToken);
-            next.folderId = await api.getOrCreateFolder();
-            next.account = await api.getAccountEmail();
-          } else {
-            next.account = await createDropboxApi(
-              async () => tokens.accessToken,
-            ).connect();
-          }
-
-          authorization.signal.throwIfAborted();
-        } finally {
-          authorization = null;
-        }
-      }
-
-      // Keep comparison history when the same destination reconnects.
-      if (
-        settings.provider === next.provider &&
-        settings.account === next.account &&
-        settings.folderId === next.folderId
-      ) {
-        next.baseline = settings.baseline;
-        next.lastSyncedAt = settings.lastSyncedAt;
-      }
-
-      await persistence.save(next);
-      settings = next;
-      needsSignIn = false;
-    });
-
-    return getStatus();
-  });
-  ipcMain.handle("sync:disconnect", async () => {
-    await runSyncOperation(async () => {
-      if (settings.provider === "github") {
-        await queue(folder, () => disconnectGithub(folder));
-      } else if (settings.provider && settings.tokens) {
-        // Best effort: disconnect still works offline or after the user revoked access.
-        await revokeTokens(settings.provider, settings.tokens).catch(
-          () => undefined,
-        );
-      }
-
-      const next = createEmptySettings();
-      await persistence.save(next);
-      settings = next;
-      needsSignIn = false;
-    });
-
-    return getStatus();
-  });
-  ipcMain.on("sync:cancel", () => authorization?.abort());
+  ipcMain.handle("sync:disconnect", () => service.disconnect());
+  ipcMain.on("sync:cancel", service.cancelSignIn);
   ipcMain.on("sync:protected", (event, names: string[]) => {
     if (!protectedByWindow.has(event.sender.id)) {
       event.sender.once("destroyed", () =>
@@ -453,18 +189,9 @@ export function registerSync(
 
   // Run background sync only while an app window is open.
   function syncInBackground() {
-    void loaded
-      .then(async () => {
-        if (
-          settings.provider &&
-          !needsSignIn &&
-          !isBusy &&
-          BrowserWindow.getAllWindows().length > 0
-        ) {
-          await sync(null);
-        }
-      })
-      .catch(() => undefined);
+    if (BrowserWindow.getAllWindows().length > 0) {
+      void service.syncInBackground();
+    }
   }
 
   // The first window asks for this sync after it listens for downloaded files.
@@ -473,6 +200,6 @@ export function registerSync(
 
   app.once("before-quit", () => {
     clearInterval(timer);
-    authorization?.abort();
+    service.cancelSignIn();
   });
 }

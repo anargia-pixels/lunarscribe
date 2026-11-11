@@ -1,32 +1,26 @@
-import { createHash } from "node:crypto";
-
-import { isImageFileName } from "@lunarscribe/utils/images";
-import { mapConcurrent } from "@lunarscribe/utils/map-concurrent";
-import { baseNameOf, folderOf } from "@lunarscribe/utils/saved-paths";
+import { isSyncedFileName } from "../file-kinds";
+import { isImageFileName } from "../images";
+import { mapConcurrent } from "../map-concurrent";
+import { baseNameOf, folderOf } from "../saved-paths";
+import { decodeUtf8 } from "../utf8";
 import {
   createDriveTree,
   DRIVE_FOLDER_TYPE,
   driveQueryString,
-} from "@lunarscribe/utils/sync/google-drive-tree";
-import type { DriveTreeFile } from "@lunarscribe/utils/sync/google-drive-tree";
+} from "./google-drive-tree";
+import type { DriveTreeFile } from "./google-drive-tree";
+import { sha256Hex } from "./hash";
+import type { ContentHash } from "./hash";
 import {
   jsonArray,
   jsonField,
   jsonString,
   jsonTimestamp,
   parseJson,
-} from "@lunarscribe/utils/sync/json";
-import type {
-  FileSyncProvider,
-  RemoteFiles,
-  SyncContent,
-} from "@lunarscribe/utils/sync/types";
-import {
-  SYNC_CONCURRENCY,
-  SyncSignInRequired,
-} from "@lunarscribe/utils/sync/types";
-
-import { isSyncedFileName } from "../files";
+} from "./json";
+import { fetchCloud } from "./network";
+import type { FileSyncProvider, RemoteFiles, SyncContent } from "./types";
+import { SYNC_CONCURRENCY, SyncSignInRequired } from "./types";
 
 // Drive metadata
 const API = "https://www.googleapis.com/drive/v2/files";
@@ -36,7 +30,7 @@ type DriveFile = {
   title: string;
   etag: string;
   mimeType: string;
-  md5Checksum: string;
+  sha256Checksum: string;
   modifiedAt: number;
 };
 
@@ -69,13 +63,16 @@ function multipartBody(
 }
 
 /** v2 exposes metadata ETags for conditional updates and trash operations. */
-export function createGoogleDriveApi(accessToken: () => Promise<string>) {
+export function createGoogleDriveApi(
+  accessToken: () => Promise<string>,
+  hash: ContentHash = sha256Hex,
+) {
   /** Report request failures without exposing remote response bodies. */
   async function request(url: string, options: RequestInit = {}) {
     const headers = new Headers(options.headers);
     headers.set("Authorization", `Bearer ${await accessToken()}`);
 
-    const response = await fetch(url, {
+    const response = await fetchCloud("google-drive", url, {
       ...options,
       headers,
       signal: AbortSignal.timeout(30_000),
@@ -89,7 +86,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
 
     if (response.status === 401) {
       throw new SyncSignInRequired(
-        "Google Drive needs sign-in again. Open Settings → Syncing and select Sign in again.",
+        "Google Drive needs sign-in again. Open the sync settings and select Sign in again.",
       );
     }
 
@@ -112,7 +109,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
         q: query,
         maxResults: "1000",
         fields:
-          "items(id,title,etag,mimeType,md5Checksum,modifiedDate),nextPageToken",
+          "items(id,title,etag,mimeType,sha256Checksum,modifiedDate),nextPageToken",
         pageToken,
       });
 
@@ -127,7 +124,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
             title: jsonString(metadata, "title"),
             etag: jsonString(metadata, "etag"),
             mimeType: jsonString(metadata, "mimeType"),
-            md5Checksum: jsonString(metadata, "md5Checksum", true),
+            sha256Checksum: jsonString(metadata, "sha256Checksum", true),
             modifiedAt: jsonTimestamp(metadata, "modifiedDate"),
           });
         }
@@ -231,7 +228,7 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
       id?: string,
       revision?: string,
     ) {
-      const boundary = `lunarscribe-${crypto.randomUUID()}`;
+      const boundary = `lunarscribe-${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
 
       const modification = {
         modifiedDate: new Date(modifiedAt).toISOString(),
@@ -318,20 +315,21 @@ export function createGoogleDriveApi(accessToken: () => Promise<string>) {
             `${API}/${encodeURIComponent(file.id)}?alt=media`,
           );
 
-          const bytes = Buffer.from(await response.arrayBuffer());
+          const bytes = new Uint8Array(await response.arrayBuffer());
+
+          // Images keep their bytes; markdown and drawings are text, BOM included.
+          const content = isImageFileName(file.path)
+            ? bytes
+            : decodeUtf8(bytes);
 
           if (
-            !file.md5Checksum ||
-            createHash("md5").update(bytes).digest("hex") !== file.md5Checksum
+            !file.sha256Checksum ||
+            (await hash(bytes)) !== file.sha256Checksum
           ) {
             throw new Error(
               `Google Drive could not verify ${JSON.stringify(file.path)} against the sync snapshot. The local and remote files were preserved; retry sync.`,
             );
           }
-
-          const content = isImageFileName(file.path)
-            ? new Uint8Array(bytes)
-            : bytes.toString("utf8");
 
           files.set(file.path, {
             id: file.id,

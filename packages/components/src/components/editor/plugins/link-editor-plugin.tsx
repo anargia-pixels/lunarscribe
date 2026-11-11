@@ -24,6 +24,7 @@ import {
   type LinkDraft,
   LinkForm,
 } from "../link-form";
+import { useEditable } from "../use-editable";
 
 type SelectedLink = { key: NodeKey; url: string };
 
@@ -70,6 +71,7 @@ export function LinkEditorPlugin() {
   const [editor] = useLexicalComposerContext();
   const [link, setLink] = useState<SelectedLink | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
+  const isEditable = useEditable(editor);
   const barRef = useRef<HTMLDivElement>(null);
   const linkKey = link?.key ?? null;
   const isAdding = draft?.key === null;
@@ -191,7 +193,7 @@ export function LinkEditorPlugin() {
         isEditing && "w-72 p-2.5",
       )}
     >
-      {draft && isEditing ? (
+      {draft && isEditing && isEditable ? (
         <div className="w-full">
           <LinkForm
             draft={draft}
@@ -206,30 +208,34 @@ export function LinkEditorPlugin() {
             <span className="text-muted-foreground min-w-0 truncate px-1.5">
               {link.url}
             </span>
-            <Hint label="Edit link">
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="Edit link"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() =>
-                  setDraft({ ...editor.read($getLinkDraft), key: link.key })
-                }
-              >
-                <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} />
-              </Button>
-            </Hint>
-            <Hint label="Remove link">
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="Remove link"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => editor.update($removeLink)}
-              >
-                <HugeiconsIcon icon={Unlink01Icon} strokeWidth={2} />
-              </Button>
-            </Hint>
+            {isEditable && (
+              <>
+                <Hint label="Edit link">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Edit link"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() =>
+                      setDraft({ ...editor.read($getLinkDraft), key: link.key })
+                    }
+                  >
+                    <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} />
+                  </Button>
+                </Hint>
+                <Hint label="Remove link">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Remove link"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => editor.update($removeLink)}
+                  >
+                    <HugeiconsIcon icon={Unlink01Icon} strokeWidth={2} />
+                  </Button>
+                </Hint>
+              </>
+            )}
           </>
         )
       )}

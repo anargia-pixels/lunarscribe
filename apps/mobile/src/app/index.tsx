@@ -1,3 +1,5 @@
+import type { EditorKind } from "@lunarscribe/utils/file-kinds";
+import type { FileSearchMatch } from "@lunarscribe/utils/file-search";
 import { isImageFileName } from "@lunarscribe/utils/images";
 import {
   allFolders,
@@ -32,8 +34,7 @@ import { MoveFileDialog } from "@/components/move-file-dialog";
 import { PressableButton } from "@/components/pressable-button";
 import { RenameFileDialog } from "@/components/rename-file-dialog";
 import { SyncAlert } from "@/components/sync-alert";
-import { type FileSearchMatch, searchFiles } from "@/lib/documents-folder";
-import type { EditorKind } from "@/lib/editor-types";
+import { searchFiles } from "@/lib/documents-folder";
 import { rowEntering, rowLayout } from "@/lib/motion";
 import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";

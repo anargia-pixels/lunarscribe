@@ -9,9 +9,9 @@ type SyncState = SyncStatus & {
 export const useSyncStore = create<SyncState>(() => ({
   provider: null,
   account: null,
-  busy: false,
+  isBusy: false,
   lastSyncedAt: null,
   error: null,
-  needsSignIn: false,
+  isSignInRequired: false,
   hasSyncedSuccessfully: false,
 }));

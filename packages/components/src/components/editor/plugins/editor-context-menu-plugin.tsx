@@ -13,6 +13,7 @@ import {
   TextSelectionIcon,
   Undo02Icon,
   Unlink01Icon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -52,6 +53,7 @@ import {
   TEXT_FORMATS,
   useToolbarState,
 } from "../toolbar-plugin";
+import { useEditable } from "../use-editable";
 import { OPEN_LINK_FORM_COMMAND } from "./link-editor-plugin";
 import {
   applyAction,
@@ -98,6 +100,7 @@ async function paste(editor: LexicalEditor, plainText: boolean) {
 export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
   const [editor] = useLexicalComposerContext();
   const { activeFormats, canUndo, canRedo } = useToolbarState(editor);
+  const isEditable = useEditable(editor);
   const [cellKey, setCellKey] = useState<NodeKey | null>(null);
 
   const [selection, setSelection] = useState<SelectionState>({
@@ -182,6 +185,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
         }
       >
         <ContextMenuItem
+          disabled={!isEditable}
           onClick={() =>
             afterClose(
               () => editor.dispatchCommand(OPEN_LINK_FORM_COMMAND, undefined),
@@ -193,12 +197,16 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
           {selection.isLink ? "Edit link" : "Add link"}
         </ContextMenuItem>
         {selection.isLink && (
-          <ContextMenuItem onClick={() => editor.update($removeLink)}>
+          <ContextMenuItem
+            disabled={!isEditable}
+            onClick={() => editor.update($removeLink)}
+          >
             <HugeiconsIcon icon={Unlink01Icon} strokeWidth={2} />
             Remove link
           </ContextMenuItem>
         )}
         <ContextMenuCheckboxItem
+          disabled={!isEditable}
           checked={selection.isHighlighted}
           onCheckedChange={() =>
             editor.dispatchCommand(FORMAT_TEXT_COMMAND, "highlight")
@@ -209,7 +217,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
         </ContextMenuCheckboxItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
-          <ContextMenuSubTrigger>
+          <ContextMenuSubTrigger disabled={!isEditable}>
             <HugeiconsIcon icon={TextFontIcon} strokeWidth={2} />
             Format
           </ContextMenuSubTrigger>
@@ -235,7 +243,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSub>
-          <ContextMenuSubTrigger>
+          <ContextMenuSubTrigger disabled={!isEditable}>
             <HugeiconsIcon icon={ParagraphIcon} strokeWidth={2} />
             Paragraph
           </ContextMenuSubTrigger>
@@ -249,7 +257,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSub>
-          <ContextMenuSubTrigger>
+          <ContextMenuSubTrigger disabled={!isEditable}>
             <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
             Insert
           </ContextMenuSubTrigger>
@@ -264,9 +272,9 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
         </ContextMenuSub>
         {cellKey !== null && (
           <ContextMenuSub>
-            <ContextMenuSubTrigger>
+            <ContextMenuSubTrigger disabled={!isEditable}>
               <HugeiconsIcon icon={Table01Icon} strokeWidth={2} />
-              Table01Icon
+              Table
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
               <TableMenuItems
@@ -277,8 +285,15 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
           </ContextMenuSub>
         )}
         <ContextMenuSeparator />
+        <ContextMenuCheckboxItem
+          checked={!isEditable}
+          onCheckedChange={(checked) => editor.setEditable(!checked)}
+        >
+          <HugeiconsIcon icon={ViewIcon} strokeWidth={2} />
+          View only
+        </ContextMenuCheckboxItem>
         <ContextMenuItem
-          disabled={!canUndo}
+          disabled={!isEditable || !canUndo}
           onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
         >
           <HugeiconsIcon icon={Undo02Icon} strokeWidth={2} />
@@ -286,7 +301,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
           <ContextMenuShortcut>{MODIFIER}Z</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem
-          disabled={!canRedo}
+          disabled={!isEditable || !canRedo}
           onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
         >
           <HugeiconsIcon icon={Redo02Icon} strokeWidth={2} />
@@ -297,7 +312,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
-          disabled={selection.isCollapsed}
+          disabled={!isEditable || selection.isCollapsed}
           onClick={() =>
             withFocus(() => editor.dispatchCommand(CUT_COMMAND, null))
           }
@@ -313,22 +328,30 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
           }
         >
           <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
-          Copy01Icon
+          Copy
           <ContextMenuShortcut>{MODIFIER}C</ContextMenuShortcut>
         </ContextMenuItem>
-        <ContextMenuItem onClick={() => withFocus(() => paste(editor, false))}>
+        <ContextMenuItem
+          disabled={!isEditable}
+          onClick={() => withFocus(() => paste(editor, false))}
+        >
           <HugeiconsIcon icon={ClipboardPasteIcon} strokeWidth={2} />
           Paste
           <ContextMenuShortcut>{MODIFIER}V</ContextMenuShortcut>
         </ContextMenuItem>
-        <ContextMenuItem onClick={() => withFocus(() => paste(editor, true))}>
+        <ContextMenuItem
+          disabled={!isEditable}
+          onClick={() => withFocus(() => paste(editor, true))}
+        >
           <HugeiconsIcon icon={InputCursorTextIcon} strokeWidth={2} />
           Paste as plain
           <ContextMenuShortcut>
             {IS_APPLE ? "⇧⌘V" : `${MODIFIER}Shift+V`}
           </ContextMenuShortcut>
         </ContextMenuItem>
+        {/* Lexical draws no selection in a read-only editor. */}
         <ContextMenuItem
+          disabled={!isEditable}
           onClick={() => withFocus(() => editor.update(() => $selectAll()))}
         >
           <HugeiconsIcon icon={TextSelectionIcon} strokeWidth={2} />

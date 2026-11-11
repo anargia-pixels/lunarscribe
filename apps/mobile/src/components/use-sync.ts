@@ -1,15 +1,12 @@
+import { stemOf } from "@lunarscribe/utils/file-kinds";
+import type { SyncConflict, SyncStatus } from "@lunarscribe/utils/sync/types";
 import { useEffect } from "react";
 
-import { stemOf } from "@/lib/editor-files";
 import {
-  getSyncStatus,
-  onSyncedFiles,
-  onSyncResult,
-  onSyncStatus,
   protectSyncFiles,
   startBackgroundSyncOnce,
+  syncService,
 } from "@/lib/sync/sync-service";
-import type { SyncConflict, SyncStatus } from "@/lib/sync/sync-types";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";
 
@@ -62,13 +59,13 @@ export function useSync() {
       }
     };
 
-    const unsubscribeStatus = onSyncStatus(receiveStatus);
+    const unsubscribeStatus = syncService.onStatus(receiveStatus);
 
-    const unsubscribeResult = onSyncResult((result) =>
+    const unsubscribeResult = syncService.onResult((result) =>
       reportConflicts(result.conflicts),
     );
 
-    const unsubscribeFiles = onSyncedFiles((changes) => {
+    const unsubscribeFiles = syncService.onFiles((changes) => {
       const conflicts = useBufferStore.getState().applySyncedFiles(changes);
 
       reportConflicts(
@@ -80,7 +77,7 @@ export function useSync() {
       );
     });
 
-    receiveStatus(getSyncStatus());
+    receiveStatus(syncService.getStatus());
     // Downloads from this sync reach the buffers through the listeners above.
     startBackgroundSyncOnce();
 

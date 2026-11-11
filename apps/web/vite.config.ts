@@ -1,7 +1,6 @@
 import { cpSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -45,7 +44,6 @@ const config = defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [
     devtools(),
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
     tailwindcss(),
     // Next.js-style app router: `page` and `layout`/`route` files are routes, and other
     // files beside them are the page's own components. tsr.config.json holds the same

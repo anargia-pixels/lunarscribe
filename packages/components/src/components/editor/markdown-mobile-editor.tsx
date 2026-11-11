@@ -2,6 +2,7 @@ import {
   ArrowDown01Icon,
   Redo02Icon,
   Undo02Icon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { $convertToMarkdownString } from "@lexical/markdown";
@@ -59,6 +60,7 @@ import {
   TextFormatMenu,
   useToolbarState,
 } from "./toolbar-plugin";
+import { useEditable } from "./use-editable";
 
 /** Keeps the editor focused, and the keyboard open, when a toolbar button is tapped. */
 function keepEditorFocus(event: MouseEvent) {
@@ -76,12 +78,14 @@ function ToolbarSeparator() {
 
 /**
  * Touch toolbar docked under the document, so it sits just above the keyboard. One
- * row of large buttons, without the desktop hover hints and highlight. As the row
+ * row of large buttons, without the desktop hover hints and highlight. View only and
+ * history stay outside the scrolling row, so they are always visible. As the row
  * narrows, the insertions and then the inline marks fold into menus.
  */
 function MobileToolbarPlugin() {
   const [editor] = useLexicalComposerContext();
   const { activeFormats, canUndo, canRedo } = useToolbarState(editor);
+  const isEditable = useEditable(editor);
   const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
@@ -98,35 +102,47 @@ function MobileToolbarPlugin() {
 
   return (
     <div className="bg-background flex shrink-0 items-center border-t">
+      <div className="flex shrink-0 items-center gap-0.5 py-1.5 pl-2">
+        {/* Turning view only on drops focus, which closes the keyboard. */}
+        <Toggle
+          size="lg"
+          aria-label="View only"
+          pressed={!isEditable}
+          onPressedChange={(pressed) => editor.setEditable(!pressed)}
+        >
+          <HugeiconsIcon icon={ViewIcon} strokeWidth={2} />
+        </Toggle>
+        <Button
+          variant="ghost"
+          size="icon-lg"
+          aria-label="Undo"
+          disabled={!isEditable || !canUndo}
+          onMouseDown={keepEditorFocus}
+          onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
+        >
+          <HugeiconsIcon icon={Undo02Icon} strokeWidth={2} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-lg"
+          aria-label="Redo"
+          disabled={!isEditable || !canRedo}
+          onMouseDown={keepEditorFocus}
+          onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
+        >
+          <HugeiconsIcon icon={Redo02Icon} strokeWidth={2} />
+        </Button>
+        <ToolbarSeparator />
+      </div>
       <div className="editor-scrollbar @container min-w-0 flex-1 overflow-x-auto overscroll-x-contain">
-        <div className="flex w-max items-center gap-0.5 px-2 py-1.5">
-          <Button
-            variant="ghost"
-            size="icon-lg"
-            aria-label="Undo"
-            disabled={!canUndo}
-            onMouseDown={keepEditorFocus}
-            onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-          >
-            <HugeiconsIcon icon={Undo02Icon} strokeWidth={2} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-lg"
-            aria-label="Redo"
-            disabled={!canRedo}
-            onMouseDown={keepEditorFocus}
-            onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-          >
-            <HugeiconsIcon icon={Redo02Icon} strokeWidth={2} />
-          </Button>
-          <ToolbarSeparator />
+        <div className="flex w-max items-center gap-0.5 py-1.5 pr-2 pl-0.5">
           <div className="hidden @2xl:contents">
             {TEXT_FORMATS.map(({ format, label, icon: Icon }) => (
               <Toggle
                 key={format}
                 size="lg"
                 aria-label={label}
+                disabled={!isEditable}
                 pressed={activeFormats.includes(format)}
                 onMouseDown={keepEditorFocus}
                 onPressedChange={() =>
@@ -144,6 +160,7 @@ function MobileToolbarPlugin() {
                 variant="ghost"
                 size="lg"
                 className="@2xl:hidden"
+                disabled={!isEditable}
                 onMouseDown={keepEditorFocus}
               />
             }
@@ -156,6 +173,7 @@ function MobileToolbarPlugin() {
                 variant="ghost"
                 size="icon-lg"
                 aria-label={label}
+                disabled={!isEditable}
                 onMouseDown={keepEditorFocus}
                 onClick={() => apply(editor)}
               >
@@ -169,6 +187,7 @@ function MobileToolbarPlugin() {
                 variant="ghost"
                 size="lg"
                 className="@3xl:hidden"
+                disabled={!isEditable}
                 onMouseDown={keepEditorFocus}
               />
             }

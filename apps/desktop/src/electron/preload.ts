@@ -1,25 +1,25 @@
+import type { FileExtension } from "@lunarscribe/utils/file-kinds";
+import type { FileSearchMatch } from "@lunarscribe/utils/file-search";
 import type { SavedEntries } from "@lunarscribe/utils/saved-paths";
+import type {
+  SyncResult,
+  SyncedFileChange,
+} from "@lunarscribe/utils/sync/types";
 import { contextBridge, ipcRenderer, webFrame, webUtils } from "electron";
 
+import type { LunarscribeApi } from "../lib/bridge";
 import type {
   ExternalFile,
-  FileExtension,
-  FileSearchMatch,
   OpenedExternalFile,
   WatchedFile,
   WatchedFileChange,
 } from "../lib/editor-files";
 import type { ImageNote, ImageUpload, ResolvedImage } from "../lib/images";
-import type {
-  SyncProvider,
-  SyncStatus,
-  SyncResult,
-  SyncedFileChange,
-} from "../lib/sync";
+import type { SyncProvider, SyncStatus } from "../lib/sync";
 import type { AppInfo, UpdateCheck } from "../lib/updates";
 
-/** Exposes file operations and lifecycle events without Node access in the renderer. */
-contextBridge.exposeInMainWorld("lunarscribe", {
+/** File operations and lifecycle events, without Node access in the renderer. */
+const api: LunarscribeApi = {
   platform: process.platform,
   getSyncStatus: (): Promise<SyncStatus> => ipcRenderer.invoke("sync:status"),
   connectSync: (provider: SyncProvider): Promise<SyncStatus> =>
@@ -104,7 +104,10 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     ipcRenderer.invoke("files:search", query, isContentSearch),
   getFilePath: (name: string): Promise<string> =>
     ipcRenderer.invoke("files:path", name),
-  readFile: (name: string) => ipcRenderer.invoke("files:read", name),
+  showInFolder: (path: string): Promise<void> =>
+    ipcRenderer.invoke("files:reveal", path),
+  readFile: (name: string): Promise<string> =>
+    ipcRenderer.invoke("files:read", name),
   exportPdf: (title: string, html: string): Promise<string | null> =>
     ipcRenderer.invoke("files:export-pdf", title, html),
   exportDocx: (title: string, bytes: Uint8Array): Promise<string | null> =>
@@ -130,7 +133,8 @@ contextBridge.exposeInMainWorld("lunarscribe", {
     ipcRenderer.invoke("images:rename", name, title),
   moveFile: (name: string, folder: string): Promise<string> =>
     ipcRenderer.invoke("files:move", name, folder),
-  deleteFile: (name: string) => ipcRenderer.invoke("files:delete", name),
+  deleteFile: (name: string): Promise<void> =>
+    ipcRenderer.invoke("files:delete", name),
   createFolder: (parent: string, name: string): Promise<string> =>
     ipcRenderer.invoke("folders:create", parent, name),
   renameFolder: (path: string, name: string): Promise<string> =>
@@ -159,4 +163,6 @@ contextBridge.exposeInMainWorld("lunarscribe", {
 
     return () => ipcRenderer.off("file-watcher:changed", handler);
   },
-});
+};
+
+contextBridge.exposeInMainWorld("lunarscribe", api);

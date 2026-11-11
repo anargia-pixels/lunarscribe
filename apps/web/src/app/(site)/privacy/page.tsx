@@ -82,6 +82,17 @@ function PrivacyPolicy() {
         covers that data.
       </p>
 
+      <LegalHeading>App updates</LegalHeading>
+      <p>
+        Each time the Android app starts, it asks
+        updates.lunarscribe.doctorthe113.com, also hosted by Cloudflare, for new
+        app code. The request names the platform and the app&apos;s native code
+        version. It contains no notes, drawings, settings, accounts, or sign-in
+        tokens. The server logs the platform, the native code version, and the
+        answer. Cloudflare may process the same technical request data as for
+        the website.
+      </p>
+
       <LegalHeading>Sync providers</LegalHeading>
       <p>
         Sync is optional. When you connect a provider, Lunarscribe sends your

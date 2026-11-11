@@ -3,27 +3,18 @@ import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import {
-  jsonNumber,
-  jsonString,
-  parseJson,
-} from "@lunarscribe/utils/sync/json";
-import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
+  OAUTH_ENDPOINTS,
+  refreshTokens as refreshSharedTokens,
+  requestTokens,
+} from "@lunarscribe/utils/sync/oauth";
+import type { OAuthTokens } from "@lunarscribe/utils/sync/oauth";
+import type { CloudSyncProvider } from "@lunarscribe/utils/sync/types";
 import { shell } from "electron";
 
-import type { SyncProvider } from "../../../lib/sync";
 import publicCredentials from "../public-creds.json";
 import { createSignInResultPage } from "./sign-in-page";
 
 // Authorization contracts
-export type OAuthProvider = Exclude<SyncProvider, "github">;
-
-export type OAuthTokens = {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-  clientId: string;
-};
-
 type BrowserCallback<T> = (
   request: IncomingMessage,
   response: ServerResponse,
@@ -37,45 +28,18 @@ const SIGN_IN_URLS = {
   dropbox: "http://127.0.0.1:53683/oauth/dropbox",
 } as const;
 
-const TOKEN_URLS = {
-  "google-drive": "https://oauth2.googleapis.com/token",
-  dropbox: "https://api.dropbox.com/oauth2/token",
-} as const;
-
-const AUTHORIZE_URLS = {
-  "google-drive": "https://accounts.google.com/o/oauth2/v2/auth",
-  dropbox: "https://www.dropbox.com/oauth2/authorize",
-} as const;
-
-const REVOKE_URLS = {
-  "google-drive": "https://oauth2.googleapis.com/revoke",
-  dropbox: "https://api.dropboxapi.com/2/auth/token/revoke",
-} as const;
-
-const SCOPES = {
-  "google-drive": "https://www.googleapis.com/auth/drive.file",
-  dropbox:
-    "files.metadata.read files.metadata.write files.content.read files.content.write account_info.read",
-} as const;
-
-/** Authorize parameters that ask each provider for a refresh token. */
-const OFFLINE_PARAMETERS = {
-  "google-drive": { access_type: "offline", prompt: "consent" },
-  dropbox: { token_access_type: "offline" },
-} as const;
-
 /**
  * Google's Desktop app clients send their secret with every token request. Google
  * treats it as public for installed apps, so it ships in `public-creds.json`.
  */
-const CLIENT_SECRETS: Partial<Record<OAuthProvider, string>> = {
+const CLIENT_SECRETS: Partial<Record<CloudSyncProvider, string>> = {
   "google-drive": publicCredentials.googleClientSecret,
 };
 
 // Browser authorization
 /** Stop the local server after success, failure, timeout, or cancel. */
 async function authorizeInBrowser<T>(
-  provider: OAuthProvider,
+  provider: CloudSyncProvider,
   browserUrl: string,
   signal: AbortSignal,
   callback: BrowserCallback<T>,
@@ -131,109 +95,18 @@ async function authorizeInBrowser<T>(
 }
 
 // Token exchange
-/** Keep token response bodies out of renderer error messages. */
-async function requestTokens(
-  provider: OAuthProvider,
-  parameters: URLSearchParams,
-  signal?: AbortSignal,
-): Promise<OAuthTokens> {
-  const clientSecret = CLIENT_SECRETS[provider];
-
-  if (clientSecret) {
-    parameters.set("client_secret", clientSecret);
-  }
-
-  const response = await fetch(TOKEN_URLS[provider], {
-    method: "POST",
-    body: parameters,
-    signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(30_000)])
-      : AbortSignal.timeout(30_000),
-  });
-
-  if (!response.ok) {
-    if (
-      parameters.get("grant_type") === "refresh_token" &&
-      (response.status === 400 || response.status === 401)
-    ) {
-      throw new SyncSignInRequired(
-        `${provider === "google-drive" ? "Google Drive" : "Dropbox"} needs sign-in again. Open Settings → Syncing and select Sign in again.`,
-      );
-    }
-
-    throw new Error(
-      "Sign-in could not obtain an access token. Check the public client ID and reconnect.",
-    );
-  }
-
-  const tokenResponse = parseJson(await response.text());
-
-  return {
-    accessToken: jsonString(tokenResponse, "access_token"),
-    refreshToken: jsonString(tokenResponse, "refresh_token", true),
-    expiresAt: Date.now() + jsonNumber(tokenResponse, "expires_in") * 1000,
-    clientId: parameters.get("client_id") ?? "",
-  };
-}
-
-/** Keep the old refresh token when the response omits a new one. */
-export async function refreshTokens(
-  provider: OAuthProvider,
+/** Refresh with the client secret Google's Desktop app client sends. */
+export function refreshTokens(
+  provider: CloudSyncProvider,
   tokens: OAuthTokens,
 ) {
-  const next = await requestTokens(
-    provider,
-    new URLSearchParams({
-      client_id: tokens.clientId,
-      refresh_token: tokens.refreshToken,
-      grant_type: "refresh_token",
-    }),
-  );
-
-  return { ...next, refreshToken: next.refreshToken || tokens.refreshToken };
-}
-
-/**
- * End the provider grant so a copied settings file stops working. Google revokes every
- * client in the Cloud project, so all of the account's devices must sign in again.
- * Dropbox revokes only the grant behind this device's access token.
- */
-export async function revokeTokens(
-  provider: OAuthProvider,
-  tokens: OAuthTokens,
-) {
-  let request: RequestInit;
-
-  if (provider === "google-drive") {
-    request = {
-      body: new URLSearchParams({
-        token: tokens.refreshToken || tokens.accessToken,
-      }),
-    };
-  } else {
-    const { accessToken } =
-      tokens.expiresAt <= Date.now() + 60_000
-        ? await refreshTokens(provider, tokens)
-        : tokens;
-
-    request = { headers: { Authorization: `Bearer ${accessToken}` } };
-  }
-
-  const response = await fetch(REVOKE_URLS[provider], {
-    ...request,
-    method: "POST",
-    signal: AbortSignal.timeout(10_000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Revocation failed (${response.status}).`);
-  }
+  return refreshSharedTokens(provider, tokens, CLIENT_SECRETS[provider]);
 }
 
 // Provider sign-in
 /** Open provider sign-in in the browser and exchange its code for tokens. */
 export async function signIn(
-  provider: OAuthProvider,
+  provider: CloudSyncProvider,
   clientId: string,
   signal: AbortSignal,
 ) {
@@ -247,7 +120,8 @@ export async function signIn(
   const verifier = randomBytes(48).toString("base64url");
   const state = randomBytes(32).toString("base64url");
   const redirectUri = SIGN_IN_URLS[provider];
-  const authorization = new URL(AUTHORIZE_URLS[provider]);
+  const endpoints = OAUTH_ENDPOINTS[provider];
+  const authorization = new URL(endpoints.authorizeUrl);
 
   authorization.search = new URLSearchParams({
     client_id: clientId.trim(),
@@ -256,8 +130,8 @@ export async function signIn(
     code_challenge: createHash("sha256").update(verifier).digest("base64url"),
     code_challenge_method: "S256",
     state,
-    scope: SCOPES[provider],
-    ...OFFLINE_PARAMETERS[provider],
+    scope: endpoints.scope,
+    ...endpoints.offlineParameters,
   }).toString();
 
   const code = await authorizeInBrowser<string>(
@@ -302,17 +176,21 @@ export async function signIn(
     },
   );
 
-  const tokens = await requestTokens(
-    provider,
-    new URLSearchParams({
-      client_id: clientId.trim(),
-      code,
-      code_verifier: verifier,
-      redirect_uri: redirectUri,
-      grant_type: "authorization_code",
-    }),
-    signal,
-  );
+  const parameters = new URLSearchParams({
+    client_id: clientId.trim(),
+    code,
+    code_verifier: verifier,
+    redirect_uri: redirectUri,
+    grant_type: "authorization_code",
+  });
+
+  const clientSecret = CLIENT_SECRETS[provider];
+
+  if (clientSecret) {
+    parameters.set("client_secret", clientSecret);
+  }
+
+  const tokens = await requestTokens(provider, parameters, signal);
 
   if (!tokens.refreshToken) {
     throw new Error(

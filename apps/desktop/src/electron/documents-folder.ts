@@ -2,6 +2,11 @@ import { existsSync, mkdirSync, watch } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import {
+  getFileExtension,
+  stemOf,
+  toFileStem,
+} from "@lunarscribe/utils/file-kinds";
 import { isImageFileName, splitImageFileName } from "@lunarscribe/utils/images";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import {
@@ -11,13 +16,8 @@ import {
   toFolderName,
 } from "@lunarscribe/utils/saved-paths";
 import { Debouncer } from "@tanstack/pacer/debouncer";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 
-import {
-  getFileExtension,
-  INVALID_FILE_TITLE_CHARACTERS,
-  stemOf,
-} from "../lib/editor-files";
 import { registerFileSearch } from "./file-search";
 import { registerFileWatcher } from "./file-watcher";
 import { registerImages } from "./images";
@@ -76,6 +76,9 @@ export function registerDocumentsFolder() {
 
   ipcMain.handle("files:list", () => listSavedEntries(folder));
   ipcMain.handle("files:path", (_event, name: string) => pathOf(name));
+  ipcMain.handle("files:reveal", (_event, path: string) => {
+    shell.showItemInFolder(path);
+  });
   ipcMain.handle("files:read", (_event, name: string) =>
     queueFileOperation(folder, () => readFile(pathOf(name), "utf8")),
   );
@@ -110,9 +113,7 @@ export function registerDocumentsFolder() {
         }
 
         // Slashes would make the written file differ from the name the buffer records.
-        const stem =
-          title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_") ||
-          "untitled";
+        const stem = toFileStem(title) || "untitled";
 
         // A saved file stays in its folder; a new one goes where it was created.
         const name = availableName(
@@ -158,7 +159,7 @@ export function registerDocumentsFolder() {
         throw new Error("Only images are renamed in place.");
       }
 
-      const stem = title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_");
+      const stem = toFileStem(title);
 
       if (!stem || stem.startsWith(".")) {
         throw new Error("Enter a name for the image.");

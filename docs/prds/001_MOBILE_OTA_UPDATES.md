@@ -1,5 +1,14 @@
 # Mobile OTA updates
 
+> **Implemented with changes.** The update server is `apps/update-server` at
+> updates.lunarscribe.doctorthe113.com, deployed by the Alchemy stack in `packages/infra`.
+> Updates live in the R2 bucket `lunarscribe-updates`, not on GitHub releases, and one
+> record per runtime replaces the OTA index (see `apps/update-server/src/storage.ts`).
+> `apps/mobile/scripts/publish-update.ts` exports, signs, uploads and registers updates.
+> Phase 0 is solved by exporting with `EXPO_NO_BUNDLE_SPLITTING=1`: `expo export` renames
+> DOM component chunks without updating their references, so split chunks cannot work in
+> an update. [RELEASE.md](../../RELEASE.md) has the current release steps.
+
 The Android build of the mobile app gets new JavaScript (JS) code and assets without a new
 APK. An OTA (over-the-air) update is a signed set of JS bundle and asset files that the
 app downloads in the background. The app uses the update on the next cold start. A cold
@@ -258,15 +267,15 @@ A maintainer creates the key pair one time:
 ```sh
 cd apps/mobile
 bunx expo-updates codesigning:generate \
-  --key-output-directory ../../../lunarscribe-ota-keys \
+  --key-output-directory certs \
   --certificate-output-directory certs \
   --certificate-validity-duration-years 10 \
   --certificate-common-name "Lunarscribe"
 ```
 
-- Commit `apps/mobile/certs/certificate.pem`.
-- Never commit `private-key.pem` or `public-key.pem`. The output directory is outside the
-  repository for this reason.
+- Commit `apps/mobile/certs/certificate.pem` and `apps/mobile/certs/code-signing.json`.
+- Keep `private-key.pem` and `public-key.pem` in `apps/mobile/certs/`; `.gitignore`
+  excludes both. Never commit them.
 - Store the content of `private-key.pem` in the GitHub Actions secret
   `EXPO_UPDATES_PRIVATE_KEY`.
 - Keep an offline copy of `private-key.pem` in the maintainer's password manager.

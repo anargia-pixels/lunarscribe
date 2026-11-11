@@ -1,4 +1,11 @@
 import {
+  getFileExtension,
+  stemOf,
+  type FileExtension,
+  toFileStem,
+  isSyncedFileName,
+} from "@lunarscribe/utils/file-kinds";
+import {
   availableImageName,
   isImageFileName,
   splitImageFileName,
@@ -26,12 +33,6 @@ import {
   withStore,
 } from "@/lib/browser-database";
 import type { SavedFileRecord, SavedImageRecord } from "@/lib/browser-database";
-import {
-  getFileExtension,
-  INVALID_FILE_TITLE_CHARACTERS,
-  stemOf,
-} from "@/lib/editor-files";
-import type { FileExtension } from "@/lib/editor-files";
 
 /**
  * Saved buffers live in IndexedDB as `<folder>/<title><extension>` records, standing in
@@ -139,9 +140,19 @@ export function readAllFiles() {
   );
 }
 
-/** Every synced file: markdown, drawings, and the images they embed. */
-export function readAllSyncFiles() {
-  return queueFileOperation(QUEUE_KEY, readRecords);
+/** Every synced file (markdown, drawings, and the images they embed), or only `name`. */
+export function readSyncedFiles(name: string | null) {
+  return queueFileOperation(QUEUE_KEY, async () => {
+    if (name === null) {
+      return (await readRecords()).filter((record) =>
+        isSyncedFileName(record.name),
+      );
+    }
+
+    const record = await readRecord(name);
+
+    return record ? [record] : [];
+  });
 }
 
 /** Every saved image path, for resolving embeds. */
@@ -250,9 +261,7 @@ export function saveFile(
         }
       }
 
-      const stem =
-        title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_") ||
-        "untitled";
+      const stem = toFileStem(title) || "untitled";
 
       const candidate = await availableName(
         store,
@@ -318,7 +327,7 @@ export function moveFile(name: string, folder: string) {
 /** Renames a saved image to `<title><its extension>` in its folder; returns its new name. */
 export function renameImage(name: string, title: string) {
   return queueFileOperation(QUEUE_KEY, async () => {
-    const stem = title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_");
+    const stem = toFileStem(title);
 
     if (!stem || stem.startsWith(".")) {
       throw new Error("Enter a name for the image.");

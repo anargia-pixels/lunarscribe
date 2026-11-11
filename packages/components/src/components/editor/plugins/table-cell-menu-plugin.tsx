@@ -38,6 +38,8 @@ import {
 } from "lexical";
 import { useEffect, useRef, useState } from "react";
 
+import { useEditable } from "../use-editable";
+
 const ACTIONS = [
   { action: "row-above", label: "Insert row above", variant: "default" },
   { action: "row-below", label: "Insert row below", variant: "default" },
@@ -193,6 +195,7 @@ export function applyAction(
 export function TableCellMenuPlugin() {
   const [editor] = useLexicalComposerContext();
   const [cellKey, setCellKey] = useState<NodeKey | null>(null);
+  const isEditable = useEditable(editor);
   const buttonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -257,9 +260,9 @@ export function TableCellMenuPlugin() {
       container.removeEventListener("scroll", positionButton, true);
       window.removeEventListener("resize", positionButton);
     };
-  }, [cellKey, editor]);
+  }, [cellKey, editor, isEditable]);
 
-  if (cellKey === null) {
+  if (cellKey === null || !isEditable) {
     return null;
   }
 

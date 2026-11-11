@@ -1,0 +1,4 @@
+{
+  "certificate": "./certs/certificate.pem",
+  "keyid": "main"
+}

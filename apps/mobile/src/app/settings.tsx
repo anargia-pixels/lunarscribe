@@ -1,5 +1,13 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
 import { redactEmail } from "@lunarscribe/utils/redact-email";
+import {
+  CLOUD_SYNC_PROVIDERS,
+  isCloudSyncProvider,
+} from "@lunarscribe/utils/sync/types";
+import type {
+  CloudSyncProvider,
+  SyncStatus,
+} from "@lunarscribe/utils/sync/types";
 import { useRouter } from "expo-router";
 import {
   Alert,
@@ -17,14 +25,7 @@ import { ScrollView, View } from "react-native";
 
 import { ColorThemeSelect } from "@/components/color-theme-select";
 import { PressableButton } from "@/components/pressable-button";
-import {
-  cancelSyncSignIn,
-  connectSync,
-  disconnectSync,
-  syncFiles,
-} from "@/lib/sync/sync-service";
-import { isSyncProvider, SYNC_PROVIDERS } from "@/lib/sync/sync-types";
-import type { SyncProvider, SyncStatus } from "@/lib/sync/sync-types";
+import { syncService } from "@/lib/sync/sync-service";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import { useSyncStore } from "@/stores/sync-store";
 
@@ -61,7 +62,7 @@ function SectionHeader({
 }
 
 /** Tell the user what the slow first connection is waiting on. */
-function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
+function getConnectMessage(stage: ConnectStage, provider: CloudSyncProvider) {
   if (stage === "syncing") {
     return {
       title: "Syncing your files…",
@@ -71,7 +72,7 @@ function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
   }
 
   return {
-    title: `Waiting for you to sign in to ${SYNC_PROVIDERS[provider]}…`,
+    title: `Waiting for you to sign in to ${CLOUD_SYNC_PROVIDERS[provider]}…`,
     description: "Finish signing in in the browser, then come back here.",
   };
 }
@@ -98,7 +99,7 @@ export default function SettingsScreen() {
     (state) => state.resetColorThemes,
   );
 
-  const [selection, setSelection] = useState<SyncProvider>(
+  const [selection, setSelection] = useState<CloudSyncProvider>(
     status.provider ?? "google-drive",
   );
 
@@ -136,14 +137,14 @@ export default function SettingsScreen() {
   const connect = () =>
     run(async () => {
       setConnectStage("signing-in");
-      useSyncStore.setState(await connectSync(selected));
+      useSyncStore.setState(await syncService.connect(selected));
       setConnectStage("syncing");
-      await syncFiles(null);
+      await syncService.sync(null);
     }, "Unable to connect sync. Try again after the current sync finishes.");
 
   const sync = () =>
     run(async () => {
-      const syncResult = await syncFiles(null);
+      const syncResult = await syncService.sync(null);
 
       if (!syncResult.conflicts.length) {
         setMessage(
@@ -154,7 +155,7 @@ export default function SettingsScreen() {
 
   const disconnect = () =>
     run(async () => {
-      useSyncStore.setState(await disconnectSync());
+      useSyncStore.setState(await syncService.disconnect());
     }, "Unable to disconnect sync. Try again after the current sync finishes.");
 
   return (
@@ -210,7 +211,7 @@ export default function SettingsScreen() {
               <ListGroup.Item>
                 <ListGroup.ItemContent>
                   <ListGroup.ItemTitle>
-                    {SYNC_PROVIDERS[status.provider]}
+                    {CLOUD_SYNC_PROVIDERS[status.provider]}
                   </ListGroup.ItemTitle>
                   <ListGroup.ItemDescription>
                     {getConnectionDetails(status) || "Connected"}
@@ -223,17 +224,17 @@ export default function SettingsScreen() {
                 isDisabled={isDisabled}
                 className="gap-0"
                 onValueChange={(value) => {
-                  if (isSyncProvider(value)) {
+                  if (isCloudSyncProvider(value)) {
                     setSelection(value);
                   }
                 }}
               >
                 <RadioGroup.Item value="google-drive" className="p-4">
-                  {SYNC_PROVIDERS["google-drive"]}
+                  {CLOUD_SYNC_PROVIDERS["google-drive"]}
                 </RadioGroup.Item>
                 <Separator className="mx-4" />
                 <RadioGroup.Item value="dropbox" className="p-4">
-                  {SYNC_PROVIDERS.dropbox}
+                  {CLOUD_SYNC_PROVIDERS.dropbox}
                 </RadioGroup.Item>
               </RadioGroup>
             )}
@@ -264,11 +265,14 @@ export default function SettingsScreen() {
               <PressableButton isDisabled={isDisabled} onPress={connect}>
                 {connectStage
                   ? "Connecting…"
-                  : `Connect ${SYNC_PROVIDERS[selected]}`}
+                  : `Connect ${CLOUD_SYNC_PROVIDERS[selected]}`}
               </PressableButton>
             )}
             {connectStage === "signing-in" && (
-              <PressableButton variant="outline" onPress={cancelSyncSignIn}>
+              <PressableButton
+                variant="outline"
+                onPress={syncService.cancelSignIn}
+              >
                 Cancel sign-in
               </PressableButton>
             )}

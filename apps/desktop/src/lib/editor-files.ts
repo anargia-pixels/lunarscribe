@@ -1,40 +1,3 @@
-import { baseNameOf } from "@lunarscribe/utils/saved-paths";
-
-/** Text extensions accepted by the markdown editor. */
-const TEXT_EXTENSIONS = [".md", ".markdown", ".txt"] as const;
-
-export type FileExtension = (typeof TEXT_EXTENSIONS)[number] | ".draw";
-
-/** Half-open JavaScript string offsets for highlighting a search match. */
-export type SearchMatchRange = [start: number, end: number];
-
-/** A saved file returned by file-name or content search. */
-export type FileSearchMatch = {
-  name: string;
-  lineNumber?: number;
-  lineContent?: string;
-  /** JavaScript string offsets, converted from fff's UTF-8 byte offsets. */
-  lineMatchRanges?: SearchMatchRange[];
-};
-
-/** A supported text or drawing extension, preserving its kind when a buffer is saved. */
-export function getFileExtension(name: string): FileExtension | null {
-  const extension = name.slice(name.lastIndexOf(".")).toLowerCase();
-
-  if (extension === ".draw") {
-    return extension;
-  }
-
-  return TEXT_EXTENSIONS.find((supported) => supported === extension) ?? null;
-}
-
-/** Whether a file can be opened by the markdown editor. */
-export function isTextFile(name: string) {
-  const extension = getFileExtension(name);
-
-  return extension !== null && extension !== ".draw";
-}
-
 /** A tracked external file; its source path preserves symlinks whose targets have other extensions. */
 export type ExternalFile = {
   path: string;
@@ -60,22 +23,9 @@ export type WatchedFile =
 /** A watched file's markdown after another program wrote it. */
 export type WatchedFileChange = WatchedFile & { content: string };
 
-/** Slashes and null characters cannot appear in a file title. */
-export const INVALID_FILE_TITLE_CHARACTERS = /[/\\\0]/gu;
-
 /** Separate saved names from canonical external paths in menus and operation queues. */
 export function fileKey(target: FileTarget) {
   return target.kind === "saved"
     ? `saved:${target.name}`
     : `external:${target.path}`;
-}
-
-/** Default file extensions for new buffers. */
-export const BUFFER_EXTENSIONS = { markdown: ".md", drawing: ".draw" } as const;
-
-/** A file's name without its folders or extension, which is its buffer title. */
-export function stemOf(fileName: string) {
-  const name = baseNameOf(fileName);
-
-  return name.slice(0, name.lastIndexOf("."));
 }

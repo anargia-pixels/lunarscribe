@@ -1,0 +1,22 @@
+{
+  "name": "@lunarscribe/infra",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./alchemy.run": "./alchemy.run.ts",
+    "./names.json": "./names.json"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "deploy": "alchemy deploy --stage production --profile lunarscribe"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@types/node": "catalog:",
+    "@effect/platform-bun": "4.0.5",
+    "@effect/platform-node": "4.0.5",
+    "alchemy": "2.0.0-beta.83",
+    "effect": "4.0.5",
+    "typescript": "catalog:"
+  }
+}

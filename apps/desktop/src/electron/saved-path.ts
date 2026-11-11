@@ -1,11 +1,10 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 
+import { getFileExtension } from "@lunarscribe/utils/file-kinds";
 import { isImageFileName } from "@lunarscribe/utils/images";
 import { isSafeSavedPath, joinSavedPath } from "@lunarscribe/utils/saved-paths";
 import type { SavedEntries } from "@lunarscribe/utils/saved-paths";
-
-import { getFileExtension } from "../lib/editor-files";
 
 /** Files the sidebar lists: markdown, drawings, and the images notes embed. */
 export function isListedFileName(name: string) {

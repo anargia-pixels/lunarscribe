@@ -1,6 +1,5 @@
+import type { SyncConflict, SyncStatus } from "@lunarscribe/utils/sync/types";
 import { create } from "zustand";
-
-import type { SyncConflict, SyncStatus } from "@/lib/sync/sync-types";
 
 /** A sync failure or conflicts, shown on the files screen until dismissed. */
 export type SyncNotice = {

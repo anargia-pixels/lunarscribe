@@ -1,10 +1,10 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import { stemOf } from "@lunarscribe/utils/file-kinds";
 import { Dialog, FieldError, Input, Label, TextField } from "heroui-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, View } from "react-native";
 
 import { PressableButton } from "@/components/pressable-button";
-import { stemOf } from "@/lib/editor-files";
 
 /** Asks for a new title for a saved file; stays open with the error if the rename fails. */
 export function RenameFileDialog({

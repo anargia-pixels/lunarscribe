@@ -1,3 +1,4 @@
+import type { EditorKind } from "@lunarscribe/utils/file-kinds";
 import { type NativeStackNavigationProp, useNavigation } from "expo-router";
 import { Spinner } from "heroui-native";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -5,7 +6,6 @@ import { View } from "react-native";
 import { ScopedVariables } from "uniwind";
 
 import { EditorWebView } from "@/components/editor-webview";
-import type { EditorKind } from "@/lib/editor-types";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorHostStore } from "@/stores/editor-host-store";
 

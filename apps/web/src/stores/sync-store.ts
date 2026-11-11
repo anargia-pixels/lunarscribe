@@ -1,6 +1,5 @@
+import type { SyncStatus } from "@lunarscribe/utils/sync/types";
 import { create } from "zustand";
-
-import type { SyncStatus } from "@/lib/sync/sync-types";
 
 type SyncState = SyncStatus & {
   hasSyncedSuccessfully: boolean;
@@ -9,9 +8,9 @@ type SyncState = SyncStatus & {
 export const useSyncStore = create<SyncState>(() => ({
   provider: null,
   account: null,
-  busy: false,
+  isBusy: false,
   lastSyncedAt: null,
   error: null,
-  needsSignIn: false,
+  isSignInRequired: false,
   hasSyncedSuccessfully: false,
 }));

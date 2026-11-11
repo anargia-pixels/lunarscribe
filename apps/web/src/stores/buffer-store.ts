@@ -1,4 +1,13 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import {
+  type EditorKind,
+  kindOf,
+  toBufferTitle,
+  BUFFER_EXTENSIONS,
+  stemOf,
+  getFileExtension,
+  isTextFile,
+} from "@lunarscribe/utils/file-kinds";
 import { isImageFileName, rewriteImageEmbeds } from "@lunarscribe/utils/images";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import {
@@ -6,17 +15,11 @@ import {
   isInFolder,
   replaceFolder,
 } from "@lunarscribe/utils/saved-paths";
+import type { SyncedFileChange } from "@lunarscribe/utils/sync/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import {
-  BUFFER_EXTENSIONS,
-  stemOf,
-  fileKey,
-  getFileExtension,
-  INVALID_FILE_TITLE_CHARACTERS,
-  isTextFile,
-} from "@/lib/editor-files";
+import { fileKey } from "@/lib/editor-files";
 import type { ExternalFile, FileTarget } from "@/lib/editor-files";
 import {
   forgetExternalFile,
@@ -28,21 +31,16 @@ import {
 import type { OpenedExternalFile } from "@/lib/external-files";
 import * as savedFiles from "@/lib/saved-files";
 import { forcePullFile, forceSyncFile } from "@/lib/sync/sync-service";
-import type { SyncedFileChange } from "@/lib/sync/sync-types";
 import { useFileAccessStore } from "@/stores/file-access-store";
 import { createBufferFileWrites } from "@/stores/file-writes";
 
-export { stemOf } from "@/lib/editor-files";
-
 // Types
-
-type BufferKind = keyof typeof BUFFER_EXTENSIONS;
 
 /** One open document; `content` is the source of truth its editor loads from and saves to. */
 export type TextBuffer = {
   id: string;
   title: string;
-  kind: BufferKind;
+  kind: EditorKind;
   /** Markdown, or the Excalidraw scene JSON for a drawing; empty for a new drawing. */
   content: string;
   savedContent: string | null;
@@ -84,7 +82,7 @@ export type BufferStore = {
   ) => Promise<void>;
   /** Starts an untitled buffer that saves into `folder`, `""` for the top level. */
   createBuffer: (
-    kind: BufferKind,
+    kind: EditorKind,
     fileNames: string[],
     folder?: string,
   ) => void;
@@ -111,23 +109,6 @@ Type markdown shortcuts and they turn into rich text:
 - \`> \` for quotes
 - \`**bold**\`, \`*italic*\` and \`~~strike~~\` for inline marks
 `;
-
-// File names and titles
-
-/** A file's kind, from its extension. */
-export function kindOf(fileName: string): BufferKind {
-  return getFileExtension(fileName) === BUFFER_EXTENSIONS.drawing
-    ? "drawing"
-    : "markdown";
-}
-
-/** Buffer titles are snake_case: lowercase, with whitespace and slashes turned into `_`. */
-export function toBufferTitle(input: string) {
-  return input
-    .toLowerCase()
-    .replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_")
-    .replaceAll(/\s/gu, "_");
-}
 
 /** Returns a copy of `buffers` with the buffer that has `id` patched. */
 function patchBuffer(

@@ -2,9 +2,9 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { FileFinder, GrepCursor } from "@ff-labs/fff-node";
+import type { FileSearchMatch } from "@lunarscribe/utils/file-search";
 import { app, ipcMain } from "electron";
 
-import type { FileSearchMatch } from "../lib/editor-files";
 import { listSavedEntries } from "./saved-path";
 
 /** Content matches returned per search; the dialog lists at most this many. */

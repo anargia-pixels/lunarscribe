@@ -38,6 +38,14 @@ drawings, settings, or sign-in tokens. Cloudflare may process technical request 
 as your IP address and browser type, to deliver and protect the site. The
 [Cloudflare Privacy Policy](https://www.cloudflare.com/privacypolicy/) covers that data.
 
+## App updates
+
+Each time the Android app starts, it asks updates.lunarscribe.doctorthe113.com, also
+hosted by Cloudflare, for new app code. The request names the platform and the app's
+native code version. It contains no notes, drawings, settings, accounts, or sign-in
+tokens. The server logs the platform, the native code version, and the answer. Cloudflare
+may process the same technical request data as for the website.
+
 ## Sync providers
 
 Sync is optional. When you connect a provider, Lunarscribe sends your saved notes and

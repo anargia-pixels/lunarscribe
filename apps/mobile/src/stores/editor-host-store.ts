@@ -1,7 +1,6 @@
+import type { EditorKind } from "@lunarscribe/utils/file-kinds";
 import type { LayoutRectangle } from "react-native";
 import { create } from "zustand";
-
-import type { EditorKind } from "@/lib/editor-types";
 
 /** Links the editor screen to the editor host. */
 type EditorHostState = {

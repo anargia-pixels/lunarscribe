@@ -4,7 +4,7 @@
  */
 
 /** Slashes and null characters cannot appear in a file or folder name. */
-const INVALID_NAME_CHARACTERS = /[/\\\0]/gu;
+export const INVALID_NAME_CHARACTERS = /[/\\\0]/gu;
 
 /** `name` inside `folder`; the top level is `""`. */
 export function joinSavedPath(folder: string, name: string) {

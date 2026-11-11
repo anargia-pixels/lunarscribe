@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   lstat,
   mkdir,
@@ -10,51 +9,25 @@ import {
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import { isSyncedFileName } from "@lunarscribe/utils/file-kinds";
 import { isImageFileName } from "@lunarscribe/utils/images";
-import { baseNameOf, isSafeSavedPath } from "@lunarscribe/utils/saved-paths";
+import type { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+import { toTextChange } from "@lunarscribe/utils/sync/plan";
+import type {
+  LocalSyncFile,
+  LocalSyncFiles,
+  LocalSyncStore,
+} from "@lunarscribe/utils/sync/plan";
 import { isSameSyncContent } from "@lunarscribe/utils/sync/types";
 import type {
   RemoteChange,
-  RemoteFiles,
   SyncContent,
+  SyncedFileChange,
 } from "@lunarscribe/utils/sync/types";
 
-import { getFileExtension } from "../../lib/editor-files";
-import type {
-  SyncBaseline,
-  SyncConflict,
-  SyncedFileChange,
-} from "../../lib/sync";
 import { listSavedEntries } from "../saved-path";
 
-// Sync comparisons
-export type LocalSyncFiles = {
-  files: Map<string, SyncContent>;
-  modifiedTimes: Map<string, number>;
-  blockedNames: Set<string>;
-};
-
-export type SyncPlan = {
-  push: RemoteChange[];
-  pull: RemoteChange[];
-  conflicts: SyncConflict[];
-  acknowledged: SyncBaseline;
-};
-
-/** Accept supported files inside the Lunarscribe documents folder or its folders. */
-export function isSavedFileName(name: string) {
-  return isSafeSavedPath(name) && getFileExtension(baseNameOf(name)) !== null;
-}
-
-/** Markdown, drawings, and the images they embed, inside the documents folder. */
-export function isSyncedFileName(name: string) {
-  return (
-    isSafeSavedPath(name) &&
-    (getFileExtension(baseNameOf(name)) !== null ||
-      isImageFileName(baseNameOf(name)))
-  );
-}
-
+// Reading
 /** Read a synced file as text, or as bytes for an image. */
 async function readSyncContent(path: string): Promise<SyncContent> {
   return isImageFileName(path)
@@ -62,262 +35,53 @@ async function readSyncContent(path: string): Promise<SyncContent> {
     : readFile(path, "utf8");
 }
 
-/** Text changes for buffers; image changes reach the editor through the folder watcher. */
-function toTextChange(
+/** One saved file as sync compares it, or null when it does not exist. */
+async function readLocalFile(
+  folder: string,
   name: string,
-  before: SyncContent | null,
-  after: SyncContent | null,
-): SyncedFileChange | null {
-  return before instanceof Uint8Array || after instanceof Uint8Array
-    ? null
-    : { name, before, after };
-}
+): Promise<LocalSyncFile | null> {
+  const path = join(folder, name);
+  let metadata: Awaited<ReturnType<typeof lstat>>;
 
-/** Hash saved text or image bytes so cloud sync can detect changes on each side. */
-export function contentHash(content: SyncContent) {
-  return createHash("sha256").update(content).digest("hex");
-}
-
-/** Compare with the shared base; never pull an older remote file over local edits. */
-export function planSync(
-  local: LocalSyncFiles,
-  remote: RemoteFiles,
-  baseline: SyncBaseline,
-  protectedNames: Set<string>,
-  pushName: string | null,
-): SyncPlan {
-  const push: RemoteChange[] = [];
-  const pull: RemoteChange[] = [];
-  const conflicts: SyncConflict[] = [];
-  const acknowledged: SyncBaseline = { ...baseline };
-
-  const names =
-    pushName === null
-      ? new Set([
-          ...local.files.keys(),
-          ...remote.keys(),
-          ...Object.keys(baseline),
-        ])
-      : new Set([pushName]);
-
-  for (const name of names) {
-    if (local.blockedNames.has(name) || remote.get(name)?.blocked) {
-      conflicts.push({
-        name,
-        reason:
-          "This path is not a regular saved file. Both copies were preserved.",
-      });
-
-      continue;
+  try {
+    metadata = await lstat(path);
+  } catch (cause) {
+    if (cause instanceof Error && "code" in cause && cause.code === "ENOENT") {
+      return null;
     }
 
-    const localContent = local.files.get(name) ?? null;
-    const remoteContent = remote.get(name)?.content ?? null;
-    const localHash = localContent === null ? null : contentHash(localContent);
-
-    const remoteHash =
-      remoteContent === null ? null : contentHash(remoteContent);
-
-    const previous = Object.hasOwn(baseline, name) ? baseline[name] : undefined;
-
-    if (localHash === remoteHash) {
-      if (localHash === null) {
-        delete acknowledged[name];
-      } else {
-        acknowledged[name] = localHash;
-      }
-
-      continue;
-    }
-
-    const localChanged =
-      previous === undefined ? localHash !== null : localHash !== previous;
-
-    const remoteChanged =
-      previous === undefined ? remoteHash !== null : remoteHash !== previous;
-
-    const localModifiedAt = local.modifiedTimes.get(name);
-    const remoteModifiedAt = remote.get(name)?.modifiedAt;
-    const precisionMs = remote.get(name)?.modifiedAtPrecisionMs ?? 1;
-
-    const localTime =
-      localModifiedAt === undefined
-        ? null
-        : Math.floor(localModifiedAt / precisionMs);
-
-    const remoteTime =
-      remoteModifiedAt === undefined
-        ? null
-        : Math.floor(remoteModifiedAt / precisionMs);
-
-    const isLocalNewer =
-      localTime !== null && remoteTime !== null && localTime > remoteTime;
-
-    let isPush = localChanged || isLocalNewer;
-
-    if (
-      previous === undefined &&
-      localContent !== null &&
-      remoteContent !== null
-    ) {
-      if (localTime === remoteTime) {
-        conflicts.push({
-          name,
-          reason:
-            "The copies differ but have the same modification time. Compare them or use Force changes to remote to keep the local copy.",
-        });
-
-        continue;
-      }
-
-      isPush = isLocalNewer;
-    } else if (localChanged && remoteChanged) {
-      conflicts.push({
-        name,
-        reason:
-          "The local and remote copies both changed since the last sync. Compare them, or select Force changes to remote to keep the local copy.",
-      });
-
-      continue;
-    }
-
-    if (!isPush && (pushName !== null || protectedNames.has(name))) {
-      conflicts.push({
-        name,
-        reason: protectedNames.has(name)
-          ? "An open buffer has pending edits. Save or preserve those edits before pulling the remote copy."
-          : "The remote copy changed. Run Sync now before pushing this file.",
-      });
-
-      continue;
-    }
-
-    const chosen = isPush ? localContent : remoteContent;
-    const modifiedAt = isPush ? localModifiedAt : remoteModifiedAt;
-    const chosenHash = isPush ? localHash : remoteHash;
-    const changes = isPush ? push : pull;
-
-    changes.push(
-      chosen === null
-        ? { name, content: null }
-        : {
-            name,
-            content: chosen,
-            modifiedAt: modifiedAt!,
-          },
-    );
-
-    if (chosen === null) {
-      delete acknowledged[name];
-    } else {
-      acknowledged[name] = chosenHash!;
-    }
+    throw cause;
   }
 
-  return { push, pull, conflicts, acknowledged };
+  return metadata.isFile()
+    ? { content: await readSyncContent(path), modifiedAt: metadata.mtimeMs }
+    : { content: "", modifiedAt: metadata.mtimeMs, blocked: true };
 }
 
-// Saved files
-/** Read saved files inside the same queue that processes local saves. */
+/** Every synced file, or only `name`; links and folders come back as blocked. */
 export async function readLocalSyncFiles(
   folder: string,
+  name: string | null,
 ): Promise<LocalSyncFiles> {
-  const files = new Map<string, SyncContent>();
-  const modifiedTimes = new Map<string, number>();
-  const blockedNames = new Set<string>();
+  const names =
+    name === null
+      ? (await listSavedEntries(folder, isSyncedFileName)).files
+      : [name];
 
-  for (const name of (await listSavedEntries(folder, isSyncedFileName)).files) {
-    const path = join(folder, name);
+  const files: LocalSyncFiles = new Map();
 
-    const metadata = await lstat(path);
+  for (const candidate of names) {
+    const file = await readLocalFile(folder, candidate);
 
-    if (metadata.isFile()) {
-      files.set(name, await readSyncContent(path));
-      modifiedTimes.set(name, metadata.mtimeMs);
-    } else {
-      blockedNames.add(name);
+    if (file) {
+      files.set(candidate, file);
     }
   }
 
-  return { files, modifiedTimes, blockedNames };
+  return files;
 }
 
-/**
- * Recheck each pull inside the save queue after the network work ends. Returns the text
- * changes for open buffers and how many files were pulled, images included.
- */
-export async function applySyncPulls(
-  folder: string,
-  snapshot: LocalSyncFiles,
-  plan: SyncPlan,
-  baseline: SyncBaseline,
-  getProtectedNames: () => Set<string>,
-  onApplied: (change: SyncedFileChange) => void,
-) {
-  const changes: SyncedFileChange[] = [];
-  let pulled = 0;
-
-  for (const change of plan.pull) {
-    const path = join(folder, change.name);
-    const before = snapshot.files.get(change.name) ?? null;
-    let current: SyncContent | null = null;
-    let currentModifiedAt: number | undefined;
-
-    try {
-      const metadata = await lstat(path);
-
-      if (!metadata.isFile()) {
-        throw new Error(
-          `The path ${JSON.stringify(change.name)} is not a regular file.`,
-        );
-      }
-
-      current = await readSyncContent(path);
-      currentModifiedAt = metadata.mtimeMs;
-    } catch (cause) {
-      if (
-        !(cause instanceof Error && "code" in cause && cause.code === "ENOENT")
-      ) {
-        throw cause;
-      }
-    }
-
-    if (
-      getProtectedNames().has(change.name) ||
-      !isSameSyncContent(before, current) ||
-      snapshot.modifiedTimes.get(change.name) !== currentModifiedAt
-    ) {
-      plan.conflicts.push({
-        name: change.name,
-        reason:
-          "The local file or its open buffer changed during sync. Both copies were preserved; retry after saving your edits.",
-      });
-
-      if (Object.hasOwn(baseline, change.name)) {
-        plan.acknowledged[change.name] = baseline[change.name]!;
-      } else {
-        delete plan.acknowledged[change.name];
-      }
-
-      continue;
-    }
-
-    await writeSavedFile(folder, change);
-
-    pulled += 1;
-
-    const applied = toTextChange(change.name, before, change.content);
-
-    if (applied) {
-      changes.push(applied);
-      // Refresh buffers even if a later pull or settings write fails.
-      onApplied(applied);
-    }
-  }
-
-  return { changes, pulled };
-}
-
+// Writing
 /** Write a pulled file through a temporary copy, or remove it when its content is null. */
 export async function writeSavedFile(folder: string, change: RemoteChange) {
   const path = join(folder, change.name);
@@ -344,8 +108,53 @@ export async function writeSavedFile(folder: string, change: RemoteChange) {
   }
 }
 
-/** The saved file's text, or null when it does not exist. */
-export async function readSavedFile(folder: string, name: string) {
+/** Cloud sync's access to the documents folder, inside its save queue. */
+export function createLocalSyncStore(
+  folder: string,
+  queue: ReturnType<typeof createOperationQueue>,
+): LocalSyncStore {
+  return {
+    read: (name) => queue(folder, () => readLocalSyncFiles(folder, name)),
+    apply: (change, before) =>
+      queue(folder, async () => {
+        const current = await readLocalFile(folder, change.name);
+
+        if (
+          current?.blocked ||
+          !isSameSyncContent(before?.content, current?.content) ||
+          before?.modifiedAt !== current?.modifiedAt
+        ) {
+          return false;
+        }
+
+        await writeSavedFile(folder, change);
+
+        return true;
+      }),
+  };
+}
+
+// Git changes
+/** Return disk changes so clean buffers can reload after a Git merge. */
+export function getFileChanges(before: LocalSyncFiles, after: LocalSyncFiles) {
+  const changes: SyncedFileChange[] = [];
+
+  const contentOf = (file: LocalSyncFile | undefined) =>
+    file && !file.blocked ? file.content : null;
+
+  for (const name of new Set([...before.keys(), ...after.keys()])) {
+    const oldContent = contentOf(before.get(name));
+    const newContent = contentOf(after.get(name));
+    const change = toTextChange(name, oldContent, newContent);
+
+    if (change && oldContent !== newContent) changes.push(change);
+  }
+
+  return changes;
+}
+
+/** A saved file's text, or null when it does not exist. */
+export async function readSavedText(folder: string, name: string) {
   try {
     return await readFile(join(folder, name), "utf8");
   } catch (cause) {
@@ -355,22 +164,4 @@ export async function readSavedFile(folder: string, name: string) {
 
     throw cause;
   }
-}
-
-/** Return disk changes so clean buffers can reload after a Git merge. */
-export function getFileChanges(
-  before: Map<string, SyncContent>,
-  after: Map<string, SyncContent>,
-) {
-  const changes: SyncedFileChange[] = [];
-
-  for (const name of new Set([...before.keys(), ...after.keys()])) {
-    const oldContent = before.get(name) ?? null;
-    const newContent = after.get(name) ?? null;
-    const change = toTextChange(name, oldContent, newContent);
-
-    if (change && oldContent !== newContent) changes.push(change);
-  }
-
-  return changes;
 }

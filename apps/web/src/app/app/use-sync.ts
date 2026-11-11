@@ -1,5 +1,7 @@
 import { formatFileMessage } from "@lunarscribe/components/lib/file-message";
 import { toast } from "@lunarscribe/components/ui/toast";
+import { stemOf } from "@lunarscribe/utils/file-kinds";
+import type { SyncConflict, SyncStatus } from "@lunarscribe/utils/sync/types";
 import { createElement, useEffect } from "react";
 
 import {
@@ -10,8 +12,7 @@ import {
   protectSyncFiles,
   startupSync,
 } from "@/lib/sync/sync-service";
-import type { SyncConflict, SyncStatus } from "@/lib/sync/sync-types";
-import { stemOf, useBufferStore } from "@/stores/buffer-store";
+import { useBufferStore } from "@/stores/buffer-store";
 import { useSyncStore } from "@/stores/sync-store";
 
 /** Keep conflicts visible until the user dismisses the toast. */
@@ -79,22 +80,22 @@ export function useSync() {
       useSyncStore.setState(status);
 
       if (
-        status.busy ||
+        status.isBusy ||
         status.error ||
-        status.needsSignIn ||
+        status.isSignInRequired ||
         !status.provider
       ) {
         clearSuccess();
       }
 
-      if (status.busy) {
+      if (status.isBusy) {
         hasBufferConflicts = false;
       }
 
-      if (status.error && !status.busy) {
+      if (status.error && !status.isBusy) {
         toast.add({
           type: "error",
-          title: status.needsSignIn ? "Sign-in required" : "Sync failed",
+          title: status.isSignInRequired ? "Sign-in required" : "Sync failed",
           description: formatFileMessage(status.error),
         });
       }

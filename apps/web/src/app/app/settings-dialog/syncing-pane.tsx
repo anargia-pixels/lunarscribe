@@ -20,6 +20,11 @@ import { Separator } from "@lunarscribe/components/ui/separator";
 import { Spinner } from "@lunarscribe/components/ui/spinner";
 import { toast } from "@lunarscribe/components/ui/toast";
 import { redactEmail } from "@lunarscribe/utils/redact-email";
+import { CLOUD_SYNC_PROVIDERS } from "@lunarscribe/utils/sync/types";
+import type {
+  CloudSyncProvider,
+  SyncStatus,
+} from "@lunarscribe/utils/sync/types";
 import { useState } from "react";
 
 import { isMac } from "@/lib/platform";
@@ -29,8 +34,6 @@ import {
   disconnectSync,
   syncFiles,
 } from "@/lib/sync/sync-service";
-import { SYNC_PROVIDERS } from "@/lib/sync/sync-types";
-import type { SyncProvider, SyncStatus } from "@/lib/sync/sync-types";
 import { useSyncStore } from "@/stores/sync-store";
 
 /** Connecting, or signing in again, signs in first and then syncs. */
@@ -41,7 +44,7 @@ function getConnectionLabel(status: SyncStatus) {
     return "Sync is off";
   }
 
-  const providerLabel = `Connected to ${SYNC_PROVIDERS[status.provider]}`;
+  const providerLabel = `Connected to ${CLOUD_SYNC_PROVIDERS[status.provider]}`;
 
   return status.account
     ? `${providerLabel} · ${redactEmail(status.account)}`
@@ -49,7 +52,7 @@ function getConnectionLabel(status: SyncStatus) {
 }
 
 /** Tell the user what the slow first connection is waiting on. */
-function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
+function getConnectMessage(stage: ConnectStage, provider: CloudSyncProvider) {
   if (stage === "syncing") {
     return {
       title: "Syncing your files…",
@@ -59,7 +62,7 @@ function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
   }
 
   return {
-    title: `Waiting for you to sign in to ${SYNC_PROVIDERS[provider]}…`,
+    title: `Waiting for you to sign in to ${CLOUD_SYNC_PROVIDERS[provider]}…`,
     description: "Finish signing in in the pop-up window, then come back here.",
   };
 }
@@ -67,7 +70,7 @@ function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
 export function SyncingPane() {
   const status = useSyncStore();
 
-  const [selection, setSelected] = useState<SyncProvider>(
+  const [selection, setSelected] = useState<CloudSyncProvider>(
     status.provider ?? "google-drive",
   );
 
@@ -76,7 +79,7 @@ export function SyncingPane() {
   const [connectStage, setConnectStage] = useState<ConnectStage | null>(null);
   const [isPending, setPending] = useState(false);
 
-  const isDisabled = status.busy || isPending;
+  const isDisabled = status.isBusy || isPending;
 
   const connectMessage =
     connectStage && getConnectMessage(connectStage, selected);
@@ -160,8 +163,8 @@ export function SyncingPane() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-6">
           <Label htmlFor="sync-provider">Provider</Label>
-          <Select<SyncProvider>
-            items={SYNC_PROVIDERS}
+          <Select<CloudSyncProvider>
+            items={CLOUD_SYNC_PROVIDERS}
             value={selected}
             disabled={isDisabled || status.provider !== null}
             onValueChange={(value) => {
@@ -175,19 +178,21 @@ export function SyncingPane() {
             </SelectTrigger>
             <SelectContent alignItemWithTrigger={false}>
               <SelectItem value="google-drive">
-                {SYNC_PROVIDERS["google-drive"]}
+                {CLOUD_SYNC_PROVIDERS["google-drive"]}
               </SelectItem>
-              <SelectItem value="dropbox">{SYNC_PROVIDERS.dropbox}</SelectItem>
+              <SelectItem value="dropbox">
+                {CLOUD_SYNC_PROVIDERS.dropbox}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
         <p className="text-muted-foreground text-sm text-pretty">
-          {`You will sign in to ${SYNC_PROVIDERS[selected]} in a pop-up window. Lunarscribe saves your files in a folder called lunarscribe-bak-files. Your sign-in stays in this browser.`}
+          {`You will sign in to ${CLOUD_SYNC_PROVIDERS[selected]} in a pop-up window. Lunarscribe saves your files in a folder called lunarscribe-bak-files. Your sign-in stays in this browser.`}
         </p>
         <div className="flex flex-wrap gap-2">
           {status.provider ? (
             <>
-              {status.needsSignIn && (
+              {status.isSignInRequired && (
                 <Button
                   disabled={isDisabled}
                   onClick={() => {
@@ -204,7 +209,7 @@ export function SyncingPane() {
                 }}
               >
                 <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
-                {status.busy && !connectStage ? "Syncing…" : "Sync now"}
+                {status.isBusy && !connectStage ? "Syncing…" : "Sync now"}
               </Button>
               <Button
                 variant="outline"
@@ -225,7 +230,7 @@ export function SyncingPane() {
             >
               {connectStage
                 ? "Connecting…"
-                : `Connect ${SYNC_PROVIDERS[selected]}`}
+                : `Connect ${CLOUD_SYNC_PROVIDERS[selected]}`}
             </Button>
           )}
           {connectStage === "signing-in" && (

@@ -1,24 +1,21 @@
-import { isImageFileName } from "@lunarscribe/utils/images";
-import { mapConcurrent } from "@lunarscribe/utils/map-concurrent";
+import { isSyncedFileName } from "../file-kinds";
+import { isImageFileName } from "../images";
+import { mapConcurrent } from "../map-concurrent";
 import {
   jsonArray,
   jsonBoolean,
   jsonString,
   jsonTimestamp,
   parseJson,
-} from "@lunarscribe/utils/sync/json";
+} from "./json";
+import { fetchCloud } from "./network";
 import type {
   FileSyncProvider,
   RemoteFile,
   RemoteFiles,
   SyncContent,
-} from "@lunarscribe/utils/sync/types";
-import {
-  SYNC_CONCURRENCY,
-  SyncSignInRequired,
-} from "@lunarscribe/utils/sync/types";
-
-import { isSyncedFileName } from "@/lib/sync/files";
+} from "./types";
+import { SYNC_CONCURRENCY, SyncSignInRequired } from "./types";
 
 // Dropbox destination
 const BACKUP_FOLDER_PATH = "/lunarscribe-bak-files";
@@ -31,7 +28,8 @@ type WriteMode =
 export function createDropboxApi(accessToken: () => Promise<string>) {
   /** Return raw status so folder setup can distinguish a missing path. */
   async function request(route: string, options: RequestInit, content = false) {
-    const response = await fetch(
+    const response = await fetchCloud(
+      "dropbox",
       `https://${content ? "content" : "api"}.dropboxapi.com/2/${route}`,
       {
         ...options,
@@ -59,7 +57,7 @@ export function createDropboxApi(accessToken: () => Promise<string>) {
   function checkResponse(response: Response) {
     if (response.status === 401) {
       throw new SyncSignInRequired(
-        "Dropbox needs sign-in again. Open Settings → Syncing and select Sign in again.",
+        "Dropbox needs sign-in again. Open the sync settings and select Sign in again.",
       );
     }
 

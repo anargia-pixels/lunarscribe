@@ -17,15 +17,25 @@ conversation, use the terms in [GLOSSARY.md](GLOSSARY.md).
   page is listed in `pages` in `vite.config.ts` and prerendered at build time, so it is
   served as a static asset; add new pages there. `robots.txt`, `sitemap.xml` and the
   `/install` redirect (`_redirects`) are static files in `public/`, so the Worker only
-  answers 404s. Cloudflare Workers Builds deploys it as the `lunarscribe` Worker on push
-  to `main`.
+  answers 404s. `packages/infra` deploys it as the `lunarscribe` Worker on push to `main`.
+- `apps/mobile`: Expo app. The markdown and drawing editors are DOM components
+  (`"use dom"`) that run in a WebView. JS and assets reach installed APKs as OTA updates
+  through `expo-updates`; only native changes (dependencies, `app.config.ts`) need a new
+  APK. `scripts/publish-update.ts` exports, signs and uploads an OTA update.
+- `apps/update-server`: the Cloudflare Worker that serves OTA updates from R2.
+  `src/storage.ts` owns the R2 layout that the publish script writes.
+- `packages/infra`: Alchemy stack (`alchemy.run.ts`) for all Cloudflare resources: the web
+  Worker, the update server and its R2 bucket. `names.json` holds the domains and bucket
+  name that the mobile app and the publish script also read.
 - `packages/components`: shared UI. `src/components/ui/` is shadcn (Base UI),
   `src/components/<feature>/` holds shared non-shadcn components (the Lexical markdown
   editor), `src/lib/` holds shared DOM and React helpers (DOCX and PDF export, file
   feedback), `src/themes/` holds the color theme catalog, `src/styles/globals.css` is the
   theme both apps import.
 - `packages/utils`: shared libs without DOM or React (`cn`, `tryCatch`, operation queue,
-  sync JSON and provider types, self-hosted fonts).
+  file kinds, self-hosted fonts). `src/sync/` is the sync engine every app shares:
+  providers, the sync plan, OAuth tokens and `createSyncService`. Each app supplies only
+  its file access, settings storage, sign-in flow and how it reaches other windows.
 - `tools/oxlint`: custom lint rules, including `anti-slop/*`.
 - `assets/`: images and icon sources more than one app needs. Anything only the web app
   serves (landing screenshots, the web manifest) belongs in `apps/web/public`, which the

@@ -25,6 +25,7 @@ import {
   TextSuperscriptIcon,
   TextUnderlineIcon,
   Undo02Icon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { $createCodeNode } from "@lexical/code";
@@ -81,6 +82,7 @@ import {
 } from "./link-form";
 import { INSERT_MATH_COMMAND } from "./plugins/math-plugin";
 import { INSERT_MERMAID_COMMAND } from "./plugins/mermaid-plugin";
+import { useEditable } from "./use-editable";
 
 type ToolbarAction = {
   label: string;
@@ -352,7 +354,7 @@ export function InsertMenu(props: ToolbarMenuProps) {
 const EMPTY_LINK_DRAFT: LinkDraft = { text: "", url: "", isLink: false };
 
 /** Adds a link to the selection, or edits the link around it. */
-function LinkButton() {
+function LinkButton({ disabled }: { disabled: boolean }) {
   const [editor] = useLexicalComposerContext();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(EMPTY_LINK_DRAFT);
@@ -377,7 +379,14 @@ function LinkButton() {
     <Popover open={open} onOpenChange={handleOpenChange}>
       <Hint label="Link">
         <PopoverTrigger
-          render={<Button variant="fluid" size="icon-sm" aria-label="Link" />}
+          render={
+            <Button
+              variant="fluid"
+              size="icon-sm"
+              aria-label="Link"
+              disabled={disabled}
+            />
+          }
         >
           <HugeiconsIcon icon={Link01Icon} strokeWidth={2} />
         </PopoverTrigger>
@@ -409,90 +418,127 @@ function ToolbarSeparator() {
 }
 
 /**
- * Formatting toolbar: history, inline marks, and block types with insertions. As
- * the toolbar narrows, the insertions and then the inline marks fold into menus.
+ * Formatting toolbar: view only and history, then inline marks, and block types with
+ * insertions. View only and history stay outside the scrolling row, so they are always
+ * visible. As the toolbar narrows, the insertions and then the inline marks fold into
+ * menus.
  */
 export function ToolbarPlugin() {
   const modifier = IS_APPLE ? "⌘" : "Ctrl";
   const [editor] = useLexicalComposerContext();
   const { activeFormats, canUndo, canRedo } = useToolbarState(editor);
+  const isEditable = useEditable(editor);
 
   return (
-    <div className="editor-scrollbar @container min-w-0 shrink-0 overflow-x-auto border-b">
-      <div className="relative flex w-max min-w-full items-center justify-center gap-1 px-3 py-1.5">
-        <FluidHighlight rows="button" className="bg-muted rounded-lg" />
-        <Hint label="Undo" shortcut={[modifier, "Z"]}>
-          <Button
-            variant="fluid"
-            size="icon-sm"
-            aria-label="Undo"
-            disabled={!canUndo}
-            onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-          >
-            <HugeiconsIcon icon={Undo02Icon} strokeWidth={2} />
-          </Button>
-        </Hint>
-        <Hint
-          label="Redo"
-          shortcut={IS_APPLE ? ["⇧", modifier, "Z"] : [modifier, "Y"]}
-        >
-          <Button
-            variant="fluid"
-            size="icon-sm"
-            aria-label="Redo"
-            disabled={!canRedo}
-            onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-          >
-            <HugeiconsIcon icon={Redo02Icon} strokeWidth={2} />
-          </Button>
-        </Hint>
-        <ToolbarSeparator />
-        <div className="hidden @2xl:contents">
-          {TEXT_FORMATS.map(({ format, label, icon: Icon, shortcut }) => (
-            <Hint
-              key={format}
-              label={label}
-              shortcut={shortcut ? [modifier, shortcut] : undefined}
+    <div className="@container min-w-0 shrink-0 border-b">
+      <div className="flex justify-center">
+        <div className="relative flex shrink-0 items-center gap-1 py-1.5 pl-3">
+          <FluidHighlight rows="button" className="bg-muted rounded-lg" />
+          <Hint label="View only">
+            <Toggle
+              variant="fluid"
+              size="icon-sm"
+              aria-label="View only"
+              pressed={!isEditable}
+              onPressedChange={(pressed) => editor.setEditable(!pressed)}
             >
-              <Toggle
-                variant="fluid"
-                size="icon-sm"
-                aria-label={label}
-                pressed={activeFormats.includes(format)}
-                onPressedChange={() =>
-                  editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
-                }
-              >
-                <HugeiconsIcon icon={Icon} strokeWidth={2} />
-              </Toggle>
-            </Hint>
-          ))}
+              <HugeiconsIcon icon={ViewIcon} strokeWidth={2} />
+            </Toggle>
+          </Hint>
+          <Hint label="Undo" shortcut={[modifier, "Z"]}>
+            <Button
+              variant="fluid"
+              size="icon-sm"
+              aria-label="Undo"
+              disabled={!isEditable || !canUndo}
+              onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
+            >
+              <HugeiconsIcon icon={Undo02Icon} strokeWidth={2} />
+            </Button>
+          </Hint>
+          <Hint
+            label="Redo"
+            shortcut={IS_APPLE ? ["⇧", modifier, "Z"] : [modifier, "Y"]}
+          >
+            <Button
+              variant="fluid"
+              size="icon-sm"
+              aria-label="Redo"
+              disabled={!isEditable || !canRedo}
+              onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
+            >
+              <HugeiconsIcon icon={Redo02Icon} strokeWidth={2} />
+            </Button>
+          </Hint>
+          <ToolbarSeparator />
         </div>
-        <TextFormatMenu
-          activeFormats={activeFormats}
-          hasHint
-          button={<Button variant="fluid" size="sm" className="@2xl:hidden" />}
-        />
-        <LinkButton />
-        <ToolbarSeparator />
-        <div className="hidden @3xl:contents">
-          {INSERTIONS.map(({ label, icon: Icon, apply }) => (
-            <Hint key={label} label={label}>
-              <Button
-                variant="fluid"
-                size="icon-sm"
-                aria-label={label}
-                onClick={() => apply(editor)}
-              >
-                <HugeiconsIcon icon={Icon} strokeWidth={2} />
-              </Button>
-            </Hint>
-          ))}
+        <div className="editor-scrollbar min-w-0 overflow-x-auto">
+          <div className="relative flex w-max items-center gap-1 py-1.5 pr-3 pl-1">
+            <FluidHighlight rows="button" className="bg-muted rounded-lg" />
+            <div className="hidden @2xl:contents">
+              {TEXT_FORMATS.map(({ format, label, icon: Icon, shortcut }) => (
+                <Hint
+                  key={format}
+                  label={label}
+                  shortcut={shortcut ? [modifier, shortcut] : undefined}
+                >
+                  <Toggle
+                    variant="fluid"
+                    size="icon-sm"
+                    aria-label={label}
+                    disabled={!isEditable}
+                    pressed={activeFormats.includes(format)}
+                    onPressedChange={() =>
+                      editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
+                    }
+                  >
+                    <HugeiconsIcon icon={Icon} strokeWidth={2} />
+                  </Toggle>
+                </Hint>
+              ))}
+            </div>
+            <TextFormatMenu
+              activeFormats={activeFormats}
+              hasHint
+              button={
+                <Button
+                  variant="fluid"
+                  size="sm"
+                  className="@2xl:hidden"
+                  disabled={!isEditable}
+                />
+              }
+            />
+            <LinkButton disabled={!isEditable} />
+            <ToolbarSeparator />
+            <div className="hidden @3xl:contents">
+              {INSERTIONS.map(({ label, icon: Icon, apply }) => (
+                <Hint key={label} label={label}>
+                  <Button
+                    variant="fluid"
+                    size="icon-sm"
+                    aria-label={label}
+                    disabled={!isEditable}
+                    onClick={() => apply(editor)}
+                  >
+                    <HugeiconsIcon icon={Icon} strokeWidth={2} />
+                  </Button>
+                </Hint>
+              ))}
+            </div>
+            <InsertMenu
+              hasHint
+              button={
+                <Button
+                  variant="fluid"
+                  size="sm"
+                  className="@3xl:hidden"
+                  disabled={!isEditable}
+                />
+              }
+            />
+          </div>
         </div>
-        <InsertMenu
-          hasHint
-          button={<Button variant="fluid" size="sm" className="@3xl:hidden" />}
-        />
       </div>
     </div>
   );

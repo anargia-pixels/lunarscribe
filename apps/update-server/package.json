@@ -1,0 +1,19 @@
+{
+  "name": "update-server",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./storage": "./src/storage.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lunarscribe/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@lunarscribe/infra": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

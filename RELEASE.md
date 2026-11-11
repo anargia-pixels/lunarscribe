@@ -17,8 +17,8 @@ git fetch origin --tags
 git tag --list 'v*' --sort=-version:refname
 ```
 
-A tag with the `+mobile` suffix, such as `v0.13.17+mobile`, uses the same version as
-`v0.13.17`. Read the version from the tag without the suffix.
+A tag with the `+mobile` or `+mobile-ota` suffix, such as `v0.13.17+mobile`, uses the same
+version as `v0.13.17`. Read the version from the tag without the suffix.
 
 Use `0.13.x` numbering, starting with `0.13.17`. For each subsequent release, keep `0.13`
 and increase `x` by one: `0.13.17` → `0.13.18` → `0.13.19`. Choose the next unused patch
@@ -38,14 +38,19 @@ the release.
 
 The tag selects the packages that the workflow builds:
 
-| Tag               | Builds                                                       |
-| ----------------- | ------------------------------------------------------------ |
-| `v0.13.17`        | Desktop: Linux x86_64 and macOS Apple Silicon                |
-| `v0.13.17+mobile` | Desktop, and the Android APK `lunarscribe-android-arm64.apk` |
+| Tag                   | Builds                                                       |
+| --------------------- | ------------------------------------------------------------ |
+| `v0.13.17`            | Desktop: Linux x86_64 and macOS Apple Silicon                |
+| `v0.13.17+mobile`     | Desktop, and the Android APK `lunarscribe-android-arm64.apk` |
+| `v0.13.17+mobile-ota` | Desktop, and an OTA update of the mobile app's JS and assets |
 
-Use the `+mobile` tag only when the user requests a mobile build. Push one tag for each
-version: either `v0.13.17` or `v0.13.17+mobile`, not both. Each tag creates its own GitHub
-release.
+Use a mobile tag only when the user requests a mobile release. An OTA update reaches every
+installed APK with the same runtime on its next two cold starts, with no download from
+GitHub. Prefer `+mobile-ota` for mobile changes. Use `+mobile` when the native code
+changed since the last `+mobile` release: a native dependency, a config plugin, or a
+native field in `apps/mobile/app.config.ts`. The `ota` job fails with "No APK release has
+runtime" when an APK is needed. Push one tag for each version. Each tag creates its own
+GitHub release.
 
 This step is complete when the selected version, the release type, and the reason for the
 increase are clear. The examples below use `0.13.17`. Replace it with the selected
@@ -85,7 +90,9 @@ The app release version belongs to `apps/desktop/package.json` and
 versions do not need to change for an app release.
 
 GitHub Actions runs the checks again, builds the project, and packages Linux x86_64 and
-macOS Apple Silicon. For a `+mobile` tag, it also builds the Android APK. Each package job
+macOS Apple Silicon. For a `+mobile` tag, it also builds the Android APK; for a
+`+mobile-ota` tag, it publishes an OTA update instead and deletes old updates that no
+runtime uses, keeping the one it replaced until the next publish. Each package job
 publishes its asset to the GitHub release as soon as it finishes, so a slow or failed
 platform does not hold back the others; `.github/scripts/publish-asset.sh` creates the
 release on the first upload and keeps `sha256sums.txt` listing every asset. Use this
@@ -103,7 +110,7 @@ user changes. If the app changes are already committed, the version commit can u
 
 ```sh
 release_version=0.13.17
-release_tag="v$release_version" # For a mobile build: "v$release_version+mobile"
+release_tag="v$release_version" # Or "v$release_version+mobile" or "+mobile-ota"
 git add apps/desktop/package.json apps/mobile/package.json apps/mobile/app.config.ts bun.lock
 git commit -m "Release $release_tag"
 git push origin HEAD
@@ -115,9 +122,9 @@ Stage any requested documentation changes explicitly before the commit. If anoth
 has changes in the package or lockfile, stage only the release version hunks in those
 files and leave its changes uncommitted. Review the complete staged diff before
 committing. Create the tag on the commit that contains the complete release. The tag must
-be `v` followed by the exact desktop package version, with an optional `+mobile` suffix.
-For a `+mobile` tag, the mobile package version must also match. The workflow rejects a
-mismatch.
+be `v` followed by the exact desktop package version, with an optional `+mobile` or
+`+mobile-ota` suffix. For a mobile tag, the mobile package version must also match. The
+workflow rejects a mismatch.
 
 This step is complete when the release commit and its tag are on GitHub and the Release
 workflow has started.
@@ -138,9 +145,10 @@ gh release view "$release_tag"
 ```
 
 Replace `RUN_ID` with the selected run ID. Confirm that the check job and both build jobs
-pass. For a `+mobile` tag, also confirm that the Android job passes. For a desktop tag,
-the workflow skips the Android job. The release appears after the first build finishes and
-gains each asset as its job finishes. Confirm that the release contains:
+pass. For a `+mobile` tag, also confirm that the Android job passes; for a `+mobile-ota`
+tag, the `ota` job. For a desktop tag, the workflow skips the Android job. The release
+appears after the first build finishes and gains each asset as its job finishes. Confirm
+that the release contains:
 
 - `lunarscribe-linux-x64.zip`
 - `lunarscribe-macos-arm64.dmg`
@@ -166,6 +174,34 @@ This step is complete when the run passes, all expected assets are published, an
 release notes match the prepared draft. Report the version, release URL, and workflow
 result. If a job fails, report the failure and resolve it before claiming that the release
 is complete.
+
+## Pause or roll back an OTA update
+
+Devices apply only an update newer than the one they run, so a rollback is a new release:
+revert the bad commit, bump the version, and push a new `+mobile-ota` tag.
+
+To stop new downloads at once, pause the runtime. The runtime is in the `ota` job log. Run
+from `apps/mobile` with `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` set:
+
+```sh
+bun run publish-update pause <runtime>
+bun run publish-update resume <runtime>
+```
+
+Devices that already downloaded the update keep it.
+
+## Repository secrets
+
+| Secret                     | Used by                                   |
+| -------------------------- | ----------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`     | Deploy workflow, `android` and `ota` jobs |
+| `CLOUDFLARE_ACCOUNT_ID`    | Deploy workflow, `android` and `ota` jobs |
+| `EXPO_UPDATES_PRIVATE_KEY` | `ota` job: signs each OTA update manifest |
+
+The token needs Workers Scripts Edit, Workers R2 Storage Edit, Zone DNS Edit and Workers
+Routes Edit. `EXPO_UPDATES_PRIVATE_KEY` must match `apps/mobile/certs/certificate.pem`;
+APKs reject updates signed by another key. The private key stays at
+`apps/mobile/certs/private-key.pem` locally, where `.gitignore` keeps it out of Git.
 
 ## Rebuild an existing release
 

@@ -1,4 +1,12 @@
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import type { EditorKind } from "@lunarscribe/utils/file-kinds";
+import {
+  BUFFER_EXTENSIONS,
+  getFileExtension,
+  kindOf,
+  stemOf,
+  toBufferTitle,
+} from "@lunarscribe/utils/file-kinds";
 import { isImageFileName, rewriteImageEmbeds } from "@lunarscribe/utils/images";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 import {
@@ -7,21 +15,13 @@ import {
   replaceFolder,
 } from "@lunarscribe/utils/saved-paths";
 import type { SavedEntries } from "@lunarscribe/utils/saved-paths";
+import type { SyncedFileChange } from "@lunarscribe/utils/sync/types";
 import { Debouncer } from "@tanstack/pacer/debouncer";
 import { AppState } from "react-native";
 import { create } from "zustand";
 
 import * as documentsFolder from "@/lib/documents-folder";
-import {
-  BUFFER_EXTENSIONS,
-  getFileExtension,
-  kindOf,
-  stemOf,
-  toBufferTitle,
-} from "@/lib/editor-files";
-import type { EditorKind } from "@/lib/editor-types";
-import { forcePullFile, forceSyncFile } from "@/lib/sync/sync-service";
-import type { SyncedFileChange } from "@/lib/sync/sync-types";
+import { syncService } from "@/lib/sync/sync-service";
 
 // Types
 /** One open piece of writing; `content` is the source of truth its editor loads from and saves to. */
@@ -494,7 +494,7 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
     const open = findBuffer((buffer) => buffer.fileName === name);
 
     if (!open) {
-      await forceSyncFile(name);
+      await syncService.forcePush(name);
 
       return;
     }
@@ -502,7 +502,7 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
     saveDebouncers.get(open.id)?.cancel();
     await queueBufferWrite(open.id, async () => {
       await writeBuffer(open.id, "manual");
-      await forceSyncFile(
+      await syncService.forcePush(
         findBuffer((buffer) => buffer.id === open.id)?.fileName ?? name,
       );
     });
@@ -512,7 +512,7 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
     const open = findBuffer((buffer) => buffer.fileName === name);
 
     if (!open) {
-      await forcePullFile(name);
+      await syncService.forcePull(name);
       get().refreshFiles();
 
       return;
@@ -521,7 +521,7 @@ export const useBufferStore = create<BufferStore>()((set, get) => ({
     // Hold the write queue, so no pending edit is saved over the pulled copy.
     discardSaveTimer(open.id);
     await queueBufferWrite(open.id, async () => {
-      const change = await forcePullFile(
+      const change = await syncService.forcePull(
         findBuffer((buffer) => buffer.id === open.id)?.fileName ?? name,
       );
 

@@ -8,7 +8,8 @@
     "dev": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "check-types": "tsc --noEmit"
+    "check-types": "bun scripts/generate-route-types.ts && tsc --noEmit && tsc --noEmit -p scripts",
+    "publish-update": "bun scripts/publish-update.ts"
   },
   "dependencies": {
     "@expo-google-fonts/pixelify-sans": "^0.4.2",
@@ -31,6 +32,7 @@
     "expo-splash-screen": "~57.0.0",
     "expo-status-bar": "~57.0.0",
     "expo-system-ui": "~57.0.0",
+    "expo-updates": "~57.0.0",
     "expo-web-browser": "~57.0.0",
     "heroui-native": "^1.0.10",
     "lucide-react-native": "^1.40.0",
@@ -53,11 +55,14 @@
   },
   "devDependencies": {
     "@lunarscribe/components": "workspace:*",
+    "@lunarscribe/infra": "workspace:*",
     "@tailwindcss/postcss": "catalog:",
+    "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "babel-preset-expo": "~57.0.0",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "update-server": "workspace:*"
   }
 }

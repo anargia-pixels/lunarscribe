@@ -14,10 +14,11 @@ import {
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isTextFile } from "@lunarscribe/utils/file-kinds";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+import { INVALID_NAME_CHARACTERS } from "@lunarscribe/utils/saved-paths";
 import { app, BrowserWindow, ipcMain } from "electron";
 
-import { INVALID_FILE_TITLE_CHARACTERS, isTextFile } from "../lib/editor-files";
 import type { ExternalFile, OpenedExternalFile } from "../lib/editor-files";
 
 const pendingPaths = new Set<string>();
@@ -137,7 +138,7 @@ async function renameTextFile(
 
   const stem = title.trim();
 
-  if (!stem || stem.match(INVALID_FILE_TITLE_CHARACTERS)) {
+  if (!stem || stem.match(INVALID_NAME_CHARACTERS)) {
     throw new Error("Enter a name without slashes.");
   }
 

@@ -1,6 +1,7 @@
 import { $convertToMarkdownString } from "@lexical/markdown";
 import { CheckListPlugin } from "@lexical/react/LexicalCheckListPlugin";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
@@ -11,7 +12,13 @@ import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
 import { ScrollArea } from "@lunarscribe/components/ui/scroll-area";
 import type { EditorState } from "lexical";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 
 import {
   type FrontmatterEntry,
@@ -43,8 +50,22 @@ import { MathPlugin } from "./plugins/math-plugin";
 import { MermaidPlugin } from "./plugins/mermaid-plugin";
 import { TableCellMenuPlugin } from "./plugins/table-cell-menu-plugin";
 import { ToolbarPlugin } from "./toolbar-plugin";
+import { useEditable } from "./use-editable";
 
 export type { EditorImages, ImageSource } from "./plugins/image-context";
+
+/** The frontmatter panel, read-only while the editor is in view only. */
+function FrontmatterPlugin(props: ComponentProps<typeof FrontmatterPanel>) {
+  const [editor] = useLexicalComposerContext();
+  const isEditable = useEditable(editor);
+
+  // A disabled fieldset disables every control inside it.
+  return (
+    <fieldset disabled={!isEditable} className="contents">
+      <FrontmatterPanel {...props} />
+    </fieldset>
+  );
+}
 
 /**
  * WYSIWYG markdown editor. Loads `markdown` once on mount (remount via `key` to
@@ -145,7 +166,7 @@ export function MarkdownEditor({
           <FindPlugin />
           <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
             <div className="relative mx-auto flex min-h-full w-full max-w-4xl flex-col px-8 pt-10">
-              <FrontmatterPanel
+              <FrontmatterPlugin
                 entries={entries}
                 onChange={handleFrontmatterChange}
               />

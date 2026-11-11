@@ -1,10 +1,10 @@
 import type { EditorImages } from "@lunarscribe/components/editor/markdown-editor";
 import { MarkdownPreview } from "@lunarscribe/components/editor/markdown-preview";
+import { isTextFile, stemOf } from "@lunarscribe/utils/file-kinds";
 import { folderOf } from "@lunarscribe/utils/saved-paths";
 import { createRoot } from "react-dom/client";
 
 import type { FileTarget } from "@/lib/editor-files";
-import { isTextFile, stemOf } from "@/lib/editor-files";
 import { createEditorImages } from "@/lib/editor-images";
 import { readExternalFile } from "@/lib/external-files";
 import { readFile } from "@/lib/saved-files";

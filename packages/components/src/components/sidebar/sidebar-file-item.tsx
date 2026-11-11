@@ -8,6 +8,7 @@ import {
   Download01Icon,
   FileDownloadIcon,
   Folder01Icon,
+  FolderOpenIcon,
   FolderTransferIcon,
   MoreHorizontalIcon,
   PencilEdit01Icon,
@@ -60,6 +61,7 @@ export function SidebarFileItem({
   onOpen,
   onRename,
   onCopyPath,
+  onReveal,
   moveTargets,
   onMove,
   onDownload,
@@ -85,6 +87,8 @@ export function SidebarFileItem({
   onOpen: () => void;
   onRename: () => void;
   onCopyPath?: () => void;
+  /** Shows the file in the OS file manager; omitted where the platform has none. */
+  onReveal?: () => void;
   /** The folders offered under Move to, leaving out the file's own folder. */
   moveTargets?: readonly FileMoveTarget[];
   onMove?: (folder: string) => void;
@@ -153,7 +157,13 @@ export function SidebarFileItem({
         {onCopyPath && (
           <ContextMenuItem onClick={onCopyPath}>
             <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
-            Copy01Icon path
+            Copy path
+          </ContextMenuItem>
+        )}
+        {onReveal && (
+          <ContextMenuItem onClick={onReveal}>
+            <HugeiconsIcon icon={FolderOpenIcon} strokeWidth={2} />
+            Reveal in file manager
           </ContextMenuItem>
         )}
         {onMove && moveTargets && moveTargets.length > 0 && (
@@ -178,7 +188,7 @@ export function SidebarFileItem({
         {onDownload && (
           <ContextMenuItem onClick={onDownload}>
             <HugeiconsIcon icon={Download01Icon} strokeWidth={2} />
-            Download01Icon
+            Download
           </ContextMenuItem>
         )}
         {canExport && (

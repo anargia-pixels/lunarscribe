@@ -1,36 +1,16 @@
+import { CLOUD_SYNC_PROVIDERS } from "@lunarscribe/utils/sync/types";
+import type { SyncStatus as SharedSyncStatus } from "@lunarscribe/utils/sync/types";
+
+/** The desktop app also syncs through a Git repository on GitHub. */
 export const SYNC_PROVIDERS = {
   github: "GitHub",
-  "google-drive": "Google Drive - WIP",
-  dropbox: "Dropbox - WIP",
+  ...CLOUD_SYNC_PROVIDERS,
 } as const;
 
 export type SyncProvider = keyof typeof SYNC_PROVIDERS;
 
-export type SyncStatus = {
-  provider: SyncProvider | null;
-  account: string | null;
-  busy: boolean;
-  lastSyncedAt: string | null;
-  error: string | null;
-  needsSignIn: boolean;
-};
+export function isSyncProvider(value: string): value is SyncProvider {
+  return Object.hasOwn(SYNC_PROVIDERS, value);
+}
 
-export type SyncedFileChange = {
-  name: string;
-  before: string | null;
-  after: string | null;
-};
-
-export type SyncResult = {
-  conflicts: SyncConflict[];
-  pushed: number;
-  pulled: number;
-};
-
-export type SyncConflict = {
-  name: string;
-  reason: string;
-};
-
-/** The last acknowledged hash distinguishes a remote edit from a local edit. */
-export type SyncBaseline = Record<string, string>;
+export type SyncStatus = SharedSyncStatus<SyncProvider>;

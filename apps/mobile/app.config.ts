@@ -1,5 +1,7 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
+import names from "../../packages/infra/names.json";
+import codeSigning from "./certs/code-signing.json";
 import publicCredentials from "./src/lib/sync/public-creds.json";
 
 /**
@@ -42,6 +44,7 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-secure-store",
     "expo-web-browser",
+    "expo-updates",
     [
       "expo-splash-screen",
       {
@@ -56,5 +59,15 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => ({
   ],
   experiments: {
     typedRoutes: true,
+  },
+  // The runtime is a fingerprint of the native code. An OTA update applies only to an
+  // APK with the same fingerprint; fingerprint.config.js keeps the app version out.
+  runtimeVersion: { policy: "fingerprint" },
+  updates: {
+    url: `https://${names.updatesDomain}/manifest`, // see apps/update-server
+    checkAutomatically: "ON_LOAD",
+    fallbackToCacheTimeout: 0, // start at once; a new update applies on the next cold start
+    codeSigningCertificate: codeSigning.certificate,
+    codeSigningMetadata: { keyid: codeSigning.keyid, alg: "rsa-v1_5-sha256" },
   },
 });

@@ -1,13 +1,13 @@
 import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
-import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
-import { Debouncer } from "@tanstack/pacer/debouncer";
-import type { StoreApi } from "zustand";
-
 import {
   BUFFER_EXTENSIONS,
   getFileExtension,
   stemOf,
-} from "@/lib/editor-files";
+} from "@lunarscribe/utils/file-kinds";
+import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+import { Debouncer } from "@tanstack/pacer/debouncer";
+import type { StoreApi } from "zustand";
+
 import type { BufferStore } from "@/stores/buffer-store";
 
 /** Owns disk-write ordering and save timers; the store retains buffer and selection state. */

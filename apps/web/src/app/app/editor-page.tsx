@@ -13,10 +13,10 @@ import {
 import { Button } from "@lunarscribe/components/ui/button";
 import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
+import { BUFFER_EXTENSIONS, isTextFile } from "@lunarscribe/utils/file-kinds";
 import { folderOf } from "@lunarscribe/utils/saved-paths";
 import { useEffect, useState } from "react";
 
-import { BUFFER_EXTENSIONS, isTextFile } from "@/lib/editor-files";
 import { useEditorImages, useSavedImageSource } from "@/lib/editor-images";
 import { MOD_KEY_LABEL } from "@/lib/platform";
 import { useAppearanceStore } from "@/stores/appearance-store";
@@ -99,7 +99,7 @@ export default function EditorPage() {
     (state) => state.hasSyncedSuccessfully,
   );
 
-  const isSyncing = useSyncStore((state) => state.busy);
+  const isSyncing = useSyncStore((state) => state.isBusy);
 
   const viewedImage = useBufferStore((state) => state.viewedImage);
   const viewedImageSource = useSavedImageSource(viewedImage);

@@ -1,3 +1,8 @@
+import {
+  getFileExtension,
+  isTextFile,
+  toFileStem,
+} from "@lunarscribe/utils/file-kinds";
 import { createOperationQueue } from "@lunarscribe/utils/operation-queue";
 
 import {
@@ -7,11 +12,6 @@ import {
   putRecord,
   withStore,
 } from "@/lib/browser-database";
-import {
-  INVALID_FILE_TITLE_CHARACTERS,
-  getFileExtension,
-  isTextFile,
-} from "@/lib/editor-files";
 import type { ExternalFile } from "@/lib/editor-files";
 
 /**
@@ -138,7 +138,7 @@ export function renameExternalFile(id: string, title: string) {
   return queueFileWrite(id, async (): Promise<ExternalFile> => {
     const record = await readExternalRecord(id);
 
-    const stem = title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_");
+    const stem = toFileStem(title);
 
     if (!stem) {
       throw new Error("Enter a name for the file.");

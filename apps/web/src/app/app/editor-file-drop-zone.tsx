@@ -1,8 +1,8 @@
+import { isTextFile } from "@lunarscribe/utils/file-kinds";
 import { isImageFileName } from "@lunarscribe/utils/images";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent, ReactNode } from "react";
 
-import { isTextFile } from "@/lib/editor-files";
 import { useBufferStore } from "@/stores/buffer-store";
 
 /** Writable handles where the browser offers them; other text files become imports. */

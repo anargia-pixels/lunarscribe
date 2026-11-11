@@ -1,8 +1,8 @@
+import type { CloudSyncProvider } from "@lunarscribe/utils/sync/types";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import appIcon from "../../../../../../assets/icons/32x32.png?inline";
-import type { OAuthProvider } from "./oauth";
 
 import styles from "./sign-in-page.css?inline";
 
@@ -35,7 +35,7 @@ const PROVIDERS = {
 
 // Page layout
 type SignInCardProps = {
-  provider: OAuthProvider;
+  provider: CloudSyncProvider;
   state: "success" | "failed";
   heading: string;
   description: ReactNode;
@@ -124,7 +124,7 @@ function createPage(title: string, body: string) {
 
 /** Shown after the provider sends the browser back to Lunarscribe. */
 export function createSignInResultPage(
-  provider: OAuthProvider,
+  provider: CloudSyncProvider,
   isSuccess: boolean,
 ) {
   const { name } = PROVIDERS[provider];

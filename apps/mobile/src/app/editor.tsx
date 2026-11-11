@@ -1,3 +1,4 @@
+import { BUFFER_EXTENSIONS } from "@lunarscribe/utils/file-kinds";
 import { Redirect, useRouter } from "expo-router";
 import { Typography, useThemeColor } from "heroui-native";
 import { ChevronLeft, PanelLeft } from "lucide-react-native";
@@ -8,8 +9,7 @@ import { DarkmodeToggle } from "@/components/darkmode-toggle";
 import { EditorSlot } from "@/components/editor-host";
 import { FileErrorAlert } from "@/components/file-error-alert";
 import { PressableButton } from "@/components/pressable-button";
-import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
-import { syncFiles } from "@/lib/sync/sync-service";
+import { syncService } from "@/lib/sync/sync-service";
 import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
 import { useEditorHostStore } from "@/stores/editor-host-store";
 import { useSyncStore } from "@/stores/sync-store";
@@ -42,7 +42,7 @@ export default function EditorScreen() {
 
             if (fileName && useSyncStore.getState().provider) {
               // A sync already running covers this file; failures show in the sync alert.
-              syncFiles(fileName).catch(() => undefined);
+              syncService.sync(fileName).catch(() => undefined);
             }
           },
           (error) => useBufferStore.setState({ fileError: String(error) }),

@@ -49,3 +49,52 @@ export type FileSyncProvider = {
     modifiedAt: number,
   ) => Promise<void>;
 };
+
+// Sync state shared with the UI
+/** Cloud providers every app can sign in to, by name in messages. */
+export const CLOUD_SYNC_PROVIDER_NAMES = {
+  "google-drive": "Google Drive",
+  dropbox: "Dropbox",
+} as const;
+
+/** The provider labels in sync settings, which mark the providers as unfinished. */
+export const CLOUD_SYNC_PROVIDERS = {
+  "google-drive": `${CLOUD_SYNC_PROVIDER_NAMES["google-drive"]} - WIP`,
+  dropbox: `${CLOUD_SYNC_PROVIDER_NAMES.dropbox} - WIP`,
+} as const;
+
+export type CloudSyncProvider = keyof typeof CLOUD_SYNC_PROVIDERS;
+
+export function isCloudSyncProvider(value: string): value is CloudSyncProvider {
+  return Object.hasOwn(CLOUD_SYNC_PROVIDERS, value);
+}
+
+/** The last acknowledged hash distinguishes a remote edit from a local edit. */
+export type SyncBaseline = Record<string, string>;
+
+export type SyncConflict = {
+  name: string;
+  reason: string;
+};
+
+export type SyncResult = {
+  conflicts: SyncConflict[];
+  pushed: number;
+  pulled: number;
+};
+
+/** A saved text file that sync changed; null means the file did not exist. */
+export type SyncedFileChange = {
+  name: string;
+  before: string | null;
+  after: string | null;
+};
+
+export type SyncStatus<Provider extends string = CloudSyncProvider> = {
+  provider: Provider | null;
+  account: string | null;
+  isBusy: boolean;
+  lastSyncedAt: string | null;
+  error: string | null;
+  isSignInRequired: boolean;
+};

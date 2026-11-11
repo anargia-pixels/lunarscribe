@@ -244,8 +244,8 @@
   }
 }
 
-/* Bullets and numbers are left aligned at the same edge as checkboxes, with the
-   text at the same indent. */
+/* Bullets and one-digit numbers sit at the same edge as checkboxes, with the text
+   at the same indent in every list. */
 @utility editor-list {
   margin-inline: 0.5rem 0;
   list-style: none;
@@ -255,28 +255,33 @@
     padding-inline-start: 1.5rem;
   }
 
+  /* The marker sits in the first line, pulled back into the padding, so it shares the
+     text's baseline even when inline math makes that line taller. */
   & > li:not([role="checkbox"], :has(> :is(ul, ol)))::before {
-    position: absolute;
-    inset-inline-start: 0;
+    display: inline-flex;
+    margin-inline-start: -1.5rem;
     color: var(--primary);
   }
 }
 
 @utility editor-list-bullet {
   & > li:not([role="checkbox"], :has(> :is(ul, ol)))::before {
+    width: 1.5rem;
     content: "•";
   }
 }
 
+/* Numbers end where a one-digit "9." ends, so longer numbers grow into the margin
+   (flex-end overflows toward the start) and the text keeps its indent, whatever
+   number the list starts at. */
 @utility editor-list-number {
   & > li:not(:has(> :is(ul, ol)))::before {
+    justify-content: flex-end;
+    width: 2ch;
+    margin-inline-end: calc(1.5rem - 2ch);
     content: counter(list-item) ".";
     font-family: var(--font-code);
-  }
-
-  /* Two-digit numbers need more room than the shared indent. */
-  &:has(> li:nth-child(10)) > li {
-    padding-inline-start: 2.25rem;
+    white-space: nowrap;
   }
 }
 

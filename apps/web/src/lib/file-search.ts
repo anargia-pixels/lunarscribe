@@ -1,6 +1,10 @@
+import {
+  type FileSearchMatch,
+  type SearchMatchRange,
+} from "@lunarscribe/utils/file-search";
+
 import type { SavedFileRecord } from "@/lib/browser-database";
-import type { FileSearchMatch, SearchMatchRange } from "@/lib/editor-files";
-import { readAllFiles, readAllSyncFiles } from "@/lib/saved-files";
+import { readAllFiles, readSyncedFiles } from "@/lib/saved-files";
 
 /** Content matches returned per search; the dialog lists at most this many. */
 const MAX_RESULTS = 10;
@@ -109,5 +113,5 @@ export async function searchFiles(query: string, isContentSearch: boolean) {
   }
 
   // Names include images, which open in the image viewer.
-  return searchFileNames(await readAllSyncFiles(), searchQuery);
+  return searchFileNames(await readSyncedFiles(null), searchQuery);
 }

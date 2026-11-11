@@ -2,6 +2,10 @@ import { execFile } from "node:child_process";
 import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 
+import {
+  describeFetchFailure,
+  errorMessage,
+} from "@lunarscribe/utils/error-message";
 import { jsonString, parseJson } from "@lunarscribe/utils/sync/json";
 import { app, ipcMain, net } from "electron";
 
@@ -73,12 +77,20 @@ async function findUpdate(): Promise<UpdateCheck> {
     return { version: null, error: CANNOT_UPDATE };
   }
 
-  const response = await net.fetch(LATEST_RELEASE_URL, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-  });
+  let response: Response;
+
+  try {
+    response = await net.fetch(LATEST_RELEASE_URL, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+  } catch (cause) {
+    throw new Error(describeFetchFailure("GitHub", LATEST_RELEASE_URL, cause), {
+      cause,
+    });
+  }
 
   if (!response.ok) {
     throw new Error(`GitHub answered ${response.status}.`);
@@ -155,7 +167,10 @@ export function registerUpdates() {
     findUpdate().catch((cause) => {
       console.error("Unable to check for updates.", cause);
 
-      return { version: null, error: "GitHub could not be reached." };
+      return {
+        version: null,
+        error: errorMessage(cause, "GitHub could not be reached."),
+      };
     }),
   );
 

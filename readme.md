@@ -77,10 +77,10 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
   into folders that expand and collapse, followed by external files, which have an arrow
   before their names. Drag a file onto a folder to move it there, or use **Move to** in
   its menu. The app keeps the sidebar visibility and open folders between app starts. File
-  actions are Rename, Copy path, Delete for saved files, and Remove for external entries.
-  **Force changes to remote** replaces a saved file's remote copy with the local copy, and
-  **Force changes from remote** replaces the local copy with the remote one. Delete
-  requires confirmation.
+  actions are Rename, Copy path, Reveal in file manager, Delete for saved files, and
+  Remove for external entries. **Force changes to remote** replaces a saved file's remote
+  copy with the local copy, and **Force changes from remote** replaces the local copy with
+  the remote one. Delete requires confirmation.
 - **Section links:** Ctrl+click (⌘+click on macOS) a `#heading` link to jump to that
   heading. Back, from a mouse button or touchpad swipe, returns to where you were reading.
 - **Search:** Find shows matching text in the active buffer. It has controls for case

@@ -24,7 +24,9 @@ import {
   SidebarMenu,
 } from "@lunarscribe/components/ui/sidebar";
 import { toast } from "@lunarscribe/components/ui/toast";
+import { isTextFile, stemOf } from "@lunarscribe/utils/file-kinds";
 import { imageMimeType, isImageFileName } from "@lunarscribe/utils/images";
+import { formatTimeAgo } from "@lunarscribe/utils/relative-time";
 import {
   allFolders,
   baseNameOf,
@@ -37,13 +39,12 @@ import { useEffect, useState } from "react";
 
 import { downloadBlob } from "@/lib/download";
 import type { FileTarget } from "@/lib/editor-files";
-import { fileKey, isTextFile } from "@/lib/editor-files";
+import { fileKey } from "@/lib/editor-files";
 import { exportDocx } from "@/lib/export-docx";
 import { exportPdf } from "@/lib/export-pdf";
 import { pickTextFiles } from "@/lib/external-files";
 import { searchFiles } from "@/lib/file-search";
 import { MOD_KEY_LABEL } from "@/lib/platform";
-import { formatTimeAgo } from "@/lib/relative-time";
 import {
   createFolder as createSavedFolder,
   listFiles,
@@ -51,7 +52,7 @@ import {
   readFile,
   readImage,
 } from "@/lib/saved-files";
-import { stemOf, useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
 import { useFileAccessStore } from "@/stores/file-access-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSyncStore } from "@/stores/sync-store";
@@ -84,7 +85,8 @@ export function AppSidebar() {
   const accessedAt = useFileAccessStore((state) => state.accessedAt);
 
   const canForceSync = useSyncStore(
-    (state) => state.provider !== null && !state.busy && !state.needsSignIn,
+    (state) =>
+      state.provider !== null && !state.isBusy && !state.isSignInRequired,
   );
 
   const openFile = useBufferStore((state) => state.openFile);

@@ -24,7 +24,9 @@ import {
   SidebarMenu,
 } from "@lunarscribe/components/ui/sidebar";
 import { toast } from "@lunarscribe/components/ui/toast";
+import { isTextFile, stemOf } from "@lunarscribe/utils/file-kinds";
 import { isImageFileName } from "@lunarscribe/utils/images";
+import { formatTimeAgo } from "@lunarscribe/utils/relative-time";
 import {
   allFolders,
   baseNameOf,
@@ -42,11 +44,10 @@ import { SyncingPane } from "@/components/settings-dialog/syncing-pane";
 import { useTheme } from "@/components/theme-provider";
 import { useUpdate } from "@/components/use-update";
 import type { FileTarget } from "@/lib/editor-files";
-import { fileKey, isTextFile } from "@/lib/editor-files";
+import { fileKey } from "@/lib/editor-files";
 import { exportDocx } from "@/lib/export-docx";
 import { exportPdf } from "@/lib/export-pdf";
-import { formatTimeAgo } from "@/lib/relative-time";
-import { stemOf, useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
+import { useActiveBuffer, useBufferStore } from "@/stores/buffer-store";
 import { useFileAccessStore } from "@/stores/file-access-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSyncStore } from "@/stores/sync-store";
@@ -74,7 +75,8 @@ export function AppSidebar() {
   const accessedAt = useFileAccessStore((state) => state.accessedAt);
 
   const canForceSync = useSyncStore(
-    (state) => state.provider !== null && !state.busy && !state.needsSignIn,
+    (state) =>
+      state.provider !== null && !state.isBusy && !state.isSignInRequired,
   );
 
   const openFile = useBufferStore((state) => state.openFile);
@@ -173,6 +175,21 @@ export function AppSidebar() {
       },
       "Unable to copy path",
       "The path could not be copied.",
+    );
+  }
+
+  function revealTarget(target: FileTarget) {
+    return runFileAction(
+      async () => {
+        const path =
+          target.kind === "external"
+            ? target.path
+            : await window.lunarscribe.getFilePath(target.name);
+
+        await window.lunarscribe.showInFolder(path);
+      },
+      "Unable to reveal file",
+      "The file manager could not be opened.",
     );
   }
 
@@ -333,6 +350,7 @@ export function AppSidebar() {
         onOpen={() => void openTarget(target)}
         onRename={() => setDialog({ kind: "rename", target })}
         onCopyPath={() => void copyPath(target)}
+        onReveal={() => void revealTarget(target)}
         moveTargets={
           target.kind === "saved"
             ? folderTargets.filter(

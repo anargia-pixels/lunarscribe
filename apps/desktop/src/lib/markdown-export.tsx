@@ -1,11 +1,11 @@
 import type { EditorImages } from "@lunarscribe/components/editor/markdown-editor";
 import { MarkdownPreview } from "@lunarscribe/components/editor/markdown-preview";
+import { isTextFile, stemOf } from "@lunarscribe/utils/file-kinds";
 import { folderOf } from "@lunarscribe/utils/saved-paths";
 import { createRoot } from "react-dom/client";
 
 import { createEditorImages } from "@/components/use-editor-images";
 import type { FileTarget } from "@/lib/editor-files";
-import { isTextFile, stemOf } from "@/lib/editor-files";
 import { useBufferStore } from "@/stores/buffer-store";
 
 type MarkdownSnapshotExporter<Result> = (

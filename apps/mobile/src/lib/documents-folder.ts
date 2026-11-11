@@ -1,4 +1,11 @@
 import {
+  type FileExtension,
+  getFileExtension,
+  stemOf,
+  toFileStem,
+} from "@lunarscribe/utils/file-kinds";
+import type { FileSearchMatch } from "@lunarscribe/utils/file-search";
+import {
   imageMimeType,
   isImageFileName,
   splitImageFileName,
@@ -15,13 +22,6 @@ import type { SavedEntries } from "@lunarscribe/utils/saved-paths";
 import { isSameSyncContent } from "@lunarscribe/utils/sync/types";
 import type { SyncContent } from "@lunarscribe/utils/sync/types";
 import { Directory, File, Paths } from "expo-file-system";
-
-import {
-  type FileExtension,
-  getFileExtension,
-  INVALID_FILE_TITLE_CHARACTERS,
-  stemOf,
-} from "@/lib/editor-files";
 
 /** Saved markdown and drawings, in `lunarscribe/` inside the app's Documents folder. */
 const folder = new Directory(Paths.document, "lunarscribe");
@@ -187,8 +187,7 @@ export function saveFile(
   return queueFileOperation(FOLDER_KEY, async () => {
     ensureFolder();
 
-    const stem =
-      title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_") || "untitled";
+    const stem = toFileStem(title) || "untitled";
 
     const name = availableName(
       previousName === null ? parent : folderOf(previousName),
@@ -231,7 +230,7 @@ export function moveFile(name: string, parent: string) {
 /** Renames a saved image to `<title><its extension>` in its folder; returns its new name. */
 export function renameImage(name: string, title: string) {
   return queueFileOperation(FOLDER_KEY, async () => {
-    const stem = title.trim().replaceAll(INVALID_FILE_TITLE_CHARACTERS, "_");
+    const stem = toFileStem(title);
 
     if (!stem || stem.startsWith(".")) {
       throw new Error("Enter a name for the image.");
@@ -323,13 +322,16 @@ async function readRecord(name: string): Promise<SavedFileRecord | null> {
   };
 }
 
-/** Every synced file, images included, read inside the queue that processes local saves. */
-export function readAllFiles() {
+/**
+ * Every synced file, images included, or only `name`, read inside the queue that
+ * processes local saves.
+ */
+export function readSyncedFiles(name: string | null) {
   return queueFileOperation(FOLDER_KEY, async () => {
     const records: SavedFileRecord[] = [];
 
-    for (const name of listFiles()) {
-      const record = await readRecord(name);
+    for (const candidate of name === null ? listFiles() : [name]) {
+      const record = await readRecord(candidate);
 
       if (record) {
         records.push(record);
@@ -374,9 +376,6 @@ export function applySyncedFile(
     return file.modificationTime ?? 0;
   });
 }
-
-/** A saved file whose name or content matches a search query. */
-export type FileSearchMatch = { name: string; lineContent?: string };
 
 /** Case-insensitive search over file names, then over each file's lines. */
 export async function searchFiles(query: string): Promise<FileSearchMatch[]> {

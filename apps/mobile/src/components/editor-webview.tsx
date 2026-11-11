@@ -1,4 +1,5 @@
 import type { ImageSource } from "@lunarscribe/components/editor/markdown-editor";
+import type { EditorKind } from "@lunarscribe/utils/file-kinds";
 import { resolveSavedImage } from "@lunarscribe/utils/images";
 import { folderOf } from "@lunarscribe/utils/saved-paths";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -8,8 +9,7 @@ import type { EditorDomProps } from "@/components/editor-dom-props";
 import MarkdownDom from "@/components/markdown-dom";
 import { useColorPalette } from "@/components/use-color-palette";
 import { listImageNames, readImageDataUrl } from "@/lib/documents-folder";
-import type { EditorKind } from "@/lib/editor-types";
-import { onSyncResult } from "@/lib/sync/sync-service";
+import { syncService } from "@/lib/sync/sync-service";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import {
   type TextBuffer,
@@ -110,7 +110,7 @@ export function EditorWebView({
 
   useEffect(
     () =>
-      onSyncResult((result) => {
+      syncService.onResult((result) => {
         if (result.pulled > 0) {
           setImageRevision((current) => current + 1);
         }

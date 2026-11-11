@@ -231,17 +231,23 @@ Required permissions: `account_info.read`, `files.metadata.read`, `files.metadat
 
 ### Code
 
-| App     | Sync code                         |
-| ------- | --------------------------------- |
-| Desktop | `apps/desktop/src/electron/sync/` |
-| Web     | `apps/web/src/lib/sync/`          |
-| Mobile  | `apps/mobile/src/lib/sync/`       |
+`packages/utils/src/sync/` holds the sync engine every app shares:
 
-Each folder has `sync-service.ts` (connections, status, schedule), `files.ts` (comparisons
-and local updates), the providers, and the OAuth code. Shared JSON checks and provider
-types are in `packages/utils/src/sync/`.
+- `service.ts`: `createSyncService` (status, one operation at a time, connect, disconnect,
+  sync, force push and force pull) and `createCloudBackend`.
+- `plan.ts`: the comparison, pulls that recheck the local file, and force push and pull.
+- `dropbox.ts` and `google-drive.ts`: the providers.
+- `oauth.ts` and `settings.ts`: token requests and stored settings.
 
-`planSync` in `files.ts` compares SHA-256 hashes of the local copy, the remote copy, and
+Each app supplies only what differs:
+
+| App     | Sync code                         | Supplies                                          |
+| ------- | --------------------------------- | ------------------------------------------------- |
+| Desktop | `apps/desktop/src/electron/sync/` | Files on disk, IPC to windows, the GitHub backend |
+| Web     | `apps/web/src/lib/sync/`          | IndexedDB files, a Web Lock and a tab channel     |
+| Mobile  | `apps/mobile/src/lib/sync/`       | The documents folder, SHA-256 from expo-crypto    |
+
+`planSync` in `plan.ts` compares SHA-256 hashes of the local copy, the remote copy, and
 the shared base. The `baseline` object in the sync settings stores one base hash per file.
 It reports a conflict when a base exists and:
 

@@ -80,7 +80,7 @@ export function SyncingPane() {
   const [isPending, setPending] = useState(false);
   const [isDisconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
 
-  const isDisabled = status.busy || isPending;
+  const isDisabled = status.isBusy || isPending;
 
   const connectMessage =
     connectStage && getConnectMessage(connectStage, selected);
@@ -193,7 +193,7 @@ export function SyncingPane() {
         <div className="flex flex-wrap gap-2">
           {status.provider ? (
             <>
-              {status.needsSignIn && (
+              {status.isSignInRequired && (
                 <Button
                   disabled={isDisabled}
                   onClick={() => {
@@ -210,7 +210,7 @@ export function SyncingPane() {
                 }}
               >
                 <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
-                {status.busy && !connectStage ? "Syncing…" : "Sync now"}
+                {status.isBusy && !connectStage ? "Syncing…" : "Sync now"}
               </Button>
               <Button
                 variant="outline"

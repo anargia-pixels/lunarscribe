@@ -1,8 +1,8 @@
+import { isTextFile } from "@lunarscribe/utils/file-kinds";
 import { isImageFileName } from "@lunarscribe/utils/images";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent, ReactNode } from "react";
 
-import { isTextFile } from "@/lib/editor-files";
 import { useBufferStore } from "@/stores/buffer-store";
 
 /** Whether a drag holds only images; names are hidden until the drop, MIME types are not. */

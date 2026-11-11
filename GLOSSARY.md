@@ -21,6 +21,25 @@ The TanStack Start app in `apps/web`, served at lunarscribe.doctorthe113.com: th
 landing and legal pages, and the browser editor at `/app`.
 _Avoid_: website, frontend
 
+**Mobile app**:
+The Expo React Native app in `apps/mobile`.
+_Avoid_: native app, phone app
+
+**OTA update**:
+A signed set of JS bundle and asset files for one runtime. The mobile app downloads it
+on launch and uses it on the next cold start.
+_Avoid_: hot update, patch, live update
+
+**Runtime**:
+The native code contract of an APK: a fingerprint of its native dependencies and
+configuration. An OTA update applies only to an APK with the same runtime.
+_Avoid_: native version, binary version
+
+**Update server**:
+The Cloudflare Worker in `apps/update-server`, at updates.lunarscribe.doctorthe113.com.
+It tells the mobile app which OTA update to use and serves its files from R2.
+_Avoid_: OTA backend, CDN
+
 ### Storage
 
 Use these exact names in code, UI copy, docs, and conversation. The
@@ -137,15 +156,21 @@ buffer title input, and the theme toggle.
 _Avoid_: titlebar, navbar, top bar
 
 **Toolbar**:
-The row of formatting controls below the header: history, inline formats, and
-block types. The Appearances pane can hide it, since the editor context menu
-holds the same actions.
+The row of formatting controls below the header: view only and history, inline
+formats, and block types. View only and history never fold or scroll away. The
+Appearances pane can hide it, since the editor context menu holds the same actions.
 _Avoid_: titlebar, header buttons, menu bar
+
+**View only**:
+The editor mode that blocks every edit to the open buffer, so a document can be read
+or scrolled on a touch screen without accidental changes. It turns on and off from
+the toolbar or the editor context menu, and resets when the buffer opens again.
+_Avoid_: read mode, read-only mode, lock, preview
 
 **Editor context menu**:
 The menu a right click on the markdown editor opens, modeled on Obsidian's: link
 actions, then Format, Paragraph, Insert, and (inside a table) Table submenus,
-then history and clipboard actions.
+then view only, history, and clipboard actions.
 _Avoid_: right-click menu, popup menu, editor menu
 
 **Mobile view**:

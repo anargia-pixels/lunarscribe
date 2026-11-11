@@ -21,11 +21,11 @@ import {
 import { Kbd, KbdGroup } from "@lunarscribe/components/ui/kbd";
 import { Toggle } from "@lunarscribe/components/ui/toggle";
 import { errorMessage } from "@lunarscribe/utils/error-message";
+import type { FileSearchMatch } from "@lunarscribe/utils/file-search";
 import { baseNameOf } from "@lunarscribe/utils/saved-paths";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { SearchHighlight } from "./search-highlight";
-import type { SearchMatchRange } from "./search-highlight";
 
 /** Most matches the dialog lists. */
 const MAX_RESULTS = 10;
@@ -101,14 +101,6 @@ function rankResults(
     .slice(0, MAX_RESULTS)
     .map(({ result }) => result);
 }
-
-/** A saved file returned by file-name or content search. */
-export type FileSearchMatch = {
-  name: string;
-  lineNumber?: number;
-  lineContent?: string;
-  lineMatchRanges?: SearchMatchRange[];
-};
 
 /** A tracked external file; the dialog matches it by name, never by content. */
 export type ExternalSearchFile = {

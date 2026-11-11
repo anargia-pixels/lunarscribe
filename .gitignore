@@ -17,6 +17,10 @@ build
 .env*
 !.env.example
 
+# OTA code-signing keys; only certificate.pem is committed
+apps/mobile/certs/private-key.pem
+apps/mobile/certs/public-key.pem
+
 # IDEs and editors
 .vscode/*
 !.vscode/settings.json
@@ -34,6 +38,7 @@ build
 
 # Cloudflare
 .wrangler
+.alchemy
 
 # Misc
 *.tgz

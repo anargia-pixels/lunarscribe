@@ -11,17 +11,18 @@ import { homedir, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
 
+import { isSyncedFileName } from "@lunarscribe/utils/file-kinds";
 import { IMAGE_EXTENSIONS } from "@lunarscribe/utils/images";
 import type { createOperationQueue } from "@lunarscribe/utils/operation-queue";
+import type { LocalSyncFiles } from "@lunarscribe/utils/sync/plan";
 import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
-
 import type {
   SyncConflict,
   SyncResult,
   SyncedFileChange,
-} from "../../../lib/sync";
-import { getFileChanges, isSyncedFileName, readLocalSyncFiles } from "../files";
-import type { LocalSyncFiles } from "../files";
+} from "@lunarscribe/utils/sync/types";
+
+import { getFileChanges, readLocalSyncFiles } from "../files";
 
 // Git commands
 type GitCommand = (...args: string[]) => Promise<string>;
@@ -241,6 +242,11 @@ async function getHead(git: GitCommand) {
   }
 }
 
+/** Names of regular saved files; links and folders stay out of commits. */
+function savedNames(local: LocalSyncFiles) {
+  return [...local].flatMap(([name, file]) => (file.blocked ? [] : [name]));
+}
+
 /** Stage supported saved files and deletions; a shortcut stages one name. */
 async function commitSavedFiles(
   git: GitCommand,
@@ -255,16 +261,15 @@ async function commitSavedFiles(
 
   const names =
     name === null
-      ? new Set([...tracked, ...local.files.keys()])
+      ? new Set([...tracked, ...savedNames(local)])
       : new Set(
           [name].filter(
-            (candidate) =>
-              local.files.has(candidate) || tracked.includes(candidate),
+            (candidate) => local.has(candidate) || tracked.includes(candidate),
           ),
         );
 
   for (const candidate of names) {
-    if (!isSyncedFileName(candidate) || local.blockedNames.has(candidate)) {
+    if (!isSyncedFileName(candidate) || local.get(candidate)?.blocked) {
       throw new Error(
         `GitHub cannot sync the path ${JSON.stringify(candidate)}. Saved writing must be a regular file inside the documents folder.`,
       );
@@ -598,7 +603,7 @@ export async function syncGithub(
 
   // Commit and merge: local saves cannot run between the snapshot and checkout.
   const prepared = await queue(folder, async () => {
-    const before = await readLocalSyncFiles(folder);
+    const before = await readLocalSyncFiles(folder, null);
     let revision = await commitSavedFiles(git, before, name);
     let pulled = 0;
 
@@ -618,7 +623,7 @@ export async function syncGithub(
         if (
           name !== null ||
           getProtectedNames().has(incomingName) ||
-          before.blockedNames.has(incomingName)
+          before.get(incomingName)?.blocked
         ) {
           conflicts.push({
             name: incomingName,
@@ -641,10 +646,7 @@ export async function syncGithub(
         } finally {
           // Refresh buffers even if a later Git operation fails.
           onApplied(
-            getFileChanges(
-              before.files,
-              (await readLocalSyncFiles(folder)).files,
-            ),
+            getFileChanges(before, await readLocalSyncFiles(folder, null)),
           );
         }
       }

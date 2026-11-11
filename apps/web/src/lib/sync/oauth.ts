@@ -1,20 +1,12 @@
 import {
-  jsonNumber,
-  jsonString,
-  parseJson,
-} from "@lunarscribe/utils/sync/json";
-import { SyncSignInRequired } from "@lunarscribe/utils/sync/types";
-
-import type { SyncProvider } from "@/lib/sync/sync-types";
+  base64Url,
+  OAUTH_ENDPOINTS,
+  requestTokens,
+} from "@lunarscribe/utils/sync/oauth";
+import type { OAuthTokens } from "@lunarscribe/utils/sync/oauth";
+import type { CloudSyncProvider } from "@lunarscribe/utils/sync/types";
 
 // Authorization contracts
-export type OAuthTokens = {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-  clientId: string;
-};
-
 /** What the Dropbox redirect page posts back to the tab that opened the popup. */
 export type OAuthCallback = {
   state: string;
@@ -29,23 +21,12 @@ const SIGN_IN_TIMEOUT_MS = 180_000;
 
 const GOOGLE_SCRIPT_URL = "https://accounts.google.com/gsi/client";
 
-const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-
-const DROPBOX_TOKEN_URL = "https://api.dropbox.com/oauth2/token";
-
 function dropboxRedirectUri() {
   return `${window.location.origin}/oauth/dropbox`;
 }
 
 function randomToken(byteLength: number) {
   return base64Url(crypto.getRandomValues(new Uint8Array(byteLength)));
-}
-
-function base64Url(bytes: Uint8Array) {
-  return btoa(String.fromCodePoint(...bytes))
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replace(/=+$/u, "");
 }
 
 /** Rejects on cancel or after the sign-in timeout, and always cleans up. */
@@ -117,7 +98,7 @@ async function signInGoogle(
   return withSignInLimits<OAuthTokens>(signal, (resolve, reject) => {
     const client = oauth2.initTokenClient({
       client_id: clientId,
-      scope: GOOGLE_DRIVE_SCOPE,
+      scope: OAUTH_ENDPOINTS["google-drive"].scope,
       callback: (response) => {
         const duration = Number(response.expires_in);
 
@@ -149,57 +130,6 @@ async function signInGoogle(
 }
 
 // Dropbox
-/** Keep token response bodies out of user-facing error messages. */
-async function requestDropboxTokens(
-  parameters: URLSearchParams,
-  signal?: AbortSignal,
-): Promise<OAuthTokens> {
-  const response = await fetch(DROPBOX_TOKEN_URL, {
-    method: "POST",
-    body: parameters,
-    signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(30_000)])
-      : AbortSignal.timeout(30_000),
-  });
-
-  if (!response.ok) {
-    if (
-      parameters.get("grant_type") === "refresh_token" &&
-      (response.status === 400 || response.status === 401)
-    ) {
-      throw new SyncSignInRequired(
-        "Dropbox needs sign-in again. Open Settings → Syncing and select Sign in again.",
-      );
-    }
-
-    throw new Error(
-      "Sign-in could not obtain an access token. Check the public client ID and reconnect.",
-    );
-  }
-
-  const tokenResponse = parseJson(await response.text());
-
-  return {
-    accessToken: jsonString(tokenResponse, "access_token"),
-    refreshToken: jsonString(tokenResponse, "refresh_token", true),
-    expiresAt: Date.now() + jsonNumber(tokenResponse, "expires_in") * 1000,
-    clientId: parameters.get("client_id") ?? "",
-  };
-}
-
-/** Keep the old refresh token when the response omits a new one. */
-export async function refreshDropboxTokens(tokens: OAuthTokens) {
-  const next = await requestDropboxTokens(
-    new URLSearchParams({
-      client_id: tokens.clientId,
-      refresh_token: tokens.refreshToken,
-      grant_type: "refresh_token",
-    }),
-  );
-
-  return { ...next, refreshToken: next.refreshToken || tokens.refreshToken };
-}
-
 /** Dropbox PKCE in a pop-up; the redirect route posts the code back over a channel. */
 async function signInDropbox(
   clientId: string,
@@ -221,7 +151,8 @@ async function signInDropbox(
     ),
   );
 
-  const authorization = new URL("https://www.dropbox.com/oauth2/authorize");
+  const endpoints = OAUTH_ENDPOINTS.dropbox;
+  const authorization = new URL(endpoints.authorizeUrl);
 
   authorization.search = new URLSearchParams({
     client_id: clientId,
@@ -230,9 +161,8 @@ async function signInDropbox(
     code_challenge: challenge,
     code_challenge_method: "S256",
     state,
-    token_access_type: "offline",
-    scope:
-      "files.metadata.read files.metadata.write files.content.read files.content.write account_info.read",
+    scope: endpoints.scope,
+    ...endpoints.offlineParameters,
   }).toString();
 
   const channel = new BroadcastChannel(OAUTH_CHANNEL);
@@ -266,7 +196,8 @@ async function signInDropbox(
     },
   );
 
-  const tokens = await requestDropboxTokens(
+  const tokens = await requestTokens(
+    "dropbox",
     new URLSearchParams({
       client_id: clientId,
       code,
@@ -289,7 +220,7 @@ async function signInDropbox(
 // Provider sign-in
 /** Open provider sign-in and return tokens without an app secret. */
 export function signIn(
-  provider: SyncProvider,
+  provider: CloudSyncProvider,
   clientId: string,
   signal: AbortSignal,
 ) {

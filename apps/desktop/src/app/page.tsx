@@ -15,6 +15,7 @@ import {
 import { Button } from "@lunarscribe/components/ui/button";
 import { SidebarTrigger } from "@lunarscribe/components/ui/sidebar";
 import { TooltipProvider } from "@lunarscribe/components/ui/tooltip";
+import { BUFFER_EXTENSIONS } from "@lunarscribe/utils/file-kinds";
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 
@@ -23,7 +24,6 @@ import {
   useEditorImages,
   useSavedImageSource,
 } from "@/components/use-editor-images";
-import { BUFFER_EXTENSIONS } from "@/lib/editor-files";
 import { useAppearanceStore } from "@/stores/appearance-store";
 import { bufferFileKey, useBufferStore } from "@/stores/buffer-store";
 import { useFileAccessStore } from "@/stores/file-access-store";
@@ -119,7 +119,7 @@ export default function Page() {
     (state) => state.hasSyncedSuccessfully,
   );
 
-  const isSyncing = useSyncStore((state) => state.busy);
+  const isSyncing = useSyncStore((state) => state.isBusy);
 
   const viewedImage = useBufferStore((state) => state.viewedImage);
   const viewedImageSource = useSavedImageSource(viewedImage);

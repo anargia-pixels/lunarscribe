@@ -90,7 +90,7 @@ jobs:
     needs: check
     if: endsWith(inputs.tag || github.ref_name, '+mobile')
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 75
     permissions:
       contents: write
     env:
@@ -123,6 +123,11 @@ jobs:
           echo "RUNTIME=$runtime" >> "$GITHUB_ENV"
       - run: bunx expo prebuild --platform android --no-install
         working-directory: apps/mobile
+      # Kotlin and R8 outgrow the generated daemon limits on the CI runner.
+      - name: Raise Gradle memory
+        working-directory: apps/mobile
+        run: |
+          printf '\norg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8\norg.gradle.workers.max=2\n' >> android/gradle.properties
       # Build only arm64, which skips the native builds for the other three ABIs.
       # R8 and resource shrinking remove unused code. Compressed native libraries
       # take the APK from 43 MB to 28 MB. The JS bundle stays uncompressed, so

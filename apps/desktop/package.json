@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "0.13.42",
+  "version": "0.13.43",
   "description": "Lunarscribe Markdown writing app",
   "desktopName": "lunarscribe.desktop",
   "private": true,

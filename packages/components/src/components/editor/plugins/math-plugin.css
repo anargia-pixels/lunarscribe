@@ -29,6 +29,13 @@
   transform: none;
 }
 
+/* View only: the equation reads as text, not as a button. */
+.editor-math [data-math-preview][data-disabled] {
+  background: none;
+  cursor: auto;
+  user-select: text;
+}
+
 .editor-math-block [data-math-preview],
 .editor-math-block [data-math-render] {
   display: block;

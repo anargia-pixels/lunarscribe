@@ -34,20 +34,71 @@ type MathPreviewProps = {
   inline: boolean;
 };
 
-function MathPreview({ equation, inline }: MathPreviewProps) {
+const nearViewportCallbacks = new Map<Element, () => void>();
+
+let nearViewportObserver: IntersectionObserver | undefined;
+
+/** Calls `onNear` once `element` is within a screen of the visible area. */
+function observeNearViewport(element: Element, onNear: () => void) {
+  nearViewportObserver ??= new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          nearViewportCallbacks.get(entry.target)?.();
+        }
+      }
+    },
+    // The editor scrolls inside its own container, which `scrollMargin` reaches.
+    { rootMargin: "100% 0px", scrollMargin: "100% 0px" },
+  );
+
+  nearViewportCallbacks.set(element, onNear);
+  nearViewportObserver.observe(element);
+
+  return () => {
+    nearViewportCallbacks.delete(element);
+    nearViewportObserver?.unobserve(element);
+  };
+}
+
+/**
+ * Renders the equation with KaTeX. A `lazy` preview waits until it scrolls
+ * near the viewport, so opening a buffer renders only the visible equations.
+ * Until then it carries `data-math-pending`, which export checks for.
+ */
+function MathPreview({
+  equation,
+  inline,
+  lazy = false,
+}: MathPreviewProps & { lazy?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null);
+  const [isPending, setIsPending] = useState(lazy);
 
   useEffect(() => {
-    if (ref.current) {
-      katex.render(equation, ref.current, {
-        displayMode: !inline,
-        throwOnError: false,
-        trust: false,
-      });
-    }
-  }, [equation, inline]);
+    const element = ref.current;
 
-  return <span data-math-render ref={ref} />;
+    if (!element) {
+      return;
+    }
+
+    if (isPending) {
+      return observeNearViewport(element, () => setIsPending(false));
+    }
+
+    katex.render(equation, element, {
+      displayMode: !inline,
+      throwOnError: false,
+      trust: false,
+    });
+  }, [equation, inline, isPending]);
+
+  return (
+    <span
+      data-math-render
+      data-math-pending={isPending ? "" : undefined}
+      ref={ref}
+    />
+  );
 }
 
 export function MathComponent({
@@ -66,6 +117,15 @@ export function MathComponent({
       return $isNodeSelection(selection) && selection.has(nodeKey);
     }),
   );
+
+  // Only the equations a buffer opens with wait for the viewport; one the user
+  // has edited renders at once, so finishing an edit does not blink. The export
+  // preview is never editable and renders everything.
+  const [isLazy, setIsLazy] = useState(editable);
+
+  if (isLazy && editing) {
+    setIsLazy(false);
+  }
 
   useEffect(
     () =>
@@ -263,18 +323,23 @@ export function MathComponent({
     );
   }
 
-  if (!editable) {
-    return <MathPreview equation={equation} inline={inline} />;
-  }
-
+  // View only disables the same element instead of swapping it for another,
+  // so toggling it does not remount and re-render every equation.
   return (
     <Button
       variant="ghost"
+      render={<span />}
+      nativeButton={false}
+      disabled={!editable}
       data-math-preview
-      aria-label={`Edit ${inline ? "inline" : "block"} math: ${equation}`}
+      aria-label={
+        editable
+          ? `Edit ${inline ? "inline" : "block"} math: ${equation}`
+          : undefined
+      }
       onClick={() => setEditing(true)}
     >
-      <MathPreview equation={equation} inline={inline} />
+      <MathPreview equation={equation} inline={inline} lazy={isLazy} />
     </Button>
   );
 }

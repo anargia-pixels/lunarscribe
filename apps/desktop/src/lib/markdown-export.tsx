@@ -105,10 +105,13 @@ export async function withMarkdownSnapshot<Result>(
       ? document.querySelector<HTMLElement>("[data-markdown-editor]")
       : null;
 
-  // Exclude block editing controls and wait for asynchronous diagram rendering.
+  // Exclude block editing controls, and wait for asynchronous diagram rendering
+  // and equations that have not scrolled into view yet.
   if (
     activeRoot &&
-    !activeRoot.querySelector("[data-math-source], [data-mermaid-render]")
+    !activeRoot.querySelector(
+      "[data-math-source], [data-math-pending], [data-mermaid-render]",
+    )
   ) {
     return exportSnapshot(activeRoot, title);
   }

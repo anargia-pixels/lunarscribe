@@ -17,6 +17,7 @@ import {
 import {
   $createLineBreakNode,
   $createParagraphNode,
+  $createTextNode,
   $isElementNode,
   type ElementFormatType,
   type ElementNode,
@@ -103,8 +104,19 @@ function $exportCell(
   return markdown.replace(/\|/g, "\\|").replace(/\n/g, "<br>");
 }
 
+/** Characters that can start inline markdown, an escape, or an encoded `<br>`. */
+const INLINE_SYNTAX = /[\\`*_~=^$[<]/;
+
 function $createCellParagraph(markdown: string, alignment: ElementFormatType) {
   const paragraph = $createParagraphNode().setFormat(alignment);
+
+  // Each parse rebuilds the importer, so plain cells skip it: opening a buffer
+  // with large tables otherwise spends most of its import time here.
+  if (!INLINE_SYNTAX.test(markdown)) {
+    return markdown === ""
+      ? paragraph
+      : paragraph.append($createTextNode(markdown));
+  }
 
   for (const node of $generateNodesFromMarkdownString(
     markdown,

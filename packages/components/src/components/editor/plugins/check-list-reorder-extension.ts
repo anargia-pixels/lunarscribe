@@ -1,21 +1,19 @@
 import { $isListItemNode, $isListNode, ListItemNode } from "@lexical/list";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $addUpdateTag,
   $getNodeByKey,
   $hasUpdateTag,
+  defineExtension,
   HISTORIC_TAG,
   HISTORY_PUSH_TAG,
   mergeRegister,
   type NodeKey,
 } from "lexical";
-import { useEffect } from "react";
 
 /** Moves completed items within their own list, in the same undo step as the toggle. */
-export function CheckListReorderPlugin() {
-  const [editor] = useLexicalComposerContext();
-
-  useEffect(() => {
+export const CheckListReorderExtension = defineExtension({
+  name: "lunarscribe/check-list-reorder",
+  register: (editor) => {
     const positions = new Map<HTMLElement, DOMRect>();
     const animations = new Map<HTMLElement, Animation>();
     const handled = new Set<NodeKey>();
@@ -197,7 +195,5 @@ export function CheckListReorderPlugin() {
         positions.clear();
       },
     );
-  }, [editor]);
-
-  return null;
-}
+  },
+});

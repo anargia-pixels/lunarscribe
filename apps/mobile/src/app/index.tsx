@@ -21,7 +21,7 @@ import {
 import { Plus, Settings } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
-import Animated from "react-native-reanimated";
+import Animated, { LayoutAnimationConfig } from "react-native-reanimated";
 
 import { DarkmodeToggle } from "@/components/darkmode-toggle";
 import { DeleteFileDialog } from "@/components/delete-file-dialog";
@@ -278,19 +278,22 @@ export default function FilesScreen() {
       <SyncAlert />
       <ScrollView contentContainerClassName="gap-2 px-4 pb-8">
         {rows.length > 0 ? (
-          <ListGroup>
-            {rows.map((row, index) => (
-              <Animated.View
-                key={`${row.node.kind}:${row.node.path}`}
-                entering={rowEntering}
-                layout={rowLayout}
-                className={INDENTS[Math.min(row.depth, INDENTS.length - 1)]}
-              >
-                {index > 0 && <Separator className="mx-4" />}
-                {renderRow(row)}
-              </Animated.View>
-            ))}
-          </ListGroup>
+          // Rows already there when the list appears do not animate in.
+          <LayoutAnimationConfig skipEntering>
+            <ListGroup>
+              {rows.map((row, index) => (
+                <Animated.View
+                  key={`${row.node.kind}:${row.node.path}`}
+                  entering={rowEntering}
+                  layout={rowLayout}
+                  className={INDENTS[Math.min(row.depth, INDENTS.length - 1)]}
+                >
+                  {index > 0 && <Separator className="mx-4" />}
+                  {renderRow(row)}
+                </Animated.View>
+              ))}
+            </ListGroup>
+          </LayoutAnimationConfig>
         ) : (
           <Typography
             type="body-sm"

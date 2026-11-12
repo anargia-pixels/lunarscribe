@@ -1,15 +1,11 @@
 import { $convertToMarkdownString } from "@lexical/markdown";
-import { CheckListPlugin } from "@lexical/react/LexicalCheckListPlugin";
-import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import { LexicalExtensionComposer } from "@lexical/react/LexicalExtensionComposer";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
 import { ScrollArea } from "@lunarscribe/components/ui/scroll-area";
 import type { EditorState } from "lexical";
 import {
@@ -26,10 +22,8 @@ import {
   stringifyFrontmatter,
 } from "./frontmatter";
 import { FrontmatterPanel } from "./frontmatter-panel";
-import { createMarkdownConfig } from "./markdown-config";
+import { createMarkdownExtension } from "./markdown-config";
 import { CaretPlugin } from "./plugins/caret-plugin";
-import { CheckListReorderPlugin } from "./plugins/check-list-reorder-plugin";
-import { CodeHighlightPlugin } from "./plugins/code-highlight-plugin";
 import { EditorContextMenuPlugin } from "./plugins/editor-context-menu-plugin";
 import { FindPlugin } from "./plugins/find-plugin";
 import { HeadingCollapsePlugin } from "./plugins/heading-collapse-plugin";
@@ -96,7 +90,7 @@ export function MarkdownEditor({
   onScrollTopSave?: (scrollTop: number) => void;
   images?: EditorImages;
 }) {
-  const initialConfig = createMarkdownConfig(markdown);
+  const [extension] = useState(() => createMarkdownExtension(markdown));
   const [parsed] = useState(() => parseFrontmatter(markdown));
   const [entries, setEntries] = useState(parsed.entries);
   // The panel edits frontmatter while Lexical owns the body, so the body keeps
@@ -159,7 +153,7 @@ export function MarkdownEditor({
     });
 
   return (
-    <LexicalComposer initialConfig={initialConfig}>
+    <LexicalExtensionComposer extension={extension} contentEditable={null}>
       <EditorImagesContext.Provider value={images ?? null}>
         {showToolbar && <ToolbarPlugin />}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
@@ -197,23 +191,13 @@ export function MarkdownEditor({
           </ScrollArea>
         </div>
         <HistoryPlugin />
-        <ListPlugin />
-        <CheckListPlugin disableTakeFocusOnClick />
-        <CheckListReorderPlugin />
-        <TablePlugin
-          hasCellMerge={false}
-          hasCellBackgroundColor={false}
-          hasHorizontalScroll
-        />
-        <CodeHighlightPlugin />
         <MathPlugin />
         <MermaidPlugin />
         <ImagePlugin />
-        <LinkPlugin />
         <MarkdownShortcutPlugin />
         <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
         {onOutlineChange && <HeadingOutlinePlugin onChange={onOutlineChange} />}
       </EditorImagesContext.Provider>
-    </LexicalComposer>
+    </LexicalExtensionComposer>
   );
 }

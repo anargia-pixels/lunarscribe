@@ -6,17 +6,13 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { $convertToMarkdownString } from "@lexical/markdown";
-import { CheckListPlugin } from "@lexical/react/LexicalCheckListPlugin";
-import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import { LexicalExtensionComposer } from "@lexical/react/LexicalExtensionComposer";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
 import { OutlineMenu } from "@lunarscribe/components/sidebar/outline-sidebar";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Separator } from "@lunarscribe/components/ui/separator";
@@ -36,9 +32,7 @@ import {
 } from "lexical";
 import { type MouseEvent, useEffect, useState } from "react";
 
-import { createMarkdownConfig } from "./markdown-config";
-import { CheckListReorderPlugin } from "./plugins/check-list-reorder-plugin";
-import { CodeHighlightPlugin } from "./plugins/code-highlight-plugin";
+import { createMarkdownExtension } from "./markdown-config";
 import { EditorContextMenuPlugin } from "./plugins/editor-context-menu-plugin";
 import {
   HeadingOutlinePlugin,
@@ -300,7 +294,7 @@ export function MarkdownMobileEditor({
   onOutlineOpenChange: (open: boolean) => void;
   images?: EditorImages;
 }) {
-  const initialConfig = createMarkdownConfig(markdown);
+  const [extension] = useState(() => createMarkdownExtension(markdown));
 
   const handleChange = (editorState: EditorState) =>
     editorState.read(() =>
@@ -310,7 +304,7 @@ export function MarkdownMobileEditor({
     );
 
   return (
-    <LexicalComposer initialConfig={initialConfig}>
+    <LexicalExtensionComposer extension={extension} contentEditable={null}>
       <EditorImagesContext.Provider value={images ?? null}>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
           <div className="relative mx-auto flex min-h-full w-full max-w-3xl flex-col px-5 pt-5">
@@ -338,18 +332,8 @@ export function MarkdownMobileEditor({
         <MobileToolbarPlugin />
         <ScrollCaretIntoViewPlugin />
         <HistoryPlugin />
-        <ListPlugin />
-        <CheckListPlugin disableTakeFocusOnClick />
-        <CheckListReorderPlugin />
-        <TablePlugin
-          hasCellMerge={false}
-          hasCellBackgroundColor={false}
-          hasHorizontalScroll
-        />
-        <CodeHighlightPlugin />
         <MathPlugin />
         <MermaidPlugin />
-        <LinkPlugin />
         <MarkdownShortcutPlugin />
         <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
         <OutlineSheetPlugin
@@ -357,6 +341,6 @@ export function MarkdownMobileEditor({
           onOpenChange={onOutlineOpenChange}
         />
       </EditorImagesContext.Provider>
-    </LexicalComposer>
+    </LexicalExtensionComposer>
   );
 }

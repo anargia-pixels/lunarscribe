@@ -8,7 +8,9 @@ import type {
   CloudSyncProvider,
   SyncStatus,
 } from "@lunarscribe/utils/sync/types";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
+import * as Updates from "expo-updates";
 import {
   Alert,
   Button,
@@ -41,6 +43,33 @@ function getConnectionDetails(status: SyncStatus) {
   return [status.account && redactEmail(status.account), lastSync]
     .filter(Boolean)
     .join(" · ");
+}
+
+/**
+ * The running version and whether it is an OTA update or the code built into the
+ * APK. An OTA update reports its own version. Shows why the last update check or
+ * download failed, if it did.
+ */
+function AppVersion() {
+  const { checkError, downloadError } = Updates.useUpdates();
+  const updateError = downloadError ?? checkError;
+
+  const source = Updates.isEmbeddedLaunch
+    ? "no OTA update"
+    : `OTA update ${Updates.updateId?.slice(0, 8)}`;
+
+  return (
+    <View className="gap-1 px-1">
+      <Typography type="body-sm" color="muted" align="center">
+        Version {Constants.expoConfig?.version} ({source})
+      </Typography>
+      {updateError && (
+        <Typography type="body-sm" color="muted" align="center">
+          Last update failed: {updateError.message}
+        </Typography>
+      )}
+    </View>
+  );
 }
 
 /** A small heading above a group of settings, with an optional action at its end. */
@@ -303,6 +332,7 @@ export default function SettingsScreen() {
             every five minutes.
           </Typography>
         </View>
+        <AppVersion />
       </ScrollView>
     </View>
   );

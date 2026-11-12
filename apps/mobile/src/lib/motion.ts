@@ -25,21 +25,23 @@ function spring(dampingRatio: number, stiffness: number) {
 export const springs = {
   fastSpatial: spring(0.6, 800),
   standardFastSpatial: spring(0.9, 1400),
-  standardDefaultSpatial: spring(0.9, 700),
   defaultEffects: spring(1, 1600),
+  /** Standard default spatial stiffness, critically damped so it never overshoots. */
+  calmSpatial: spring(1, 700),
 } as const;
 
 /**
- * New file list rows fade in; the rest glide when rows come and go. Both stay
- * calm, since searching and opening folders change many rows at once.
+ * New file list rows fade in; the rest glide when rows come and go, without
+ * overshooting. Collapsing a folder moves every row below it a long way, where
+ * even a slight overshoot reads as a bounce.
  */
 export const rowEntering = FadeIn.springify()
   .damping(springs.defaultEffects.damping)
   .stiffness(springs.defaultEffects.stiffness);
 
 export const rowLayout = LinearTransition.springify()
-  .damping(springs.standardDefaultSpatial.damping)
-  .stiffness(springs.standardDefaultSpatial.stiffness);
+  .damping(springs.calmSpatial.damping)
+  .stiffness(springs.calmSpatial.stiffness);
 
 /**
  * Press feel for a tappable surface: it shrinks by `squish` while pressed and

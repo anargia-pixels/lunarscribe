@@ -82,7 +82,7 @@ import {
 } from "./link-form";
 import { INSERT_MATH_COMMAND } from "./plugins/math-plugin";
 import { INSERT_MERMAID_COMMAND } from "./plugins/mermaid-plugin";
-import { useEditable } from "./use-editable";
+import { useEditable, useViewOnly } from "./use-editable";
 
 type ToolbarAction = {
   label: string;
@@ -417,6 +417,24 @@ function ToolbarSeparator() {
   );
 }
 
+/** Its own component, so switching re-renders only the toggle before the paint. */
+function ViewOnlyToggle() {
+  const [editor] = useLexicalComposerContext();
+  const [isViewOnly, setViewOnly] = useViewOnly(editor);
+
+  return (
+    <Toggle
+      variant="fluid"
+      size="icon-sm"
+      aria-label="View only"
+      pressed={isViewOnly}
+      onPressedChange={setViewOnly}
+    >
+      <HugeiconsIcon icon={ViewIcon} strokeWidth={2} />
+    </Toggle>
+  );
+}
+
 /**
  * Formatting toolbar: view only and history, then inline marks, and block types with
  * insertions. View only and history stay outside the scrolling row, so they are always
@@ -435,15 +453,7 @@ export function ToolbarPlugin() {
         <div className="relative flex shrink-0 items-center gap-1 py-1.5 pl-3">
           <FluidHighlight rows="button" className="bg-muted rounded-lg" />
           <Hint label="View only">
-            <Toggle
-              variant="fluid"
-              size="icon-sm"
-              aria-label="View only"
-              pressed={!isEditable}
-              onPressedChange={(pressed) => editor.setEditable(!pressed)}
-            >
-              <HugeiconsIcon icon={ViewIcon} strokeWidth={2} />
-            </Toggle>
+            <ViewOnlyToggle />
           </Hint>
           <Hint label="Undo" shortcut={[modifier, "Z"]}>
             <Button

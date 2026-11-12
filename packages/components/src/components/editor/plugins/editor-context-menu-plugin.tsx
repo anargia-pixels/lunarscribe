@@ -53,7 +53,7 @@ import {
   TEXT_FORMATS,
   useToolbarState,
 } from "../toolbar-plugin";
-import { useEditable } from "../use-editable";
+import { useEditable, useViewOnly } from "../use-editable";
 import { OPEN_LINK_FORM_COMMAND } from "./link-editor-plugin";
 import {
   applyAction,
@@ -101,6 +101,7 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
   const [editor] = useLexicalComposerContext();
   const { activeFormats, canUndo, canRedo } = useToolbarState(editor);
   const isEditable = useEditable(editor);
+  const [isViewOnly, setViewOnly] = useViewOnly(editor);
   const [cellKey, setCellKey] = useState<NodeKey | null>(null);
 
   const [selection, setSelection] = useState<SelectionState>({
@@ -286,8 +287,8 @@ export function EditorContextMenuPlugin({ children }: { children: ReactNode }) {
         )}
         <ContextMenuSeparator />
         <ContextMenuCheckboxItem
-          checked={!isEditable}
-          onCheckedChange={(checked) => editor.setEditable(!checked)}
+          checked={isViewOnly}
+          onCheckedChange={setViewOnly}
         >
           <HugeiconsIcon icon={ViewIcon} strokeWidth={2} />
           View only

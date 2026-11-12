@@ -54,7 +54,7 @@ import {
   TextFormatMenu,
   useToolbarState,
 } from "./toolbar-plugin";
-import { useEditable } from "./use-editable";
+import { useEditable, useViewOnly } from "./use-editable";
 
 /** Keeps the editor focused, and the keyboard open, when a toolbar button is tapped. */
 function keepEditorFocus(event: MouseEvent) {
@@ -67,6 +67,23 @@ function ToolbarSeparator() {
       orientation="vertical"
       className="mx-1 h-6 data-vertical:self-center"
     />
+  );
+}
+
+/** Its own component, so switching re-renders only the toggle before the paint. */
+function ViewOnlyToggle() {
+  const [editor] = useLexicalComposerContext();
+  const [isViewOnly, setViewOnly] = useViewOnly(editor);
+
+  return (
+    <Toggle
+      size="lg"
+      aria-label="View only"
+      pressed={isViewOnly}
+      onPressedChange={setViewOnly}
+    >
+      <HugeiconsIcon icon={ViewIcon} strokeWidth={2} />
+    </Toggle>
   );
 }
 
@@ -98,14 +115,7 @@ function MobileToolbarPlugin() {
     <div className="bg-background flex shrink-0 items-center border-t">
       <div className="flex shrink-0 items-center gap-0.5 py-1.5 pl-2">
         {/* Turning view only on drops focus, which closes the keyboard. */}
-        <Toggle
-          size="lg"
-          aria-label="View only"
-          pressed={!isEditable}
-          onPressedChange={(pressed) => editor.setEditable(!pressed)}
-        >
-          <HugeiconsIcon icon={ViewIcon} strokeWidth={2} />
-        </Toggle>
+        <ViewOnlyToggle />
         <Button
           variant="ghost"
           size="icon-lg"

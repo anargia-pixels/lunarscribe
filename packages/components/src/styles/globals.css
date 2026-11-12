@@ -347,6 +347,14 @@
   }
 }
 
+/* An editable root also turns on these wrap rules, and view only turns them off.
+   Pinned, text wraps the same in both modes, so toggling view only restyles the
+   buffer without laying its text out again. */
+[data-markdown-editor] {
+  overflow-wrap: break-word;
+  -webkit-line-break: after-white-space;
+}
+
 /* Off-screen blocks skip layout and paint, so opening a long buffer or resizing
    the editor costs only what the viewport shows. `auto` keeps each block's last
    rendered height for the scrollbar. Lexical's block cursor is a zero-height
@@ -423,17 +431,18 @@
 /* Dark mode toggle: the incoming theme is revealed as a circle growing from the toggle, so the
    swap reads as one surface rolling over the old one instead of a cross-fade. The reveal
    origin arrives as --theme-reveal-x/--theme-reveal-y on <html>, defaulting to the centre. */
-::view-transition-old(root),
-::view-transition-new(root) {
+/* `:root` lets every other element skip these rules during a style recalculation. */
+:root::view-transition-old(root),
+:root::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
 
-::view-transition-old(root) {
+:root::view-transition-old(root) {
   z-index: 0;
 }
 
-::view-transition-new(root) {
+:root::view-transition-new(root) {
   z-index: 1;
   animation: theme-reveal 0.4s ease-in-out forwards;
 }

@@ -6,7 +6,11 @@ import {
   withSpring,
 } from "react-native-reanimated";
 
-/** Converts a Material spring (damping ratio, stiffness, unit mass) to Reanimated's physics config. */
+/**
+ * Converts a Material spring (damping ratio, stiffness, unit mass) to Reanimated's
+ * physics config. Pass the mass along too: Reanimated 4 assumes a mass of 4, which
+ * would halve the damping ratio.
+ */
 function spring(dampingRatio: number, stiffness: number) {
   return {
     damping: 2 * dampingRatio * Math.sqrt(stiffness),
@@ -37,11 +41,13 @@ export const springs = {
  */
 export const rowEntering = FadeIn.springify()
   .damping(springs.defaultEffects.damping)
-  .stiffness(springs.defaultEffects.stiffness);
+  .stiffness(springs.defaultEffects.stiffness)
+  .mass(springs.defaultEffects.mass);
 
 export const rowLayout = LinearTransition.springify()
   .damping(springs.calmSpatial.damping)
-  .stiffness(springs.calmSpatial.stiffness);
+  .stiffness(springs.calmSpatial.stiffness)
+  .mass(springs.calmSpatial.mass);
 
 /**
  * Press feel for a tappable surface: it shrinks by `squish` while pressed and

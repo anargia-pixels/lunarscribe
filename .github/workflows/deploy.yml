@@ -1,17 +1,13 @@
 # Deploys the Alchemy stack in packages/infra (the web app and the OTA update server)
-# on every push to main. Alchemy reads Cloudflare credentials from the environment
-# when CI is set.
+# on every push to main, and for a +web release tag through the Release workflow.
+# Alchemy reads Cloudflare credentials from the environment when CI is set.
 name: Deploy
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
-# One deploy at a time; a newer push waits instead of cancelling a running one.
-concurrency:
-  group: deploy-production
-  cancel-in-progress: false
+  workflow_call:
 
 permissions:
   contents: read
@@ -20,6 +16,11 @@ jobs:
   deploy:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    # One deploy at a time; a newer one waits instead of cancelling a running one. The
+    # group sits on the job so it also holds when the Release workflow calls this one.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2

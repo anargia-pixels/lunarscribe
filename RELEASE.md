@@ -17,8 +17,8 @@ git fetch origin --tags
 git tag --list 'v*' --sort=-version:refname
 ```
 
-A tag with the `+mobile` or `+mobile-ota` suffix, such as `v0.13.17+mobile`, uses the same
-version as `v0.13.17`. Read the version from the tag without the suffix.
+A tag with the `+mobile`, `+mobile-ota` or `+web` suffix, such as `v0.13.17+mobile`, uses
+the same version as `v0.13.17`. Read the version from the tag without the suffix.
 
 Use `0.13.x` numbering, starting with `0.13.17`. For each subsequent release, keep `0.13`
 and increase `x` by one: `0.13.17` → `0.13.18` → `0.13.19`. Choose the next unused patch
@@ -43,6 +43,7 @@ The tag selects the packages that the workflow builds:
 | `v0.13.17`            | Desktop: Linux x86_64 and macOS Apple Silicon                |
 | `v0.13.17+mobile`     | Desktop, and the Android APK `lunarscribe-android-arm64.apk` |
 | `v0.13.17+mobile-ota` | Desktop, and an OTA update of the mobile app's JS and assets |
+| `v0.13.17+web`        | Only the web app, deployed to Cloudflare; no GitHub release  |
 
 Use a mobile tag only when the user requests a mobile release. An OTA update reaches every
 installed APK with the same runtime on its next two cold starts, with no download from
@@ -50,7 +51,14 @@ GitHub. Prefer `+mobile-ota` for mobile changes. Use `+mobile` when the native c
 changed since the last `+mobile` release: a native dependency, a config plugin, or a
 native field in `apps/mobile/app.config.ts`. The `ota` job fails with "No APK release has
 runtime" when an APK is needed. Push one tag for each version. Each tag creates its own
-GitHub release.
+GitHub release, except a `+web` tag.
+
+Use `+web` when the user requests a release of web changes only, such as the landing page.
+Every push to `main` already deploys the web app; a `+web` tag deploys it again after the
+checks, and builds no desktop or mobile package. It uses the current desktop version
+without a bump. If that `+web` tag already exists, select the next version as usual and
+set it in step 2. A `+web` tag creates no GitHub release, so the installer's latest
+release stays a desktop one.
 
 This step is complete when the selected version, the release type, and the reason for the
 increase are clear. The examples below use `0.13.17`. Replace it with the selected
@@ -110,7 +118,7 @@ user changes. If the app changes are already committed, the version commit can u
 
 ```sh
 release_version=0.13.17
-release_tag="v$release_version" # Or "v$release_version+mobile" or "+mobile-ota"
+release_tag="v$release_version" # Or "v$release_version+mobile", "+mobile-ota" or "+web"
 git add apps/desktop/package.json apps/mobile/package.json apps/mobile/app.config.ts bun.lock
 git commit -m "Release $release_tag"
 git push origin HEAD
@@ -122,9 +130,9 @@ Stage any requested documentation changes explicitly before the commit. If anoth
 has changes in the package or lockfile, stage only the release version hunks in those
 files and leave its changes uncommitted. Review the complete staged diff before
 committing. Create the tag on the commit that contains the complete release. The tag must
-be `v` followed by the exact desktop package version, with an optional `+mobile` or
-`+mobile-ota` suffix. For a mobile tag, the mobile package version must also match. The
-workflow rejects a mismatch.
+be `v` followed by the exact desktop package version, with an optional `+mobile`,
+`+mobile-ota` or `+web` suffix. For a mobile tag, the mobile package version must also
+match. The workflow rejects a mismatch.
 
 This step is complete when the release commit and its tag are on GitHub and the Release
 workflow has started.
@@ -169,6 +177,9 @@ command in the [README](readme.md).
 
 If one build fails, the release keeps the assets of the builds that passed. Rerun the
 failed job with `gh run rerun RUN_ID --failed`; it adds its asset to the same release.
+
+For a `+web` tag, confirm that the check job and the `web` job pass; the build, Android
+and `ota` jobs are skipped, and there is no release, assets or notes to verify.
 
 This step is complete when the run passes, all expected assets are published, and the
 release notes match the prepared draft. Report the version, release URL, and workflow

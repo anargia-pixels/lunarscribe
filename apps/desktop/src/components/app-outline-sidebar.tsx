@@ -29,6 +29,7 @@ export function AppOutlineSidebar() {
       width={width}
       onWidthChange={setWidth}
       headings={outline?.headings ?? []}
+      activeKey={outline?.activeKey ?? null}
       onSelect={(key) => outline?.goToHeading(key)}
     />
   );

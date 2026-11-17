@@ -1,154 +1,36 @@
-import { RotateLeft01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, RotateLeft01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  COLOR_THEME_LABELS,
+  ColorThemeSelect,
+} from "@lunarscribe/components/settings-dialog/color-theme-select";
+import { EditorSpacingSelect } from "@lunarscribe/components/settings-dialog/editor-spacing-select";
 import { HighlightColorPicker } from "@lunarscribe/components/settings-dialog/highlight-color-picker";
-import { SettingsPane } from "@lunarscribe/components/settings-dialog/settings-pane";
+import { ImportColorThemeDialog } from "@lunarscribe/components/settings-dialog/import-color-theme-dialog";
+import { ImportedColorThemeList } from "@lunarscribe/components/settings-dialog/imported-color-theme-list";
 import {
-  COLOR_THEMES,
-  findColorTheme,
-  type ColorPalette,
-} from "@lunarscribe/components/themes/color-themes";
+  SettingsBlock,
+  SettingsGroup,
+  SettingsPane,
+  SettingsRow,
+} from "@lunarscribe/components/settings-dialog/settings-pane";
+import type { ImportedColorTheme } from "@lunarscribe/components/themes/imported-color-themes";
 import { Button } from "@lunarscribe/components/ui/button";
-import { Label } from "@lunarscribe/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@lunarscribe/components/ui/select";
 import { Switch } from "@lunarscribe/components/ui/switch";
-import type { CSSProperties } from "react";
+import { useState } from "react";
 
-import { type Theme, useAppearanceStore } from "@/stores/appearance-store";
+import { useAppearanceStore } from "@/stores/appearance-store";
 
 import { FontSettings } from "./font-settings";
 
-/** Stands for the colors written in globals.css rather than a color theme. */
-const DEFAULT_COLOR_THEME = "default";
-
-const LABELS = {
-  light: "Light theme",
-  dark: "Dark theme",
-} as const;
-
-const COLOR_THEME_ITEMS = {
-  [DEFAULT_COLOR_THEME]: "Default",
-  ...Object.fromEntries(
-    COLOR_THEMES.map((colorTheme) => [colorTheme.id, colorTheme.label]),
-  ),
-};
-
-/** The five colors a color theme shows beside its name. */
-const SWATCH_TOKENS = [
-  "background",
-  "foreground",
-  "accent",
-  "primary",
-  "popover",
-] as const;
-
-type SwatchStyle = CSSProperties & { "--swatch": string };
-
-/** Picks the color theme for one theme; every color theme in the dropdown with its five colors. */
-function ColorThemeSelect({
-  theme,
-  colorTheme,
-  onColorThemeChange,
-}: {
-  theme: Theme;
-  colorTheme: string | null;
-  onColorThemeChange: (colorTheme: string | null) => void;
-}) {
-  const selected = findColorTheme(colorTheme);
-  const value = selected === undefined ? DEFAULT_COLOR_THEME : selected.id;
-
-  return (
-    <div className="flex items-center justify-between gap-6">
-      <span className="text-sm">{LABELS[theme]}</span>
-      <Select
-        items={COLOR_THEME_ITEMS}
-        value={value}
-        onValueChange={(next) =>
-          onColorThemeChange(next === DEFAULT_COLOR_THEME ? null : next)
-        }
-      >
-        <SelectTrigger
-          className="w-64 justify-between"
-          aria-label={LABELS[theme]}
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
-          <SelectItem value={DEFAULT_COLOR_THEME}>Default</SelectItem>
-          {COLOR_THEMES.map((colorTheme) => (
-            <SelectItem key={colorTheme.id} value={colorTheme.id}>
-              <ColorThemeSwatches palette={colorTheme[theme]} />
-              <span>{colorTheme.label}</span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
-/** The five colors of a color theme, each painted through a custom property so the value stays dynamic. */
-function ColorThemeSwatches({ palette }: { palette: ColorPalette }) {
-  return SWATCH_TOKENS.map((token) => {
-    const style: SwatchStyle = { "--swatch": palette[token] };
-
-    return (
-      <span
-        key={token}
-        className="ring-foreground/15 size-3.5 shrink-0 rounded-xs bg-(--swatch) ring-1"
-        style={style}
-      />
-    );
-  });
-}
-
-/** Picks the color `==text==` highlights are painted with. */
-function HighlightColorSetting() {
-  const highlightColor = useAppearanceStore((state) => state.highlightColor);
-
-  const setHighlightColor = useAppearanceStore(
-    (state) => state.setHighlightColor,
-  );
-
-  return (
-    <HighlightColorPicker
-      value={highlightColor}
-      onValueChange={setHighlightColor}
-    />
-  );
-}
-
-/** Hides the toolbar; the editor context menu keeps every action. */
-function EditorToolbarSwitch() {
-  const showEditorToolbar = useAppearanceStore(
-    (state) => state.showEditorToolbar,
-  );
-
-  const setShowEditorToolbar = useAppearanceStore(
-    (state) => state.setShowEditorToolbar,
-  );
-
-  return (
-    <div className="flex items-center justify-between gap-6">
-      <Label htmlFor="show-editor-toolbar">Show toolbar</Label>
-      <Switch
-        id="show-editor-toolbar"
-        checked={showEditorToolbar}
-        onCheckedChange={setShowEditorToolbar}
-      />
-    </div>
-  );
-}
-
-/** Appearances pane: color themes, separate UI, buffer, and code fonts, then misc settings. */
-export function AppearancePane() {
+/** Light and dark color themes, importing more, and the imported ones. */
+function ColorThemeSettings() {
   const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
   const darkColorTheme = useAppearanceStore((state) => state.darkColorTheme);
+
+  const importedColorThemes = useAppearanceStore(
+    (state) => state.importedColorThemes,
+  );
 
   const setLightColorTheme = useAppearanceStore(
     (state) => state.setLightColorTheme,
@@ -158,51 +40,181 @@ export function AppearancePane() {
     (state) => state.setDarkColorTheme,
   );
 
+  const addImportedColorThemes = useAppearanceStore(
+    (state) => state.addImportedColorThemes,
+  );
+
+  const removeImportedColorTheme = useAppearanceStore(
+    (state) => state.removeImportedColorTheme,
+  );
+
   const resetColorThemes = useAppearanceStore(
     (state) => state.resetColorThemes,
   );
 
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  // A single imported color theme is applied right away to every theme it has colors for.
+  const handleImport = (themes: ImportedColorTheme[]) => {
+    addImportedColorThemes(themes);
+
+    const [imported] = themes;
+
+    if (themes.length !== 1 || imported === undefined) {
+      return;
+    }
+
+    if (imported.light) {
+      setLightColorTheme(imported.id);
+    }
+
+    if (imported.dark) {
+      setDarkColorTheme(imported.id);
+    }
+  };
+
   return (
-    <SettingsPane>
-      <header className="flex flex-col gap-1">
-        <h2 className="text-base font-medium">Appearances</h2>
-        <p className="text-muted-foreground text-sm">
-          A color theme restyles every color in the app. Each theme picks its
-          own.
-        </p>
-      </header>
-      <div className="flex flex-col gap-4">
+    <SettingsGroup
+      title="Color theme"
+      description="A color theme restyles every color in the app. Light and dark each pick their own."
+      action={
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={lightColorTheme === null && darkColorTheme === null}
+          onClick={resetColorThemes}
+        >
+          <HugeiconsIcon icon={RotateLeft01Icon} strokeWidth={2} />
+          Reset
+        </Button>
+      }
+    >
+      <SettingsRow title={COLOR_THEME_LABELS.light}>
         <ColorThemeSelect
           theme="light"
           colorTheme={lightColorTheme}
+          importedColorThemes={importedColorThemes}
           onColorThemeChange={setLightColorTheme}
         />
+      </SettingsRow>
+      <SettingsRow title={COLOR_THEME_LABELS.dark}>
         <ColorThemeSelect
           theme="dark"
           colorTheme={darkColorTheme}
+          importedColorThemes={importedColorThemes}
           onColorThemeChange={setDarkColorTheme}
         />
-      </div>
-      <Button
-        variant="outline"
-        className="self-start"
-        disabled={lightColorTheme === null && darkColorTheme === null}
-        onClick={resetColorThemes}
+      </SettingsRow>
+      <SettingsRow
+        title="Imported color themes"
+        description="Add T3 skins and VS Code themes from their galleries or from a file."
       >
-        <HugeiconsIcon icon={RotateLeft01Icon} strokeWidth={2} />
-        Reset to defaults
-      </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsImportOpen(true)}
+        >
+          <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+          Import
+        </Button>
+      </SettingsRow>
+      {importedColorThemes.length > 0 && (
+        <SettingsBlock>
+          <ImportedColorThemeList
+            themes={importedColorThemes}
+            onRemove={removeImportedColorTheme}
+          />
+        </SettingsBlock>
+      )}
+      <ImportColorThemeDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        importedIds={new Set(importedColorThemes.map(({ id }) => id))}
+        onImport={handleImport}
+      />
+    </SettingsGroup>
+  );
+}
+
+/** Line spacing, spell check, the highlighter color, and the toolbar. */
+function EditorSettings() {
+  const bufferSpacing = useAppearanceStore((state) => state.bufferSpacing);
+
+  const setBufferSpacing = useAppearanceStore(
+    (state) => state.setBufferSpacing,
+  );
+
+  const spellCheck = useAppearanceStore((state) => state.spellCheck);
+  const setSpellCheck = useAppearanceStore((state) => state.setSpellCheck);
+  const highlightColor = useAppearanceStore((state) => state.highlightColor);
+
+  const setHighlightColor = useAppearanceStore(
+    (state) => state.setHighlightColor,
+  );
+
+  const showEditorToolbar = useAppearanceStore(
+    (state) => state.showEditorToolbar,
+  );
+
+  const setShowEditorToolbar = useAppearanceStore(
+    (state) => state.setShowEditorToolbar,
+  );
+
+  return (
+    <SettingsGroup title="Editor">
+      <SettingsRow
+        title="Spacing"
+        description="How much room the text you write gets between lines."
+        htmlFor="editor-spacing"
+      >
+        <EditorSpacingSelect
+          id="editor-spacing"
+          spacing={bufferSpacing}
+          onSpacingChange={setBufferSpacing}
+        />
+      </SettingsRow>
+      <SettingsRow
+        title="Spell check"
+        description="Underline misspelled words with a squiggly line."
+        htmlFor="spell-check"
+      >
+        <Switch
+          id="spell-check"
+          checked={spellCheck}
+          onCheckedChange={setSpellCheck}
+        />
+      </SettingsRow>
+      <SettingsRow
+        title="Highlighter"
+        description="The color ==text== highlights are painted with."
+      >
+        <HighlightColorPicker
+          value={highlightColor}
+          onValueChange={setHighlightColor}
+        />
+      </SettingsRow>
+      <SettingsRow
+        title="Show toolbar"
+        description="Formatting buttons above the editor. The right-click menu keeps every action."
+        htmlFor="show-editor-toolbar"
+      >
+        <Switch
+          id="show-editor-toolbar"
+          checked={showEditorToolbar}
+          onCheckedChange={setShowEditorToolbar}
+        />
+      </SettingsRow>
+    </SettingsGroup>
+  );
+}
+
+/** Appearance section: color themes, fonts and editor options. */
+export function AppearancePane() {
+  return (
+    <SettingsPane>
+      <ColorThemeSettings />
       <FontSettings />
-      <div className="flex flex-col gap-4">
-        <header className="flex flex-col gap-1">
-          <h3 className="text-base font-medium">Misc</h3>
-          <p className="text-muted-foreground text-sm text-pretty">
-            The highlighter color and the editor toolbar.
-          </p>
-        </header>
-        <HighlightColorSetting />
-        <EditorToolbarSwitch />
-      </div>
+      <EditorSettings />
     </SettingsPane>
   );
 }

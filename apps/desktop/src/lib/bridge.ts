@@ -53,6 +53,8 @@ export type LunarscribeApi = {
   installUpdate: () => Promise<{ error: string | null }>;
   /** Restarts into the installed update. */
   restartApp: () => void;
+  /** Reloads the window, which the window's navigation guard keeps the page from doing itself. */
+  reloadApp: () => void;
   readExternalFile: (path: string) => Promise<OpenedExternalFile>;
   saveExternalFile: (path: string, markdown: string) => Promise<void>;
   renameExternalFile: (

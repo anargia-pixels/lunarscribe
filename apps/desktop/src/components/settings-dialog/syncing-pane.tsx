@@ -2,14 +2,18 @@ import { RefreshIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ConfirmationDialog } from "@lunarscribe/components/confirmation-dialog/confirmation-dialog";
 import { reportFileError } from "@lunarscribe/components/lib/file-feedback";
-import { SettingsPane } from "@lunarscribe/components/settings-dialog/settings-pane";
+import {
+  SettingsBlock,
+  SettingsGroup,
+  SettingsPane,
+  SettingsRow,
+} from "@lunarscribe/components/settings-dialog/settings-pane";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@lunarscribe/components/ui/alert";
 import { Button } from "@lunarscribe/components/ui/button";
-import { Label } from "@lunarscribe/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -17,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@lunarscribe/components/ui/select";
-import { Separator } from "@lunarscribe/components/ui/separator";
 import { Spinner } from "@lunarscribe/components/ui/spinner";
 import { toast } from "@lunarscribe/components/ui/toast";
 import { redactEmail } from "@lunarscribe/utils/redact-email";
@@ -65,6 +68,24 @@ function getConnectMessage(stage: ConnectStage, provider: SyncProvider) {
     description:
       "Finish signing in on the page that opened in your browser, then come back here.",
   };
+}
+
+/** When the last sync ran, and the error that stopped the last one. */
+function SyncStatusLine({ status }: { status: SyncStatus }) {
+  if (!status.lastSyncedAt && !status.error) {
+    return null;
+  }
+
+  return (
+    <span aria-live="polite" className="flex flex-col gap-0.5">
+      {status.lastSyncedAt && (
+        <span>Last sync: {new Date(status.lastSyncedAt).toLocaleString()}</span>
+      )}
+      {status.error && (
+        <span className="text-destructive select-text">{status.error}</span>
+      )}
+    </span>
+  );
 }
 
 export function SyncingPane() {
@@ -153,16 +174,19 @@ export function SyncingPane() {
 
   return (
     <SettingsPane>
-      <header className="flex flex-col gap-1">
-        <h2 className="text-base font-medium">Syncing</h2>
-        <p className="text-muted-foreground text-sm text-pretty">
-          Back up your saved notes and drawings and keep them the same on all
-          your devices. Lunarscribe syncs every five minutes while it is open.
-        </p>
-      </header>
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-6">
-          <Label htmlFor="sync-provider">Provider</Label>
+      <SettingsGroup
+        title="Sync"
+        description="Back up your saved notes and drawings and keep them the same on all your devices. Lunarscribe syncs every five minutes while it is open."
+      >
+        <SettingsRow
+          title="Provider"
+          htmlFor="sync-provider"
+          description={
+            selected === "github"
+              ? "You need Git 2.38 or newer and the GitHub app for the terminal (gh), signed in with gh auth login. Lunarscribe saves your files in a private repository called lunarscribe-bak-files and creates it if needed. Disconnecting keeps your files."
+              : `You will sign in to ${SYNC_PROVIDERS[selected]} in your browser. Lunarscribe saves your files in a folder called lunarscribe-bak-files. Your sign-in stays on this computer.`
+          }
+        >
           <Select<SyncProvider>
             items={SYNC_PROVIDERS}
             value={selected}
@@ -173,7 +197,7 @@ export function SyncingPane() {
               }
             }}
           >
-            <SelectTrigger id="sync-provider" className="w-64 justify-between">
+            <SelectTrigger id="sync-provider" className="w-56 justify-between">
               <SelectValue />
             </SelectTrigger>
             <SelectContent alignItemWithTrigger={false}>
@@ -184,17 +208,16 @@ export function SyncingPane() {
               <SelectItem value="dropbox">{SYNC_PROVIDERS.dropbox}</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        <p className="text-muted-foreground text-sm text-pretty">
-          {selected === "github"
-            ? "You need Git 2.38 or newer and the GitHub app for the terminal (gh), signed in with gh auth login. Lunarscribe saves your files in a private repository called lunarscribe-bak-files and creates it if needed. Disconnecting keeps your files."
-            : `You will sign in to ${SYNC_PROVIDERS[selected]} in your browser. Lunarscribe saves your files in a folder called lunarscribe-bak-files. Your sign-in stays on this computer.`}
-        </p>
-        <div className="flex flex-wrap gap-2">
+        </SettingsRow>
+        <SettingsRow
+          title={<span aria-live="polite">{getConnectionLabel(status)}</span>}
+          description={<SyncStatusLine status={status} />}
+        >
           {status.provider ? (
             <>
               {status.isSignInRequired && (
                 <Button
+                  size="sm"
                   disabled={isDisabled}
                   onClick={() => {
                     void connect();
@@ -204,16 +227,8 @@ export function SyncingPane() {
                 </Button>
               )}
               <Button
-                disabled={isDisabled}
-                onClick={() => {
-                  void sync();
-                }}
-              >
-                <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
-                {status.isBusy && !connectStage ? "Syncing…" : "Sync now"}
-              </Button>
-              <Button
                 variant="outline"
+                size="sm"
                 disabled={isDisabled}
                 onClick={() => {
                   // Google revokes access on every device, so ask first.
@@ -226,73 +241,84 @@ export function SyncingPane() {
               >
                 Disconnect
               </Button>
+              <Button
+                size="sm"
+                disabled={isDisabled}
+                onClick={() => {
+                  void sync();
+                }}
+              >
+                <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
+                {status.isBusy && !connectStage ? "Syncing…" : "Sync now"}
+              </Button>
             </>
           ) : (
-            <Button
-              disabled={isDisabled}
-              onClick={() => {
-                void connect();
-              }}
-            >
-              {connectStage
-                ? "Connecting…"
-                : `Connect ${SYNC_PROVIDERS[selected]}`}
-            </Button>
+            <>
+              {connectStage === "signing-in" && selected !== "github" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.lunarscribe.cancelSyncSignIn()}
+                >
+                  Cancel sign-in
+                </Button>
+              )}
+              <Button
+                size="sm"
+                disabled={isDisabled}
+                onClick={() => {
+                  void connect();
+                }}
+              >
+                {connectStage
+                  ? "Connecting…"
+                  : `Connect ${SYNC_PROVIDERS[selected]}`}
+              </Button>
+            </>
           )}
-          {connectStage === "signing-in" && selected !== "github" && (
-            <Button
-              variant="outline"
-              onClick={() => window.lunarscribe.cancelSyncSignIn()}
-            >
-              Cancel sign-in
-            </Button>
-          )}
-        </div>
-        <ConfirmationDialog
-          open={isDisconnectConfirmOpen}
-          onOpenChange={setDisconnectConfirmOpen}
-          title="Disconnect Google Drive?"
-          description="Google removes Lunarscribe's access on every device signed in to this Google account. Each one has to sign in again to keep syncing. Your files stay on your devices and in Google Drive."
-          confirmLabel="Disconnect everywhere"
-          onConfirm={() => {
-            setDisconnectConfirmOpen(false);
-            void disconnect();
-          }}
-        />
+        </SettingsRow>
         {connectMessage && (
-          <Alert>
-            <Spinner aria-hidden="true" />
-            <AlertTitle>{connectMessage.title}</AlertTitle>
-            <AlertDescription>{connectMessage.description}</AlertDescription>
-          </Alert>
+          <SettingsBlock>
+            <Alert>
+              <Spinner aria-hidden="true" />
+              <AlertTitle>{connectMessage.title}</AlertTitle>
+              <AlertDescription>{connectMessage.description}</AlertDescription>
+            </Alert>
+          </SettingsBlock>
         )}
-        <div aria-live="polite" className="flex flex-col gap-1 text-sm">
-          <p>{getConnectionLabel(status)}</p>
-          {status.lastSyncedAt && (
-            <p className="text-muted-foreground">
-              Last sync: {new Date(status.lastSyncedAt).toLocaleString()}
+      </SettingsGroup>
+      <SettingsGroup title="How syncing works">
+        <SettingsBlock>
+          <p className="text-muted-foreground text-sm text-pretty">
+            Press{" "}
+            {window.lunarscribe.platform === "darwin" ? "Cmd+S" : "Ctrl+S"} to
+            save the open file and sync it right away. Files opened from outside
+            Lunarscribe are not synced.
+          </p>
+          <p className="text-muted-foreground text-sm text-pretty">
+            {selected === "github"
+              ? "If a note changed on two devices, Lunarscribe combines the changes when it can. When it can't, it keeps both copies and lets you know."
+              : "If a note changed on two devices, Lunarscribe keeps both copies and lets you know. On the first sync, the most recently edited copy is kept."}
+          </p>
+          {selected === "google-drive" && (
+            <p className="text-muted-foreground text-sm text-pretty">
+              Google Drive renews your sign-in automatically. Disconnecting
+              signs out every device that uses this Google account.
             </p>
           )}
-          {status.error && (
-            <p className="text-destructive select-text">{status.error}</p>
-          )}
-        </div>
-        <Separator />
-        <p className="text-muted-foreground text-sm text-pretty">
-          Press {window.lunarscribe.platform === "darwin" ? "Cmd+S" : "Ctrl+S"}{" "}
-          to save the open file and sync it right away. Files opened from
-          outside Lunarscribe are not synced.{" "}
-          {selected === "github"
-            ? "If a note changed on two devices, Lunarscribe combines the changes when it can. When it can't, it keeps both copies and lets you know."
-            : "If a note changed on two devices, Lunarscribe keeps both copies and lets you know. On the first sync, the most recently edited copy is kept."}
-        </p>
-        {selected === "google-drive" && (
-          <p className="text-muted-foreground text-sm text-pretty">
-            Google Drive renews your sign-in automatically. Disconnecting signs
-            out every device that uses this Google account.
-          </p>
-        )}
-      </div>
+        </SettingsBlock>
+      </SettingsGroup>
+      <ConfirmationDialog
+        open={isDisconnectConfirmOpen}
+        onOpenChange={setDisconnectConfirmOpen}
+        title="Disconnect Google Drive?"
+        description="Google removes Lunarscribe's access on every device signed in to this Google account. Each one has to sign in again to keep syncing. Your files stay on your devices and in Google Drive."
+        confirmLabel="Disconnect everywhere"
+        onConfirm={() => {
+          setDisconnectConfirmOpen(false);
+          void disconnect();
+        }}
+      />
     </SettingsPane>
   );
 }

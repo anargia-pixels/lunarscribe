@@ -51,7 +51,7 @@ export const COLOR_TOKENS = [
   "sidebar-ring",
 ] as const;
 
-type ColorToken = (typeof COLOR_TOKENS)[number];
+export type ColorToken = (typeof COLOR_TOKENS)[number];
 
 // Types
 

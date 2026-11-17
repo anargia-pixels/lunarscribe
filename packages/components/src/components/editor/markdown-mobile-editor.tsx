@@ -265,11 +265,13 @@ function OutlineSheetPlugin({
           {/* The outline menu is a sidebar menu, which reads a sidebar provider. */}
           <SidebarProvider
             keyboardShortcut={null}
+            data-nested-sidebar
             className="min-h-0 flex-1 overflow-y-auto"
           >
             <div className="w-full px-2">
               <OutlineMenu
                 headings={outline?.headings ?? []}
+                activeKey={outline?.activeKey ?? null}
                 onSelect={(key) => {
                   onOpenChange(false);
                   outline?.goToHeading(key);

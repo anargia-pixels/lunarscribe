@@ -4,10 +4,11 @@ import {
   PaintBoardIcon,
   RefreshIcon,
 } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
@@ -17,9 +18,75 @@ import {
 
 export type SettingsSection = "appearances" | "syncing" | "storage" | "about";
 
+type SectionLink = {
+  section: SettingsSection;
+  label: string;
+  icon: IconSvgElement;
+};
+
+/** Each section's name, used in the settings sidebar and the settings window's breadcrumb. */
+export const SETTINGS_SECTION_LABELS: Record<SettingsSection, string> = {
+  appearances: "Appearance",
+  syncing: "Syncing",
+  storage: "Storage",
+  about: "About",
+};
+
+const GROUPS: { label: string; links: SectionLink[] }[] = [
+  {
+    label: "Personalize",
+    links: [
+      {
+        section: "appearances",
+        label: SETTINGS_SECTION_LABELS.appearances,
+        icon: PaintBoardIcon,
+      },
+    ],
+  },
+  {
+    label: "Data",
+    links: [
+      {
+        section: "syncing",
+        label: SETTINGS_SECTION_LABELS.syncing,
+        icon: RefreshIcon,
+      },
+      {
+        section: "storage",
+        label: SETTINGS_SECTION_LABELS.storage,
+        icon: Database01Icon,
+      },
+    ],
+  },
+];
+
+function SectionButton({
+  link,
+  isActive,
+  onSectionChange,
+}: {
+  link: SectionLink;
+  isActive: boolean;
+  onSectionChange: (section: SettingsSection) => void;
+}) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        isActive={isActive}
+        aria-current={isActive ? "page" : undefined}
+        onClick={() => onSectionChange(link.section)}
+      >
+        <HugeiconsIcon icon={link.icon} strokeWidth={2} />
+        <span>{link.label}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
 /**
- * Settings navigation listing the sections of the settings window; it never collapses.
- * About is listed only when `hasAbout` is set.
+ * Settings navigation listing the sections of the settings window in labelled
+ * groups, with About at the bottom; it never collapses. About is listed only
+ * when `hasAbout` is set.
  */
 export function SettingsSidebar({
   section,
@@ -33,50 +100,37 @@ export function SettingsSidebar({
   return (
     <Sidebar collapsible="none">
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>General</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={section === "appearances"}
-                onClick={() => onSectionChange("appearances")}
-              >
-                <HugeiconsIcon icon={PaintBoardIcon} strokeWidth={2} />
-                <span>Appearances</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={section === "syncing"}
-                onClick={() => onSectionChange("syncing")}
-              >
-                <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
-                <span>Syncing</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={section === "storage"}
-                onClick={() => onSectionChange("storage")}
-              >
-                <HugeiconsIcon icon={Database01Icon} strokeWidth={2} />
-                <span>Storage</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            {hasAbout && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={section === "about"}
-                  onClick={() => onSectionChange("about")}
-                >
-                  <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} />
-                  <span>About</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
+        {GROUPS.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarMenu>
+              {group.links.map((link) => (
+                <SectionButton
+                  key={link.section}
+                  link={link}
+                  isActive={section === link.section}
+                  onSectionChange={onSectionChange}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
+      {hasAbout && (
+        <SidebarFooter>
+          <SidebarMenu>
+            <SectionButton
+              link={{
+                section: "about",
+                label: SETTINGS_SECTION_LABELS.about,
+                icon: InformationCircleIcon,
+              }}
+              isActive={section === "about"}
+              onSectionChange={onSectionChange}
+            />
+          </SidebarMenu>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }

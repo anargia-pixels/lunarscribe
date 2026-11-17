@@ -20,6 +20,7 @@ import { configExtension, defineExtension } from "lexical";
 
 import { editorTheme } from "./editor-theme";
 import { parseFrontmatter } from "./frontmatter";
+import { AlertQuoteNode } from "./plugins/alert-quote-node";
 import { CheckListReorderExtension } from "./plugins/check-list-reorder-extension";
 import { CodeHighlightExtension } from "./plugins/code-highlight-plugin";
 import { ImageNode } from "./plugins/image-node";
@@ -30,6 +31,7 @@ import { MermaidNode } from "./plugins/mermaid-node";
 const MARKDOWN_NODES = [
   HeadingNode,
   QuoteNode,
+  AlertQuoteNode,
   ListNode,
   ListItemNode,
   CodeNode,

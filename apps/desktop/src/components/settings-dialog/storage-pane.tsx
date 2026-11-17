@@ -40,6 +40,7 @@ export function StoragePane() {
     <SharedStoragePane
       stores={PERSISTED_STORES}
       keptNote="Saved files in your Documents folder and sync sign-ins are not affected."
+      reload={window.lunarscribe.reloadApp}
     />
   );
 }

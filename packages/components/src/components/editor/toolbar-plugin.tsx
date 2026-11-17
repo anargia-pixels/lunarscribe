@@ -1,4 +1,5 @@
 import {
+  Alert02Icon,
   ArrowDown01Icon,
   CheckListIcon,
   CodeIcon,
@@ -7,9 +8,11 @@ import {
   Heading01Icon,
   Heading02Icon,
   Heading03Icon,
+  InformationCircleIcon,
   LeftToRightListBulletIcon,
   LeftToRightListNumberIcon,
   Link01Icon,
+  OctagonAlertIcon,
   ParagraphIcon,
   PlusSignIcon,
   QuoteDownIcon,
@@ -80,6 +83,7 @@ import {
   type LinkDraft,
   LinkForm,
 } from "./link-form";
+import { $createAlertQuoteNode } from "./plugins/alert-quote-node";
 import { INSERT_MATH_COMMAND } from "./plugins/math-plugin";
 import { INSERT_MERMAID_COMMAND } from "./plugins/mermaid-plugin";
 import { useEditable, useViewOnly } from "./use-editable";
@@ -140,6 +144,21 @@ export const BLOCK_TYPES: ToolbarAction[] = [
     label: "Quote",
     icon: QuoteDownIcon,
     apply: (editor) => setBlock(editor, $createQuoteNode),
+  },
+  {
+    label: "Note quote",
+    icon: InformationCircleIcon,
+    apply: (editor) => setBlock(editor, () => $createAlertQuoteNode("note")),
+  },
+  {
+    label: "Warning quote",
+    icon: Alert02Icon,
+    apply: (editor) => setBlock(editor, () => $createAlertQuoteNode("warning")),
+  },
+  {
+    label: "Caution quote",
+    icon: OctagonAlertIcon,
+    apply: (editor) => setBlock(editor, () => $createAlertQuoteNode("caution")),
   },
   {
     label: "Bulleted list",
@@ -448,7 +467,7 @@ export function ToolbarPlugin() {
   const isEditable = useEditable(editor);
 
   return (
-    <div className="@container min-w-0 shrink-0 border-b">
+    <div className="@container min-w-0 shrink-0">
       <div className="flex justify-center">
         <div className="relative flex shrink-0 items-center gap-1 py-1.5 pl-3">
           <FluidHighlight rows="button" className="bg-muted rounded-lg" />

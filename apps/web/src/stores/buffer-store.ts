@@ -102,12 +102,62 @@ export type BufferStore = {
 /** Markdown shown by the welcome buffer on first launch. */
 const WELCOME_MARKDOWN = `# Welcome to Lunarscribe
 
-Type markdown shortcuts and they turn into rich text:
+Write in markdown and it turns into rich text as you type. Everything on this page is editable, so try it out.
+
+## Writing
 
 - \`# \` through \`###### \` for headings
-- \`- \` or \`1. \` for lists
-- \`> \` for quotes
-- \`**bold**\`, \`*italic*\` and \`~~strike~~\` for inline marks
+- \`- \` or \`1. \` for lists, and \`- [ ] \` for a checklist
+- \`> \` for quotes, and \`[!NOTE] \`, \`[!WARNING] \` or \`[!CAUTION] \` at the start of a quote for an alert
+- \`**bold**\`, \`*italic*\`, \`__underline__\`, \`~~strike~~\` and \`==highlight==\` for inline marks
+- \`x^2^\` and \`H~2~O\` for superscript and subscript
+
+You can **bold**, *italicize*, __underline__, ~~strike~~ and ==highlight== text, write x^2^ and H~2~O, or add \`inline code\`.
+
+> A quote keeps the words you want to remember.
+> It can run over several lines.
+
+> [!NOTE]
+> A note points out something worth knowing.
+
+> [!WARNING]
+> A warning flags something that needs care.
+
+> [!CAUTION]
+> A caution marks an action that is destructive or cannot be undone.
+
+## Lists
+
+1. Write a draft
+2. Edit it
+3. Share it
+
+- [x] Open Lunarscribe
+- [ ] Write something
+
+## Math
+
+Wrap math in \`$\` to keep it in a sentence, like $E = mc^2$, or in \`$$\` to give it its own line:
+
+$$
+\\int_0^\\infty e^{-x^2}\\,dx = \\frac{\\sqrt{\\pi}}{2}
+$$
+
+## Tables
+
+| Shortcut | Result |
+| :-- | :-- |
+| \`**text**\` | **bold** |
+| \`*text*\` | *italic* |
+| \`==text==\` | ==highlight== |
+
+## Code
+
+\`\`\`ts
+function greet(name: string) {
+  return "Hello, " + name + "!";
+}
+\`\`\`
 `;
 
 /** Returns a copy of `buffers` with the buffer that has `id` patched. */

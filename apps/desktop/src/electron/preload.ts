@@ -74,6 +74,7 @@ const api: LunarscribeApi = {
   installUpdate: (): Promise<{ error: string | null }> =>
     ipcRenderer.invoke("updates:install"),
   restartApp: () => ipcRenderer.send("updates:restart"),
+  reloadApp: () => ipcRenderer.send("app:reload"),
   readExternalFile: (path: string): Promise<OpenedExternalFile> =>
     ipcRenderer.invoke("external-files:read", path),
   saveExternalFile: (path: string, markdown: string): Promise<void> =>

@@ -1,4 +1,8 @@
 import {
+  SettingsGroup,
+  SettingsRow,
+} from "@lunarscribe/components/settings-dialog/settings-pane";
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -29,42 +33,39 @@ function FontSelect({
   );
 
   return (
-    <div className="flex items-center justify-between gap-6">
-      <span className="text-sm">{label}</span>
-      <Select<string>
-        items={items}
-        value={font}
-        onValueChange={(next) => {
-          if (next !== null) {
-            onFontChange(next);
-          }
-        }}
-      >
-        <SelectTrigger className="w-64 justify-between" aria-label={label}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
-          <SelectGroup>
-            <SelectLabel>Default</SelectLabel>
-            {DEFAULT_FONTS.map((family) => (
+    <Select<string>
+      items={items}
+      value={font}
+      onValueChange={(next) => {
+        if (next !== null) {
+          onFontChange(next);
+        }
+      }}
+    >
+      <SelectTrigger className="w-56 justify-between" aria-label={label}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent alignItemWithTrigger={false}>
+        <SelectGroup>
+          <SelectLabel>Default</SelectLabel>
+          {DEFAULT_FONTS.map((family) => (
+            <SelectItem key={family} value={family}>
+              {family}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+        {GOOGLE_FONT_GROUPS.map((group) => (
+          <SelectGroup key={group.label}>
+            <SelectLabel>{group.label}</SelectLabel>
+            {group.families.map((family) => (
               <SelectItem key={family} value={family}>
                 {family}
               </SelectItem>
             ))}
           </SelectGroup>
-          {GOOGLE_FONT_GROUPS.map((group) => (
-            <SelectGroup key={group.label}>
-              <SelectLabel>{group.label}</SelectLabel>
-              {group.families.map((family) => (
-                <SelectItem key={family} value={family}>
-                  {family}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -78,25 +79,27 @@ export function FontSettings() {
   const setCodeFont = useAppearanceStore((state) => state.setCodeFont);
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-col gap-1">
-        <h3 className="text-base font-medium">Fonts</h3>
-        <p className="text-muted-foreground text-sm text-pretty">
-          Choose fonts for the interface, buffer writing, and code. Default
-          fonts work offline; the others load from Google Fonts.
-        </p>
-      </header>
-      <FontSelect label="UI font" font={uiFont} onFontChange={setUiFont} />
-      <FontSelect
-        label="Buffer font"
-        font={bufferFont}
-        onFontChange={setBufferFont}
-      />
-      <FontSelect
-        label="Code font"
-        font={codeFont}
-        onFontChange={setCodeFont}
-      />
-    </div>
+    <SettingsGroup
+      title="Fonts"
+      description="Default fonts work offline; the others load from Google Fonts."
+    >
+      <SettingsRow title="UI font" description="Menus, sidebars and dialogs.">
+        <FontSelect label="UI font" font={uiFont} onFontChange={setUiFont} />
+      </SettingsRow>
+      <SettingsRow title="Buffer font" description="The text you write.">
+        <FontSelect
+          label="Buffer font"
+          font={bufferFont}
+          onFontChange={setBufferFont}
+        />
+      </SettingsRow>
+      <SettingsRow title="Code font" description="Code blocks and inline code.">
+        <FontSelect
+          label="Code font"
+          font={codeFont}
+          onFontChange={setCodeFont}
+        />
+      </SettingsRow>
+    </SettingsGroup>
   );
 }

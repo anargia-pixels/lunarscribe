@@ -1,9 +1,14 @@
 import {
+  applyThemeBackgroundImage,
+  applyThemeCss,
+} from "@lunarscribe/components/lib/theme-css";
+import {
   COLOR_TOKENS,
-  findColorTheme,
   type ColorPalette,
 } from "@lunarscribe/components/themes/color-themes";
+import { editorSpacingLineHeight } from "@lunarscribe/components/themes/editor-spacing";
 import { highlightColorValue } from "@lunarscribe/components/themes/highlight-colors";
+import { resolveColorTheme } from "@lunarscribe/components/themes/imported-color-themes";
 import {
   createContext,
   type ReactNode,
@@ -41,28 +46,45 @@ function applyColorTheme(root: HTMLElement, palette?: ColorPalette) {
   }
 }
 
-/** Puts the theme and its color theme on <html>, and flips the theme on demand. */
+/** Puts the theme, its color theme with any theme styles, and editor text spacing on <html>, and flips the theme on demand. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const theme = useAppearanceStore((state) => state.theme);
   const lightColorTheme = useAppearanceStore((state) => state.lightColorTheme);
   const darkColorTheme = useAppearanceStore((state) => state.darkColorTheme);
+
+  const importedColorThemes = useAppearanceStore(
+    (state) => state.importedColorThemes,
+  );
+
   const setTheme = useAppearanceStore((state) => state.setTheme);
   const uiFont = useAppearanceStore((state) => state.uiFont);
   const bufferFont = useAppearanceStore((state) => state.bufferFont);
   const codeFont = useAppearanceStore((state) => state.codeFont);
   const highlightColor = useAppearanceStore((state) => state.highlightColor);
 
-  const colorTheme = findColorTheme(
+  const bufferSpacing = useAppearanceStore((state) => state.bufferSpacing);
+
+  const colorTheme = resolveColorTheme(
     theme === "dark" ? darkColorTheme : lightColorTheme,
+    importedColorThemes,
   );
+
+  // A color theme without colors for this theme leaves globals.css, and its styles, off.
+  const palette = colorTheme?.[theme];
+  const css = palette === undefined ? "" : (colorTheme?.css ?? "");
+
+  const backgroundImage =
+    palette === undefined ? undefined : colorTheme?.backgroundImage;
 
   useLayoutEffect(() => {
     const root = document.documentElement;
 
     root.classList.remove("light", "dark");
     root.classList.add(theme);
-    applyColorTheme(root, colorTheme?.[theme]);
-  }, [theme, colorTheme]);
+    applyColorTheme(root, palette);
+    applyThemeCss(css);
+    applyThemeBackgroundImage(backgroundImage);
+  }, [theme, palette, css, backgroundImage]);
 
   useLayoutEffect(() => {
     const root = document.documentElement;
@@ -82,6 +104,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       highlightColorValue(highlightColor),
     );
   }, [highlightColor]);
+
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty(
+      "--buffer-line-height",
+      String(editorSpacingLineHeight(bufferSpacing)),
+    );
+  }, [bufferSpacing]);
 
   // Non-default fonts come from Google Fonts; until they load, the fallbacks above show.
   useEffect(() => {

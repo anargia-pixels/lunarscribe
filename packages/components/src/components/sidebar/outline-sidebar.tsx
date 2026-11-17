@@ -1,3 +1,6 @@
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@lunarscribe/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -8,7 +11,7 @@ import {
 } from "@lunarscribe/components/ui/sidebar";
 import { cn } from "@lunarscribe/utils/cn";
 import type { NodeKey } from "lexical";
-import type { CSSProperties } from "react";
+import { type CSSProperties, useState } from "react";
 
 import type { HeadingAnchor } from "../editor/heading-anchors";
 import { SidebarResizeRail } from "./sidebar-resize-rail";
@@ -20,42 +23,196 @@ const HEADING_COLORS = [
   "text-heading-3",
 ] as const;
 
-/** Indent for each nesting depth; six heading levels nest at most five deep. */
-const DEPTH_INDENTS = [
-  "ms-0",
-  "ms-3",
-  "ms-6",
-  "ms-9",
-  "ms-12",
-  "ms-15",
-] as const;
+/** A heading and the headings nested under it. */
+type OutlineNode = {
+  heading: HeadingAnchor;
+  children: OutlineNode[];
+};
 
-/** Each heading with its nesting depth: the number of shallower headings still open above it. */
-function withDepths(headings: HeadingAnchor[]) {
-  const open: number[] = [];
+/** Nests each heading under the closest shallower heading above it. */
+function buildTree(headings: HeadingAnchor[]) {
+  const roots: OutlineNode[] = [];
+  const open: OutlineNode[] = [];
 
-  return headings.map((heading) => {
-    while (open.length && (open.at(-1) ?? 0) >= heading.level) {
+  for (const heading of headings) {
+    while ((open.at(-1)?.heading.level ?? 0) >= heading.level) {
       open.pop();
     }
 
-    open.push(heading.level);
+    const node: OutlineNode = { heading, children: [] };
 
-    return { heading, depth: open.length - 1 };
-  });
+    (open.at(-1)?.children ?? roots).push(node);
+    open.push(node);
+  }
+
+  return roots;
+}
+
+/** Keys from a top-level heading down to `key`; empty when no heading has it. */
+function pathTo(nodes: OutlineNode[], key: NodeKey | null): NodeKey[] {
+  for (const node of nodes) {
+    if (node.heading.key === key) {
+      return [key];
+    }
+
+    const below = pathTo(node.children, key);
+
+    if (below.length) {
+      return [node.heading.key, ...below];
+    }
+  }
+
+  return [];
+}
+
+type BranchProps = {
+  nodes: OutlineNode[];
+  path: ReadonlySet<NodeKey>;
+  activeKey: NodeKey | null;
+  folded: ReadonlySet<NodeKey>;
+  onToggle: (key: NodeKey) => void;
+  onSelect: (key: NodeKey) => void;
+};
+
+/** One heading's row: the heading itself and, when it has sub-headings, its fold toggle. */
+function OutlineRow({
+  node,
+  isActive,
+  isFolded,
+  onToggle,
+  onSelect,
+}: {
+  node: OutlineNode;
+  isActive: boolean;
+  isFolded: boolean;
+  onToggle: (key: NodeKey) => void;
+  onSelect: (key: NodeKey) => void;
+}) {
+  const { heading } = node;
+
+  return (
+    <div className="flex items-center">
+      <SidebarMenuButton
+        size="sm"
+        title={heading.text}
+        aria-current={isActive ? "location" : undefined}
+        className="min-w-0 flex-1"
+        onClick={() => onSelect(heading.key)}
+      >
+        <span
+          className={cn(
+            HEADING_COLORS[heading.level - 1],
+            isActive && "font-semibold",
+          )}
+        >
+          {heading.text}
+        </span>
+      </SidebarMenuButton>
+      {node.children.length > 0 && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`${isFolded ? "Unfold" : "Fold"} ${heading.text}`}
+          aria-expanded={!isFolded}
+          onClick={() => onToggle(heading.key)}
+        >
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            strokeWidth={2}
+            className={cn(
+              "transition-transform motion-reduce:transition-none",
+              isFolded && "-rotate-90",
+            )}
+          />
+        </Button>
+      )}
+    </div>
+  );
 }
 
 /**
- * The headings as a menu, indented by nesting and colored like the editor's
- * headings. Needs a sidebar provider, as every sidebar menu does.
+ * A heading's sub-headings, each branching off a trunk under it. The lines on
+ * the way to the caret's section turn the primary color; folding slides the
+ * branch shut.
+ */
+function OutlineBranches({
+  parentLabel,
+  isFolded,
+  ...props
+}: BranchProps & { parentLabel: string; isFolded: boolean }) {
+  const { nodes, path } = props;
+  const onPath = nodes.findIndex((node) => path.has(node.heading.key));
+
+  return (
+    <div className="branch-fold" data-folded={isFolded || undefined}>
+      <ul
+        aria-label={`Under ${parentLabel}`}
+        className="branch-list"
+        inert={isFolded}
+      >
+        {nodes.map((node, index) => (
+          <li
+            key={node.heading.key}
+            className="branch-item"
+            data-path={
+              index === onPath ? "to" : index < onPath ? "through" : undefined
+            }
+          >
+            <span aria-hidden className="branch-elbow" />
+            <OutlineNodeItem node={node} {...props} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** A heading's row and, under it, its sub-headings. */
+function OutlineNodeItem({
+  node,
+  ...props
+}: Omit<BranchProps, "nodes"> & { node: OutlineNode }) {
+  const { activeKey, folded, onToggle, onSelect } = props;
+  const isFolded = folded.has(node.heading.key);
+
+  return (
+    <>
+      <OutlineRow
+        node={node}
+        isActive={node.heading.key === activeKey}
+        isFolded={isFolded}
+        onToggle={onToggle}
+        onSelect={onSelect}
+      />
+      {node.children.length > 0 && (
+        <OutlineBranches
+          {...props}
+          nodes={node.children}
+          parentLabel={node.heading.text}
+          isFolded={isFolded}
+        />
+      )}
+    </>
+  );
+}
+
+/**
+ * The headings as a branched menu: each heading's sub-headings branch off a
+ * trunk under it, the lines to the caret's section turn the primary color,
+ * and a chevron folds a heading's branch. Colored like the editor's headings.
+ * Needs a sidebar provider, as every sidebar menu does.
  */
 export function OutlineMenu({
   headings,
+  activeKey,
   onSelect,
 }: {
   headings: HeadingAnchor[];
+  activeKey: NodeKey | null;
   onSelect: (key: NodeKey) => void;
 }) {
+  const [folded, setFolded] = useState<ReadonlySet<NodeKey>>(new Set());
+
   if (!headings.length) {
     return (
       <p className="text-muted-foreground px-2 py-1 text-xs">
@@ -64,33 +221,43 @@ export function OutlineMenu({
     );
   }
 
+  const tree = buildTree(headings);
+  const path = new Set(pathTo(tree, activeKey));
+
+  const toggle = (key: NodeKey) =>
+    setFolded((previous) => {
+      const next = new Set(previous);
+
+      if (!next.delete(key)) {
+        next.add(key);
+      }
+
+      return next;
+    });
+
   return (
-    <SidebarMenu aria-label="Outline">
-      {withDepths(headings).map(({ heading, depth }) => (
-        <SidebarMenuItem key={heading.key}>
-          <SidebarMenuButton
-            size="sm"
-            title={heading.text}
-            onClick={() => onSelect(heading.key)}
-          >
-            <span
-              className={cn(
-                DEPTH_INDENTS[depth],
-                HEADING_COLORS[heading.level - 1],
-              )}
-            >
-              {heading.text}
-            </span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
+    <div className="branch-tree">
+      <SidebarMenu aria-label="Outline">
+        {tree.map((node) => (
+          <SidebarMenuItem key={node.heading.key}>
+            <OutlineNodeItem
+              node={node}
+              path={path}
+              activeKey={activeKey}
+              folded={folded}
+              onToggle={toggle}
+              onSelect={onSelect}
+            />
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    </div>
   );
 }
 
 /**
- * VS Code style outline of a markdown buffer's headings on the right of the
- * window, indented by nesting and colored like the editor's headings. It has
+ * Outline of a markdown buffer's headings on the right of the window, as a
+ * branched menu colored like the editor's headings. It has
  * its own sidebar provider, so it opens independently of the left sidebar;
  * the app owns `open`, `width` (in CSS pixels) and the shortcut that toggles it.
  */
@@ -100,6 +267,7 @@ export function OutlineSidebar({
   width,
   onWidthChange,
   headings,
+  activeKey,
   onSelect,
 }: {
   open: boolean;
@@ -107,6 +275,7 @@ export function OutlineSidebar({
   width: number;
   onWidthChange: (width: number) => void;
   headings: HeadingAnchor[];
+  activeKey: NodeKey | null;
   onSelect: (key: NodeKey) => void;
 }) {
   const sidebarStyle: CSSProperties & Record<"--sidebar-width", string> = {
@@ -118,16 +287,24 @@ export function OutlineSidebar({
       open={open}
       onOpenChange={onOpenChange}
       keyboardShortcut={null}
+      data-nested-sidebar
       style={sidebarStyle}
       className="min-h-0 w-auto flex-none"
     >
       <Sidebar side="right">
-        <div className="flex h-10 shrink-0 items-center border-b px-4 text-xs font-medium">
+        <div
+          className="flex h-10 shrink-0 items-center px-4 text-xs font-medium"
+          data-outline-header
+        >
           Outline
         </div>
         <SidebarContent>
           <div className="p-2">
-            <OutlineMenu headings={headings} onSelect={onSelect} />
+            <OutlineMenu
+              headings={headings}
+              activeKey={activeKey}
+              onSelect={onSelect}
+            />
           </div>
         </SidebarContent>
         <SidebarResizeRail

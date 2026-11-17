@@ -14,6 +14,7 @@ import {
   PencilEdit01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { THEME_CSS_HOOKS } from "@lunarscribe/components/lib/theme-css";
 import { Button } from "@lunarscribe/components/ui/button";
 import {
   ContextMenu,
@@ -117,6 +118,7 @@ export function SidebarFileItem({
         <SidebarMenuButton
           className="h-auto"
           isActive={isActive}
+          {...THEME_CSS_HOOKS.sidebarFile}
           title={title}
           onClick={onOpen}
           {...(dragPath === undefined ? {} : savedFileDragProps(dragPath))}

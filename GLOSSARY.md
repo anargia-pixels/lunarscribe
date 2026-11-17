@@ -144,9 +144,15 @@ A style applied to a run of text: bold, italic, strikethrough, or inline code.
 _Avoid_: text style, mark
 
 **Block type**:
-The kind of a whole block: paragraph, heading, quote, code block, bulleted
-list, or numbered list.
+The kind of a whole block: paragraph, heading, quote, alert quote, code block,
+bulleted list, or numbered list.
 _Avoid_: block format, paragraph style
+
+**Alert quote**:
+A quote that flags a note, a warning or a caution (for destructive or
+irreversible actions), written as GitHub's alerts: `> [!NOTE]`, `> [!WARNING]`
+or `> [!CAUTION]` on the quote's first line. It shows its own icon and colors.
+_Avoid_: callout, admonition, destructive quote
 
 ### Interface
 
@@ -187,8 +193,10 @@ _Avoid_: drawer, nav, side panel
 
 **Outline sidebar**:
 The collapsible panel on the right of the window listing the active buffer's
-headings, VS Code style: indented by nesting and colored like the editor's
-headings. Clicking a heading moves the caret to it. It shows only for markdown
+headings as a branched menu: sub-headings branch off a line under their heading,
+the lines to the caret's section are highlighted, a chevron folds a heading's
+branch, and headings are colored like the editor's. Clicking a heading moves the
+caret to it. It shows only for markdown
 buffers, and Ctrl+Alt+B (⌘+Alt+B on macOS), its rail, or the outline trigger on
 the right of the header opens and collapses it. The mobile app shows the same list
 in a sheet from the left, opened from its editor header.
@@ -214,13 +222,15 @@ _Avoid_: separator, divider
 
 **Settings window**:
 The dialog that holds Lunarscribe's settings, filling 80% of the app window.
-It pairs the settings sidebar with the settings of the open section.
+It pairs the settings sidebar with the open section, under a bar naming that
+section. Each section lists its settings in titled groups of rows: a setting's
+name and what it does on the left, its control on the right.
 Also: settings dialog.
 _Avoid_: preferences, settings modal, options
 
 **Settings sidebar**:
-The panel on the left of the settings window listing its sections. It never
-collapses.
+The panel on the left of the settings window listing its sections in labelled
+groups, with About at the bottom. It never collapses.
 _Avoid_: settings menu, settings nav, preferences sidebar
 
 **Theme**:
@@ -233,6 +243,13 @@ like Modern Minimal or Catppuccin. The settings window picks one per theme
 under Appearances; "Reset to defaults" clears both, leaving the colors in
 `globals.css`. The colors tweakcn ships are the catalog.
 _Avoid_: mode, dark mode, skin, color mode, theme preset, palette
+
+**Imported color theme**:
+A color theme the user adds under Appearances from T3 Skins, from a VS Code theme
+extension on Open VSX, or from a theme file. It is converted into the same colors as
+the built-in catalog when it is imported, may cover only the light or the dark theme,
+and a T3 skin's may bring its own styles, such as a background behind the editor.
+_Avoid_: skin (except as T3 Skins' own name for its files), custom theme, user theme
 
 **Dark mode toggle**:
 The header button that flips between light and dark themes in one click. It is

@@ -7,6 +7,11 @@ import {
   type Transformer,
 } from "@lexical/markdown";
 
+import {
+  ALERT_QUOTE,
+  ALERT_QUOTE_FIRST_LINE,
+  ALERT_QUOTE_SHORTCUT,
+} from "./alert-quote-transformers";
 import { HORIZONTAL_RULE } from "./horizontal-rule-transformer";
 import { MARKDOWN_IMAGE, WIKILINK_IMAGE } from "./image-transformers";
 import { INLINE_TRANSFORMERS } from "./inline-transformers";
@@ -36,6 +41,10 @@ export const MARKDOWN_TRANSFORMERS: Transformer[] = [
   MERMAID_SHORTCUT,
   WIKILINK_IMAGE,
   MARKDOWN_IMAGE,
+  // Ahead of QUOTE, which would otherwise export alert quotes as plain quotes.
+  ALERT_QUOTE,
+  ALERT_QUOTE_FIRST_LINE,
+  ALERT_QUOTE_SHORTCUT,
   QUOTE_BLANK_LINE,
   ...ELEMENT_TRANSFORMERS,
   BLOCK_MATH,

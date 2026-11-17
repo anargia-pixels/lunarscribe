@@ -4,7 +4,12 @@ import {
   RotateRight01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SettingsPane } from "@lunarscribe/components/settings-dialog/settings-pane";
+import {
+  SettingsBlock,
+  SettingsGroup,
+  SettingsPane,
+  SettingsRow,
+} from "@lunarscribe/components/settings-dialog/settings-pane";
 import { Button } from "@lunarscribe/components/ui/button";
 import { Spinner } from "@lunarscribe/components/ui/spinner";
 import { useEffect, useState } from "react";
@@ -49,7 +54,7 @@ function getUpdateMessage(
   }
 }
 
-/** About pane: version and system details, and checking for and installing updates. */
+/** About pane: checking for and installing updates, then version and system details. */
 export function AboutPane() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const status = useUpdateStore((state) => state.status);
@@ -75,55 +80,67 @@ export function AboutPane() {
 
   return (
     <SettingsPane>
-      <header className="flex flex-col gap-1">
-        <h2 className="text-base font-medium">About</h2>
-        <p className="text-muted-foreground text-sm text-pretty">
-          {getUpdateMessage(status, version, error)}
-        </p>
-      </header>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          disabled={isBusy || status === "ready"}
-          onClick={() => void check(true)}
+      <SettingsGroup title="Updates">
+        <SettingsRow
+          title="Lunarscribe"
+          description={
+            <span aria-live="polite">
+              {getUpdateMessage(status, version, error)}
+            </span>
+          }
         >
-          {status === "checking" ? (
-            <Spinner aria-hidden="true" />
-          ) : (
-            <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
-          )}
-          Check for updates
-        </Button>
-        {(status === "available" || status === "downloading") && (
           <Button
-            disabled={status === "downloading"}
-            onClick={() => void install()}
+            variant="outline"
+            size="sm"
+            disabled={isBusy || status === "ready"}
+            onClick={() => void check(true)}
           >
-            {status === "downloading" ? (
+            {status === "checking" ? (
               <Spinner aria-hidden="true" />
             ) : (
-              <HugeiconsIcon icon={Download01Icon} strokeWidth={2} />
+              <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
             )}
-            Update to {version}
+            Check for updates
           </Button>
-        )}
-        {status === "ready" && (
-          <Button onClick={() => window.lunarscribe.restartApp()}>
-            <HugeiconsIcon icon={RotateRight01Icon} strokeWidth={2} />
-            Restart to update
-          </Button>
-        )}
-      </div>
-      <dl className="flex flex-col gap-2 text-sm">
-        {INFO_ROWS.map((row) => (
-          <div key={row.key} className="flex gap-6">
-            <dt className="w-40 shrink-0">{row.label}</dt>
-            <dd className="text-muted-foreground min-w-0 break-all select-text">
-              {info?.[row.key] ?? "…"}
-            </dd>
-          </div>
-        ))}
-      </dl>
+          {(status === "available" || status === "downloading") && (
+            <Button
+              size="sm"
+              disabled={status === "downloading"}
+              onClick={() => void install()}
+            >
+              {status === "downloading" ? (
+                <Spinner aria-hidden="true" />
+              ) : (
+                <HugeiconsIcon icon={Download01Icon} strokeWidth={2} />
+              )}
+              Update to {version}
+            </Button>
+          )}
+          {status === "ready" && (
+            <Button size="sm" onClick={() => window.lunarscribe.restartApp()}>
+              <HugeiconsIcon icon={RotateRight01Icon} strokeWidth={2} />
+              Restart to update
+            </Button>
+          )}
+        </SettingsRow>
+      </SettingsGroup>
+      <SettingsGroup
+        title="System"
+        description="Details to include when you report a problem."
+      >
+        <SettingsBlock>
+          <dl className="flex flex-col gap-2 text-sm">
+            {INFO_ROWS.map((row) => (
+              <div key={row.key} className="flex gap-6">
+                <dt className="w-40 shrink-0">{row.label}</dt>
+                <dd className="text-muted-foreground min-w-0 break-all select-text">
+                  {info?.[row.key] ?? "…"}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </SettingsBlock>
+      </SettingsGroup>
     </SettingsPane>
   );
 }

@@ -5,9 +5,10 @@ export const editorTheme: EditorThemeClasses = {
   // Lexical hides the native caret beside block decorators and uses this cursor.
   blockCursor:
     "pointer-events-none relative block h-0 before:absolute before:top-0 before:left-0 before:h-7 before:w-px before:animate-caret-blink before:bg-foreground",
-  paragraph: "leading-7",
+  paragraph: "leading-(--buffer-line-height)",
+  // `editor-quote` in globals.css adds the icon, its padding and the alert quote colors.
   quote:
-    "mb-3 border-l-3 border-primary pl-4 py-2 bg-muted text-muted-foreground italic",
+    "editor-quote mb-3 border-l-3 border-primary bg-muted text-muted-foreground italic",
   heading: {
     h1: "mb-4 text-3xl font-bold tracking-tight text-heading-1",
     h2: "mb-3 text-2xl font-semibold tracking-tight text-heading-2",
@@ -28,7 +29,7 @@ export const editorTheme: EditorThemeClasses = {
   link: "text-primary hover:underline underline-offset-4",
   hr: "my-4 border-0 border-t border-primary",
   hrSelected: "outline outline-ring",
-  code: "mb-3 block overflow-x-auto rounded-md bg-muted p-3 font-code text-sm",
+  code: "mb-3 block overflow-x-auto rounded-md border border-primary bg-muted p-3 font-code text-sm",
   codeHighlight: {
     atrule: "text-syntax-keyword",
     attr: "text-syntax-function",
@@ -63,9 +64,11 @@ export const editorTheme: EditorThemeClasses = {
     variable: "text-syntax-type",
   },
   table: "mb-3 w-full border-collapse text-sm",
-  tableRow: "border-b border-border",
-  tableCell: "min-w-24 border border-border px-3 py-2 align-top",
-  tableCellHeader: "bg-popover font-semibold",
+  // Only lines between rows: no column lines, and the table's top and bottom edges stay open.
+  // `of-type` skips the <colgroup> Lexical puts before the rows.
+  tableRow: "first-of-type:*:border-t-0 last-of-type:*:border-b-0",
+  tableCell: "min-w-24 border-y border-border px-3 py-2 align-top",
+  tableCellHeader: "bg-popover font-semibold text-muted-foreground italic",
   tableCellSelected: "bg-accent",
   tableSelection: "selection:bg-transparent",
   tableScrollableWrapper: "editor-scrollbar w-full overflow-x-auto",

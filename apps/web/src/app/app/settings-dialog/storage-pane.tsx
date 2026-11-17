@@ -33,6 +33,7 @@ export function StoragePane() {
     <SharedStoragePane
       stores={PERSISTED_STORES}
       keptNote="Files saved in this browser, your external files and sync settings are not affected."
+      reload={() => window.location.reload()}
     />
   );
 }

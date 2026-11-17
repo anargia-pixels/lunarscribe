@@ -76,6 +76,7 @@ export function MarkdownEditor({
   markdown,
   onChange,
   showToolbar = true,
+  spellCheck = true,
   onOutlineChange,
   readScrollTop,
   onScrollTopSave,
@@ -84,6 +85,8 @@ export function MarkdownEditor({
   markdown: string;
   onChange: (markdown: string) => void;
   showToolbar?: boolean;
+  /** Whether misspelled words get the browser's squiggly underline. */
+  spellCheck?: boolean;
   onOutlineChange?: (outline: Outline | null) => void;
   /** Read when the editor mounts, after any previous editor saved its position. */
   readScrollTop?: () => number | undefined;
@@ -159,7 +162,10 @@ export function MarkdownEditor({
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <FindPlugin />
           <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
-            <div className="relative mx-auto flex min-h-full w-full max-w-4xl flex-col px-8 pt-10">
+            <div
+              className="relative mx-auto flex min-h-full w-full max-w-4xl flex-col px-8 pt-10"
+              data-editor-surface
+            >
               <FrontmatterPlugin
                 entries={entries}
                 onChange={handleFrontmatterChange}
@@ -169,14 +175,15 @@ export function MarkdownEditor({
                   contentEditable={
                     <ContentEditable
                       data-markdown-editor
+                      spellCheck={spellCheck}
                       aria-label="Document"
                       aria-placeholder="Start writing…"
                       placeholder={
-                        <div className="font-buffer text-muted-foreground pointer-events-none absolute top-0 left-0 select-none">
+                        <div className="font-buffer text-muted-foreground pointer-events-none absolute top-0 left-0 leading-(--buffer-line-height) select-none">
                           Start writing…
                         </div>
                       }
-                      className="font-buffer w-full min-w-0 cursor-text pb-48 outline-none select-text"
+                      className="font-buffer w-full min-w-0 cursor-text pb-48 leading-(--buffer-line-height) outline-none select-text"
                     />
                   }
                   ErrorBoundary={LexicalErrorBoundary}

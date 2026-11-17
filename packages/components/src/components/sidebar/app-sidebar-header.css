@@ -1,19 +1,28 @@
-/* The header image lives in the root assets folder that both apps share. */
+/* The header image lives in the root assets folder that both apps share. It
+   fades out to transparent rather than to the sidebar color, so it blends into
+   whatever the sidebar paints behind it, including a color theme's gradient. */
 .dark [data-app-sidebar-header] {
   position: relative;
   isolation: isolate;
-  background-image: url("../../../../../assets/sidebar-header.webp");
-  background-position: center;
-  background-size: cover;
+}
+
+.dark [data-app-sidebar-header]::before,
+.dark [data-app-sidebar-header]::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
 }
 
 .dark [data-app-sidebar-header]::before {
-  position: absolute;
-  z-index: -1;
+  inset: 0;
+  background: url("../../../../../assets/sidebar-header.webp") center / cover;
+  mask-image: linear-gradient(to bottom, black 35%, transparent 90%);
+}
+
+/* Softens the image as it fades, so its detail does not end in a hard line. */
+.dark [data-app-sidebar-header]::after {
   inset: 35% 0 0;
-  content: "";
-  pointer-events: none;
-  background: linear-gradient(to bottom, transparent, var(--sidebar) 90%);
   backdrop-filter: blur(6px);
   mask-image: linear-gradient(to bottom, transparent, black 50%);
 }

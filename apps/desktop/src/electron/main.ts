@@ -132,6 +132,9 @@ function createWindow() {
   // Any page this window navigates to inherits the preload bridge, so keep the editor loaded.
   window.webContents.on("will-navigate", (event) => event.preventDefault());
 
+  // The guard above also cancels the renderer's own location.reload(), so it asks here.
+  window.webContents.ipc.on("app:reload", () => window.webContents.reload());
+
   const devServerUrl = process.env["ELECTRON_RENDERER_URL"];
 
   if (!app.isPackaged && devServerUrl) {

@@ -4,7 +4,7 @@ import { ConfirmationDialog } from "@lunarscribe/components/confirmation-dialog/
 import { Button } from "@lunarscribe/components/ui/button";
 import { useState } from "react";
 
-import { SettingsPane } from "./settings-pane";
+import { SettingsGroup, SettingsPane, SettingsRow } from "./settings-pane";
 
 /** A zustand store saved with `persist`; only the parts of its persist API the pane uses. */
 export type PersistedStore = {
@@ -35,68 +35,113 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
+/** What a confirmation clears: one store, or every store. */
+type ClearTarget = { kind: "store"; store: PersistedStore } | { kind: "all" };
+
 /**
- * Lists the app state each store keeps across launches and how much space it takes, with
- * a way to clear it all when something goes wrong. Clearing reloads the app, so stores
- * start over from their defaults. `keptNote` says what clearing leaves alone.
+ * Lists the app state each store keeps across launches and how much space it
+ * takes. Each store can be cleared on its own, or all of them at once when
+ * something goes wrong. Clearing reloads the app, so cleared stores start over
+ * from their defaults. `keptNote` says what clearing leaves alone.
  */
 export function StoragePane({
   stores,
   keptNote,
+  reload,
 }: {
   stores: readonly PersistedStore[];
   keptNote: string;
+  /** Reloads the app; the desktop window cannot reload itself with `location.reload()`. */
+  reload: () => void;
 }) {
   const [sizes] = useState(() => stores.map(storedBytes));
-  const [isConfirming, setIsConfirming] = useState(false);
+  const [target, setTarget] = useState<ClearTarget | null>(null);
   const total = sizes.reduce((sum, size) => sum + size, 0);
 
-  function clearAll() {
-    for (const store of stores) {
+  function clear(cleared: ClearTarget) {
+    for (const store of cleared.kind === "all" ? stores : [cleared.store]) {
       store.persist.clearStorage();
     }
 
     // In-memory state would otherwise be written straight back on the next change.
-    window.location.reload();
+    reload();
   }
+
+  const confirmation =
+    target?.kind === "store"
+      ? {
+          title: `Clear ${target.store.label.toLowerCase()}?`,
+          description: `${target.store.label}: ${target.store.description} Lunarscribe forgets this and reloads, so untitled buffers that were never saved are lost. ${keptNote}`,
+          confirmLabel: "Clear and reload",
+        }
+      : {
+          title: "Clear all app storage?",
+          description: `Lunarscribe forgets everything listed here and reloads with default settings. Untitled buffers that were never saved are lost. ${keptNote}`,
+          confirmLabel: "Clear all and reload",
+        };
 
   return (
     <SettingsPane>
-      <header className="flex flex-col gap-1">
-        <h2 className="text-base font-medium">Storage</h2>
-        <p className="text-muted-foreground text-sm text-pretty">
-          Settings and app state Lunarscribe remembers between launches, using{" "}
-          {formatBytes(total)} in total. {keptNote}
-        </p>
-      </header>
-      <dl className="flex flex-col gap-3 text-sm">
+      <SettingsGroup
+        title="App state"
+        description={
+          <>
+            Settings and app state Lunarscribe remembers between launches, using{" "}
+            <span className="tabular-nums">{formatBytes(total)}</span> in total.{" "}
+            {keptNote}
+          </>
+        }
+      >
         {stores.map((store, index) => (
-          <div key={store.label} className="flex items-baseline gap-6">
-            <div className="min-w-0 flex-1">
-              <dt>{store.label}</dt>
-              <dd className="text-muted-foreground text-pretty">
-                {store.description}
-              </dd>
-            </div>
-            <dd className="text-muted-foreground shrink-0 tabular-nums">
+          <SettingsRow
+            key={store.label}
+            title={store.label}
+            description={store.description}
+          >
+            <span className="text-muted-foreground text-xs tabular-nums">
               {formatBytes(sizes[index] ?? 0)}
-            </dd>
-          </div>
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={`Clear ${store.label}`}
+              onClick={() => setTarget({ kind: "store", store })}
+            >
+              Clear
+            </Button>
+          </SettingsRow>
         ))}
-      </dl>
-      <div>
-        <Button variant="destructive" onClick={() => setIsConfirming(true)}>
-          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-          Clear app storage
-        </Button>
-      </div>
+      </SettingsGroup>
+      <SettingsGroup title="Reset">
+        <SettingsRow
+          title="Clear all app storage"
+          description="Forget everything above at once and start over with default settings."
+        >
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setTarget({ kind: "all" })}
+          >
+            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+            Clear all
+          </Button>
+        </SettingsRow>
+      </SettingsGroup>
       <ConfirmationDialog
-        open={isConfirming}
-        onOpenChange={setIsConfirming}
-        title="Clear app storage?"
-        description={`Lunarscribe forgets everything listed here and reloads with default settings. ${keptNote} Untitled buffers that were never saved are lost.`}
-        confirmLabel="Clear and reload"
-        onConfirm={clearAll}
+        open={target !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTarget(null);
+          }
+        }}
+        title={confirmation.title}
+        description={confirmation.description}
+        confirmLabel={confirmation.confirmLabel}
+        onConfirm={() => {
+          if (target !== null) {
+            clear(target);
+          }
+        }}
       />
     </SettingsPane>
   );

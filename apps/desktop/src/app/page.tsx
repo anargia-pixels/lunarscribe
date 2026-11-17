@@ -7,6 +7,7 @@ import type {
 import { ImageViewer } from "@lunarscribe/components/editor/image-viewer";
 import { MarkdownEditor } from "@lunarscribe/components/editor/markdown-editor";
 import { Hint } from "@lunarscribe/components/hint/hint";
+import { THEME_CSS_HOOKS } from "@lunarscribe/components/lib/theme-css";
 import {
   Alert,
   AlertDescription,
@@ -112,6 +113,8 @@ export default function Page() {
     (state) => state.showEditorToolbar,
   );
 
+  const spellCheck = useAppearanceStore((state) => state.spellCheck);
+
   const clearFileError = useBufferStore((state) => state.clearFileError);
   const fileError = useBufferStore((state) => state.fileError);
 
@@ -172,10 +175,13 @@ export default function Page() {
       ?.content ?? "";
 
   return (
-    <div className="flex h-svh flex-col">
+    <div className="flex h-svh flex-col" {...THEME_CSS_HOOKS.editorArea}>
       {/* Hover waits 800ms; moving to a neighbour within 300ms opens it instantly. */}
       <TooltipProvider delay={800} timeout={300}>
-        <header className="relative flex h-10 shrink-0 items-center justify-center border-b px-12 text-xs select-none">
+        <header
+          className="relative flex h-10 shrink-0 items-center justify-center px-12 text-xs select-none"
+          {...THEME_CSS_HOOKS.editorHeader}
+        >
           <Hint
             label="Toggle sidebar"
             side="bottom"
@@ -250,6 +256,7 @@ export default function Page() {
             markdown={content}
             onChange={(markdown) => setContent(buffer.id, markdown)}
             showToolbar={showEditorToolbar}
+            spellCheck={spellCheck}
             onOutlineChange={setOutline}
             readScrollTop={() =>
               scrollKey === null

@@ -13,13 +13,16 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
 - **Markdown editor:** Markdown shortcuts apply headings, quotes, bulleted lists, numbered
   lists, checkbox lists, code blocks, links, and horizontal rules. Code blocks show syntax
   highlighting.
+- **Alert quotes:** GitHub's `> [!NOTE]`, `> [!WARNING]` and `> [!CAUTION]` quotes show
+  with their own icon and color. Type `[!NOTE] ` at the start of a quote, or pick one from
+  the toolbar's block menu.
 - **Checkbox lists:** Completed items move below incomplete items. An animation shows the
   change in item order.
 - **Inline formats:** The editor supports bold, italic, underline, strikethrough,
   superscript, subscript, and inline code. The toolbar shows the inline formats of the
   selected text. It also has undo and redo controls.
 - **Highlighter:** Type `==text==` or pick Highlight in the right-click menu to highlight
-  text, as in Obsidian. Settings → Appearances → Misc sets the highlighter color.
+  text, as in Obsidian. Settings → Appearance → Editor sets the highlighter color.
 - **Tables:** The toolbar has a control to insert tables. The editor also loads markdown
   tables. Each cell has an action menu to insert or delete rows and columns, or delete the
   table. In a cell, the right-click menu has the same actions under Table. Wide tables
@@ -31,13 +34,14 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
   suggests one for every heading.
 - **Collapsible headings:** A chevron beside every heading collapses everything under it
   until the next heading of the same or a higher level.
-- **Outline:** The outline lists a markdown note's headings, indented by nesting and
-  colored like the editor's headings. Tap or click a heading to jump to it. On desktop it
-  is a resizable panel on the right; on Android it opens from the editor header as a panel
-  from the left.
+- **Outline:** The outline lists a markdown note's headings as a branched menu:
+  sub-headings branch off a line under their heading, colored like the editor's headings.
+  The lines to the section you are reading or editing are highlighted, and a chevron folds
+  a heading's branch. Tap or click a heading to jump to it. On desktop it is a resizable
+  panel on the right; on Android it opens from the editor header as a panel from the left.
 - **Right-click menu:** A right-click in the editor opens a menu like Obsidian's, with
   link actions, Highlight, Format, Paragraph, Insert, and Table submenus, undo and redo,
-  and clipboard actions. Settings → Appearances can hide the toolbar, since the menu holds
+  and clipboard actions. Settings → Appearance can hide the toolbar, since the menu holds
   all of its actions.
 - **Math:** KaTeX shows LaTeX equations as inline math or math blocks. The toolbar has
   controls to insert both types. The editor also converts `$...$`, `$$...$$`, and pasted
@@ -92,15 +96,18 @@ file storage, Excalidraw drawings, and PDF and DOCX export.
   buffer, exports use the current edits. Exports use the selected theme and fonts. They
   keep formatted text, tables, code, and equations.
 - **Appearance:** The default themes are a warm paper light theme and Catppuccin Mocha
-  dark theme. Each theme can have a separate color theme. The interface, buffer writing,
+  dark theme. Each theme can have a separate color theme. Import more from T3 Skins or VS
+  Code themes on Open VSX, or from a theme file or `.vsix`. The interface, buffer writing,
   and code can use different fonts. Available fonts are Poppins, Roboto Mono, Pixelify
-  Sans, and installed system fonts. The app keeps appearance settings between app starts.
+  Sans, and installed system fonts. Line spacing is Compact, Standard or Comfortable, and
+  spell check can be turned off. The app keeps appearance settings between app starts.
 - **Reading position:** Each saved and external file reopens where you last scrolled, also
   after a restart. Deleting a file, or removing an external file from the sidebar, forgets
   its position.
-- **Storage:** Settings → General → Storage lists the settings and app state Lunarscribe
-  keeps between app starts and how much space each part takes. **Clear app storage**
-  resets them and reloads the app; saved files and sync sign-ins stay.
+- **Storage:** Settings → Storage lists the settings and app state Lunarscribe keeps
+  between app starts and how much space each part takes. Each part can be cleared on its
+  own, or **Clear all** resets them together; clearing reloads the app, and saved files
+  and sync sign-ins stay.
 - **Offline use:** The app includes its fonts, KaTeX fonts, and Excalidraw fonts. These
   fonts support writing, equations, and drawings without a network connection.
 
@@ -180,7 +187,7 @@ To export a text file:
 3. Select the destination in the save dialog.
 4. Save the export.
 
-To change color themes and fonts, open Settings → Appearances. To change between the light
+To change color themes and fonts, open Settings → Appearance. To change between the light
 and dark themes, use the dark mode toggle in the sidebar.
 
 ### Markdown extensions

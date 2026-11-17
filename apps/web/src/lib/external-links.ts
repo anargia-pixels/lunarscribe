@@ -4,6 +4,8 @@ export const EXTERNAL_LINKS = {
   releases: "https://github.com/anargia-pixels/lunarscribe/releases/latest",
   fff: "https://github.com/dmtrKovalenko/fff",
   lexical: "https://lexical.dev/docs/intro",
+  t3Skins: "https://www.t3skins.dev",
+  openVsx: "https://open-vsx.org",
   issues: "https://github.com/anargia-pixels/lunarscribe/issues",
   agpl: "https://www.gnu.org/licenses/agpl-3.0.html",
   cloudflarePrivacy: "https://www.cloudflare.com/privacypolicy/",

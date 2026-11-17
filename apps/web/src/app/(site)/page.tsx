@@ -24,7 +24,7 @@ export const Route = createFileRoute("/(site)/")({
 
 const HEADLINE = "An Obsidian OSS alternative";
 
-/** Screenshots of the web app, captured at 1920×1200. */
+/** Screenshots of the app, captured at 1920×1200 unless a size is given. */
 const SHOWCASE = [
   {
     title: (
@@ -35,6 +35,19 @@ const SHOWCASE = [
     description: "Local first OSS alternative to Obsidian.",
     image: "/landing/context-menu.webp",
     alt: "The editor context menu with the Paragraph submenu open",
+  },
+  {
+    title: (
+      <>
+        <Link to={EXTERNAL_LINKS.t3Skins}>T3 Skins</Link> and{" "}
+        <Link to={EXTERNAL_LINKS.openVsx}>Open VSX</Link> themes
+      </>
+    ),
+    description:
+      "Import a T3 skin with its background, or any VS Code color theme from Open VSX, a JSON file or a .vsix. The note stays readable on a frosted backdrop.",
+    image: "/landing/themes.webp",
+    alt: "The welcome note with note, warning and caution quotes, a branched outline and a purple T3 skin",
+    size: { width: 1832, height: 1000 },
   },
   {
     title: "Zen mode",
@@ -91,13 +104,21 @@ const SHOWCASE = [
   },
 ] as const;
 
-function Screenshot({ src, alt }: { src: string; alt: string }) {
+function Screenshot({
+  src,
+  alt,
+  size = { width: 1920, height: 1200 },
+}: {
+  src: string;
+  alt: string;
+  size?: { width: number; height: number };
+}) {
   return (
     <img
       src={src}
       alt={alt}
-      width={1920}
-      height={1200}
+      width={size.width}
+      height={size.height}
       loading="lazy"
       className="w-full rounded-xl shadow-2xl"
     />
@@ -188,9 +209,9 @@ function LandingPage() {
 
       <main>
         <section className="mx-auto flex max-w-6xl flex-col gap-24 px-6 py-16">
-          {SHOWCASE.map(({ title, description, image, alt }, index) => (
+          {SHOWCASE.map((item, index) => (
             <div
-              key={image}
+              key={item.image}
               className="grid items-center gap-10 md:grid-cols-5"
             >
               <div
@@ -200,14 +221,18 @@ function LandingPage() {
                 )}
               >
                 <h2 className="text-3xl font-semibold tracking-tight">
-                  {title}
+                  {item.title}
                 </h2>
                 <p className="text-muted-foreground mt-3 text-lg">
-                  {description}
+                  {item.description}
                 </p>
               </div>
               <div className="md:col-span-3">
-                <Screenshot src={image} alt={alt} />
+                <Screenshot
+                  src={item.image}
+                  alt={item.alt}
+                  size={"size" in item ? item.size : undefined}
+                />
               </div>
             </div>
           ))}
